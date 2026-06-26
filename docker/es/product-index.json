@@ -1,0 +1,48 @@
+{
+  "mappings": {
+    "properties": {
+      "id": { "type": "keyword" },
+      "title": { 
+        "type": "text", 
+        "analyzer": "ik_max_word",
+        "search_analyzer": "ik_smart",
+        "fields": {
+          "keyword": { "type": "keyword" }
+        }
+      },
+      "subtitle": { 
+        "type": "text", 
+        "analyzer": "ik_max_word",
+        "search_analyzer": "ik_smart"
+      },
+      "categoryId": { "type": "keyword" },
+      "brandId": { "type": "keyword" },
+      "shopId": { "type": "keyword" },
+      "price": { "type": "double" },
+      "originalPrice": { "type": "double" },
+      "sales": { "type": "integer" },
+      "mainImage": { "type": "keyword", "index": false },
+      "attrs": {
+        "type": "nested",
+        "properties": {
+          "name": { "type": "keyword" },
+          "value": { "type": "keyword" }
+        }
+      },
+      "status": { "type": "integer" },
+      "suggest": { "type": "completion" },
+      "createTime": { "type": "date", "format": "yyyy-MM-dd HH:mm:ss||epoch_millis" }
+    }
+  },
+  "settings": {
+    "number_of_shards": 1,
+    "number_of_replicas": 0,
+    "analysis": {
+      "analyzer": {
+        "ik_smart_analyzer": {
+          "type": "ik_smart"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,46 @@
+# 支付服务独立配置
+# 在Nacos中配置为：Data ID = shop-payment.yml, Group = DEFAULT_GROUP, Namespace = dev
+
+server:
+  port: 8850
+
+spring:
+  application:
+    name: shop-payment
+
+# Seata分布式事务配置（跨服务的事务一致性保证）
+# 支付时要同时操作支付服务和订单服务，保证数据一致
+seata:
+  enabled: true
+  # 应用标识，在Seata中注册的名字
+  application-id: shop-payment
+  # 事务分组，和订单服务使用同一个分组
+  tx-service-group: shop-tx-group
+  service:
+    # 事务分组映射：shop-tx-group分组使用default集群
+    vgroup-mapping:
+      shop-tx-group: default
+  registry:
+    # 注册中心类型：通过Nacos发现Seata Server
+    type: nacos
+    nacos:
+      server-addr: ${NACOS_SERVER:localhost:8976}
+      namespace: ${NACOS_NAMESPACE:dev}
+      group: DEFAULT_GROUP
+
+# RocketMQ配置（消息队列，用于异步处理）
+# 比如支付成功后发消息通知订单服务更新订单状态
+rocketmq:
+  # NameServer地址（RocketMQ的路由注册中心）
+  name-server: ${ROCKETMQ_NAMESRV:localhost:9977}
+  producer:
+    # 生产者组名
+    group: payment-producer-group
+    # 发送消息超时时间（3秒内没发成功就报错）
+    send-message-timeout: 3000
+
+# 支付配置（MVP阶段先用模拟支付，不接真实支付渠道）
+pay:
+  mock:
+    # 开启模拟支付：true表示不真付钱，只是假装支付成功
+    enabled: true

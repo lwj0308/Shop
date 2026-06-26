@@ -1,0 +1,9 @@
+# 管理后台服务独立配置
+# 在Nacos中配置为：Data ID = shop-admin.yml, Group = DEFAULT_GROUP, Namespace = dev
+
+server:
+  port: 8851
+
+spring:
+  application:
+    name: shop-admin

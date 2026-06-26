@@ -1,0 +1,23 @@
+# 商品服务独立配置
+# 在Nacos中配置为：Data ID = shop-product.yml, Group = DEFAULT_GROUP, Namespace = dev
+
+server:
+  port: 8847
+
+spring:
+  application:
+    name: shop-product
+
+# Elasticsearch配置（搜索引擎，用来做商品搜索）
+elasticsearch:
+  host: ${ES_HOST:localhost}
+  port: ${ES_PORT:9201}
+  # 商品索引名称（相当于数据库里的表名）
+  index-name: product_index
+
+# Caffeine本地缓存配置（在JVM内存里缓存热点数据，减少数据库查询）
+cache:
+  caffeine:
+    # maximumSize=1000：最多缓存1000条数据
+    # expireAfterWrite=60s：写入60秒后自动过期
+    spec: maximumSize=1000,expireAfterWrite=60s

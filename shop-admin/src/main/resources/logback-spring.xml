@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <springProperty scope="context" name="APP_NAME" source="spring.application.name" defaultValue="shop-admin"/>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %highlight(%-5level) %cyan(%logger{36}) - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+
+    <!-- 项目代码日志级别 -->
+    <logger name="com.shop" level="DEBUG"/>
+    <!-- Spring Cloud 日志级别 -->
+    <logger name="org.springframework.cloud" level="INFO"/>
+    <!-- Sa-Token 日志 -->
+    <logger name="cn.dev33.satoken" level="WARN"/>
+    <!-- 默认配置：当没有激活任何profile时，至少有控制台输出（防止"No appenders"警告） -->
+    <springProfile name="default">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+
+    <!-- 兜底配置：如果以上profile都没匹配，用这个 -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+</configuration>

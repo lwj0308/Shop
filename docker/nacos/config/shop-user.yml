@@ -1,0 +1,17 @@
+# 用户服务独立配置
+# 在Nacos中配置为：Data ID = shop-user.yml, Group = DEFAULT_GROUP, Namespace = dev
+
+server:
+  port: 8845
+
+spring:
+  application:
+    name: shop-user
+
+# Sa-Token 用户服务特殊配置
+sa-token:
+  # AccessToken有效期2小时（单位：秒）
+  timeout: 7200
+  extra-data:
+    # RefreshToken有效期7天（单位：秒），用来在AccessToken过期后换取新的
+    refresh-timeout: 604800

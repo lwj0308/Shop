@@ -1,0 +1,153 @@
+server:
+  port: 8844
+
+spring:
+  application:
+    name: shop-gateway
+  # 激活dev环境（logback和Nacos配置都依赖这个profile）
+  profiles:
+    active: dev
+  # 强制使用WebFlux响应式模式（Gateway基于WebFlux，不能用Spring MVC）
+  # 父POM继承了spring-boot-starter-web，这里必须显式指定reactive模式
+  main:
+    web-application-type: reactive
+  # 使用spring.config.import方式加载Nacos配置（Spring Boot 4的新方式，不再用bootstrap.yml）
+  config:
+    import: nacos:shop-gateway.yml?refreshEnabled=true
+  cloud:
+    nacos:
+      server-addr: ${NACOS_SERVER:localhost:8976}
+      config:
+        namespace: ${NACOS_NAMESPACE:dev}
+        group: DEFAULT_GROUP
+      discovery:
+        namespace: ${NACOS_NAMESPACE:dev}
+    # 网关路由配置：定义请求如何转发到各个微服务
+    # 注意：Spring Cloud Gateway 5.x（Spring Cloud 2025.1.0）改了配置前缀
+    # 旧前缀 spring.cloud.gateway.routes 已废弃，必须用 spring.cloud.gateway.server.webflux.routes
+    # 否则路由不会被加载，所有请求都会返回 404
+    gateway:
+      server:
+        webflux:
+          routes:
+            # 用户服务路由：前端访问 /api/user/** 的请求会转发到 shop-user 服务
+            - id: shop-user
+              uri: lb://shop-user
+              predicates:
+                - Path=/api/user/**
+              filters:
+                # StripPrefix=1 表示去掉路径的第一段（/api），转发给后端的路径保留 /user/xxx
+                - StripPrefix=1
+
+            # 商家服务路由
+            - id: shop-merchant
+              uri: lb://shop-merchant
+              predicates:
+                - Path=/api/merchant/**
+              filters:
+                # StripPrefix=1 表示去掉路径的第一段（/api），转发给后端的路径保留 /merchant/xxx
+                - StripPrefix=1
+
+            # 商品服务路由
+            - id: shop-product
+              uri: lb://shop-product
+              predicates:
+                - Path=/api/product/**
+              filters:
+                - StripPrefix=1
+
+            # 购物车服务路由
+            - id: shop-cart
+              uri: lb://shop-cart
+              predicates:
+                - Path=/api/cart/**
+              filters:
+                - StripPrefix=1
+
+            # 订单服务路由
+            - id: shop-order
+              uri: lb://shop-order
+              predicates:
+                - Path=/api/order/**
+              filters:
+                - StripPrefix=1
+
+            # 支付服务路由
+            - id: shop-payment
+              uri: lb://shop-payment
+              predicates:
+                - Path=/api/payment/**
+              filters:
+                - StripPrefix=1
+
+            # 管理后台路由：前端访问 /api/admin/** 的请求会转发到 shop-admin 服务
+            - id: shop-admin
+              uri: lb://shop-admin
+              predicates:
+                - Path=/api/admin/**
+              filters:
+                - StripPrefix=1
+
+# ==================== 网关自定义配置 ====================
+gateway:
+  # 完全公开的白名单路径（不需要登录就能访问）
+  # 支持Ant风格路径匹配：? 匹配一个字符，* 匹配一层，** 匹配任意层
+  whitelist:
+    - /api/user/auth/login
+    - /api/user/auth/register
+    - /api/user/auth/captcha
+    - /api/user/auth/sms-code
+    - /api/merchant/auth/login
+    - /api/admin/auth/login
+    - /api/admin/auth/captcha
+    # 商品浏览相关接口：公开访问，不需要登录
+    - /api/product/list
+    - /api/product/*
+    - /api/product/search
+    - /api/product/category/**
+    - /api/product/brand/**
+    - /api/product/comment/**
+  # 仅限登录用户的白名单路径（需要登录，但不需要特定角色）
+  auth-whitelist: []
+  # 跨域配置
+  cors:
+    # 生产环境允许的前端域名（多个用逗号分隔）
+    allowed-origins: http://localhost:3000,http://localhost:8080
+
+# Sa-Token 配置
+sa-token:
+  # token名称（同时也是Cookie名称和提交参数名称）
+  token-name: Authorization
+  # token有效期（单位：秒），默认30天，-1代表永不过期
+  timeout: 2592000
+  # token临时有效期（指定时间内无操作就视为过期，单位：秒）
+  active-timeout: 86400
+  # 是否允许同一账号多地同时登录
+  is-concurrent: true
+  # 在多人登录同一账号时，是否共用一个token
+  is-share: true
+  # token风格（uuid、simple-uuid、random-32、random-64、random-128、tik）
+  token-style: uuid
+  # 是否输出操作日志
+  is-log: false
+
+# ==================== 日志级别配置 ====================
+logging:
+  level:
+    root: INFO
+    # 网关过滤器日志级别（开发时可以设为DEBUG查看详细过滤过程）
+    com.shop.gateway.filter: DEBUG
+    # Spring Cloud Gateway 路由日志（开启DEBUG查看路由匹配过程）
+    org.springframework.cloud.gateway: DEBUG
+    # Sa-Token 日志
+    cn.dev33.satoken: WARN
+
+# ==================== Actuator 端点配置 ====================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: gateway,health,info
+  endpoint:
+    gateway:
+      access: read-only

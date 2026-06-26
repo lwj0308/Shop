@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ShopMall 管理后台 - 原型图</title>
+  <style>
+    /* ========== CSS 变量 - 全局配色方案 ========== */
+    :root {
+      --sidebar-bg: #001529;
+      --sidebar-hover: #000c17;
+      --sidebar-active: #1890FF;
+      --sidebar-text: #ffffffb3;
+      --sidebar-text-active: #ffffff;
+      --content-bg: #f0f2f5;
+      --card-bg: #ffffff;
+      --text-primary: #262626;
+      --text-secondary: #8c8c8c;
+      --border-color: #f0f0f0;
+      --primary: #1890FF;
+      --primary-hover: #40a9ff;
+      --primary-bg: #e6f7ff;
+      --success: #52c41a;
+      --success-bg: #f6ffed;
+      --warning: #faad14;
+      --warning-bg: #fffbe6;
+      --danger: #ff4d4f;
+      --danger-bg: #fff2f0;
+      --info: #1890ff;
+      --font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', 'Source Han Sans SC', sans-serif;
+      --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: var(--font-family); background: var(--content-bg); color: var(--text-primary); font-size: 14px; -webkit-font-smoothing: antialiased; line-height: 1.5715; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #d9d9d9; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #bfbfbf; }
+    a { color: var(--primary); text-decoration: none; }
+    button { font-family: inherit; cursor: pointer; }
+
+    /* ========== 原型导航条 ========== */
+    .proto-nav { position: fixed; left: 0; top: 0; bottom: 0; width: 180px; background: #0a0a14; z-index: 9999; overflow-y: auto; border-right: 1px solid #1a1a2e; }
+    .proto-nav-title { padding: 16px; color: var(--primary); font-size: 13px; font-weight: 700; background: #06060e; text-align: center; letter-spacing: 1px; border-bottom: 1px solid #1a1a2e; }
+    .proto-nav-group { padding: 10px 16px 4px; color: #555b6e; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; font-weight: 600; }
+    .proto-nav-item { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 16px; background: none; border: none; color: #8b92a5; font-size: 12px; cursor: pointer; transition: all .2s; border-left: 2px solid transparent; }
+    .proto-nav-item:hover { background: #12121e; color: #c8cdd8; }
+    .proto-nav-item.active { background: #12121e; color: var(--primary); border-left-color: var(--primary); font-weight: 500; }
+    .proto-display { margin-left: 180px; min-height: 100vh; }
+    .proto-page { display: none; min-height: 100vh; }
+    .proto-page.active { display: block; }
+
+    /* ========== 登录页 ========== */
+    .login-page { display: flex; min-height: 100vh; background: #001529; }
+    .login-brand { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 60px; position: relative; overflow: hidden; }
+    .login-brand::before { content: ''; position: absolute; width: 600px; height: 600px; border-radius: 50%; background: radial-gradient(circle, rgba(24,144,255,0.15) 0%, transparent 70%); top: -100px; right: -200px; }
+    .login-brand::after { content: ''; position: absolute; width: 400px; height: 400px; border-radius: 50%; background: radial-gradient(circle, rgba(24,144,255,0.1) 0%, transparent 70%); bottom: -100px; left: -100px; }
+    .login-brand-logo { font-size: 36px; font-weight: 700; color: #fff; margin-bottom: 16px; letter-spacing: 2px; position: relative; z-index: 1; }
+    .login-brand-logo span { color: var(--primary); }
+    .login-brand-slogan { font-size: 16px; color: #ffffffb3; margin-bottom: 48px; position: relative; z-index: 1; }
+    .login-brand-features { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 20px; }
+    .login-brand-feature { display: flex; align-items: center; gap: 12px; color: #ffffff80; font-size: 14px; }
+    .login-brand-feature .feature-icon { width: 40px; height: 40px; border-radius: 8px; background: rgba(24,144,255,0.15); display: flex; align-items: center; justify-content: center; color: var(--primary); font-size: 18px; flex-shrink: 0; }
+    .login-form-area { width: 480px; background: #fff; display: flex; flex-direction: column; justify-content: center; padding: 60px; }
+    .login-form-title { font-size: 28px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; }
+    .login-form-subtitle { font-size: 14px; color: var(--text-secondary); margin-bottom: 40px; }
+    .login-form-group { margin-bottom: 24px; }
+    .login-form-label { display: block; font-size: 14px; color: var(--text-primary); margin-bottom: 8px; font-weight: 500; }
+    .login-form-input { width: 100%; height: 44px; padding: 0 16px; border: 1px solid #d9d9d9; border-radius: 6px; font-size: 14px; color: var(--text-primary); outline: none; transition: border-color .3s; font-family: inherit; }
+    .login-form-input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(24,144,255,0.1); }
+    .login-form-input::placeholder { color: #bfbfbf; }
+    .login-captcha-row { display: flex; gap: 12px; }
+    .login-captcha-row .login-form-input { flex: 1; }
+    .login-captcha-canvas { width: 120px; height: 44px; border-radius: 6px; cursor: pointer; border: 1px solid #d9d9d9; }
+    .login-form-options { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
+    .login-checkbox { display: flex; align-items: center; gap: 6px; color: var(--text-secondary); font-size: 13px; cursor: pointer; }
+    .login-checkbox input { accent-color: var(--primary); }
+    .login-forgot { color: var(--primary); font-size: 13px; cursor: pointer; }
+    .login-btn { width: 100%; height: 44px; background: var(--primary); color: #fff; border: none; border-radius: 6px; font-size: 16px; font-weight: 500; cursor: pointer; transition: background .3s; }
+    .login-btn:hover { background: var(--primary-hover); }
+
+    /* ========== 后台布局 ========== */
+    .admin-layout { display: flex; min-height: 100vh; }
+
+    /* ========== 侧边栏 ========== */
+    .admin-sidebar { width: 240px; background: var(--sidebar-bg); overflow-y: auto; flex-shrink: 0; display: flex; flex-direction: column; transition: width 0.3s ease; }
+    .admin-sidebar.collapsed { width: 72px; }
+    .admin-sidebar.collapsed .sidebar-text,
+    .admin-sidebar.collapsed .sidebar-logo-text,
+    .admin-sidebar.collapsed .sidebar-submenu,
+    .admin-sidebar.collapsed .sidebar-arrow { display: none; }
+    .admin-sidebar.collapsed .sidebar-menu-item { justify-content: center; padding: 14px 0; }
+    .sidebar-logo { height: 64px; display: flex; align-items: center; padding: 0 20px; gap: 10px; border-bottom: 1px solid #ffffff0d; flex-shrink: 0; }
+    .sidebar-logo-icon { width: 32px; height: 32px; background: var(--primary); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 14px; flex-shrink: 0; }
+    .sidebar-logo-text { color: #fff; font-size: 16px; font-weight: 700; white-space: nowrap; }
+    .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; }
+    .sidebar-menu-item { display: flex; align-items: center; padding: 12px 20px; color: var(--sidebar-text); cursor: pointer; transition: all .15s; font-size: 14px; gap: 10px; margin: 2px 0; user-select: none; }
+    .sidebar-menu-item:hover { color: #fff; background: var(--sidebar-hover); }
+    .sidebar-menu-item.active { color: #fff; background: var(--primary); }
+    .sidebar-menu-item .menu-icon { width: 18px; height: 18px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+    .sidebar-text { white-space: nowrap; }
+    .sidebar-arrow { margin-left: auto; transition: transform .2s; font-size: 12px; }
+    .sidebar-arrow.open { transform: rotate(90deg); }
+    .sidebar-submenu { list-style: none; padding: 0; max-height: 0; overflow: hidden; transition: max-height 0.3s ease; background: #000c17; }
+    .sidebar-submenu.open { max-height: 300px; }
+    .sidebar-submenu-item { padding: 10px 20px 10px 48px; color: var(--sidebar-text); cursor: pointer; font-size: 13px; transition: all .15s; }
+    .sidebar-submenu-item:hover { color: #fff; background: var(--sidebar-hover); }
+    .sidebar-submenu-item.active { color: var(--primary); }
+    .sidebar-collapse-btn { padding: 16px; border-top: 1px solid #ffffff0d; display: flex; align-items: center; justify-content: center; color: var(--sidebar-text); cursor: pointer; transition: color .2s; flex-shrink: 0; }
+    .sidebar-collapse-btn:hover { color: #fff; }
+
+    /* ========== 顶部导航栏 ========== */
+    .admin-main { flex: 1; display: flex; flex-direction: column; background: var(--content-bg); min-width: 0; }
+    .admin-header { height: 64px; background: #fff; border-bottom: 1px solid #e8e8e8; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; flex-shrink: 0; }
+    .header-left { display: flex; align-items: center; gap: 16px; }
+    .header-trigger { width: 36px; height: 36px; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); cursor: pointer; transition: all .15s; background: none; border: none; font-size: 18px; }
+    .header-trigger:hover { background: var(--content-bg); color: var(--text-primary); }
+    .header-breadcrumb { display: flex; align-items: center; gap: 6px; color: var(--text-secondary); font-size: 14px; }
+    .header-breadcrumb span.current { color: var(--text-primary); font-weight: 500; }
+    .header-right { display: flex; align-items: center; gap: 16px; }
+    .header-icon-btn { width: 36px; height: 36px; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); cursor: pointer; transition: all .15s; position: relative; background: none; border: none; font-size: 16px; }
+    .header-icon-btn:hover { background: var(--content-bg); color: var(--text-primary); }
+    .header-badge { position: absolute; top: 4px; right: 4px; width: 8px; height: 8px; background: var(--danger); border-radius: 50%; border: 2px solid #fff; }
+    .header-user { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background .15s; position: relative; }
+    .header-user:hover { background: var(--content-bg); }
+    .header-avatar { width: 32px; height: 32px; border-radius: 6px; background: var(--primary); display: flex; align-items: center; justify-content: center; color: white; font-size: 13px; font-weight: 600; }
+    .header-username { font-size: 14px; color: var(--text-primary); }
+    .header-dropdown { position: absolute; top: 100%; right: 0; background: #fff; border-radius: 8px; box-shadow: 0 6px 16px rgba(0,0,0,0.08); padding: 4px 0; min-width: 140px; z-index: 100; display: none; margin-top: 8px; }
+    .header-dropdown.show { display: block; }
+    .header-dropdown-item { padding: 8px 16px; font-size: 13px; color: var(--text-primary); cursor: pointer; transition: background .15s; }
+    .header-dropdown-item:hover { background: var(--content-bg); }
+    .header-dropdown-item.danger { color: var(--danger); }
+
+    /* ========== 内容区 ========== */
+    .admin-content { flex: 1; padding: 24px; overflow-y: auto; }
+
+    /* ========== 统计卡片 ========== */
+    .stat-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+    .stat-card { background: #fff; border-radius: 8px; padding: 20px 24px; display: flex; align-items: center; justify-content: space-between; }
+    .stat-card-info { flex: 1; }
+    .stat-card-label { font-size: 14px; color: var(--text-secondary); margin-bottom: 8px; }
+    .stat-card-value { font-size: 28px; font-weight: 600; color: var(--text-primary); font-family: var(--font-mono); line-height: 1.2; }
+    .stat-card-trend { font-size: 13px; margin-top: 8px; display: flex; align-items: center; gap: 4px; }
+    .stat-card-trend.up { color: var(--success); }
+    .stat-card-trend.down { color: var(--danger); }
+    .stat-card-icon { width: 56px; height: 56px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
+    .stat-card-icon.blue { background: #e6f7ff; color: var(--primary); }
+    .stat-card-icon.green { background: #f6ffed; color: var(--success); }
+    .stat-card-icon.orange { background: #fff7e6; color: #fa8c16; }
+    .stat-card-icon.red { background: #fff1f0; color: var(--danger); }
+
+    /* ========== 卡片容器 ========== */
+    .card { background: #fff; border-radius: 8px; }
+    .card-header { padding: 16px 24px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; }
+    .card-title { font-size: 16px; font-weight: 600; color: var(--text-primary); }
+    .card-body { padding: 24px; }
+    .card-extra { font-size: 13px; color: var(--primary); cursor: pointer; }
+
+    /* ========== 双栏布局 ========== */
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+    .row-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 24px; }
+
+    /* ========== 饼图 ========== */
+    .pie-chart { width: 180px; height: 180px; border-radius: 50%; position: relative; margin: 0 auto; }
+    .pie-chart-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100px; height: 100px; border-radius: 50%; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .pie-chart-center .pie-total { font-size: 24px; font-weight: 600; font-family: var(--font-mono); color: var(--text-primary); }
+    .pie-chart-center .pie-label { font-size: 12px; color: var(--text-secondary); }
+    .pie-legend { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+    .pie-legend-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+    .pie-legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .pie-legend-name { color: var(--text-secondary); flex: 1; }
+    .pie-legend-value { color: var(--text-primary); font-weight: 500; font-family: var(--font-mono); }
+
+    /* ========== 表格 ========== */
+    .table-wrapper { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    thead th { padding: 12px 16px; text-align: left; font-weight: 500; color: var(--text-secondary); background: #fafafa; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+    tbody td { padding: 12px 16px; border-bottom: 1px solid var(--border-color); color: var(--text-primary); }
+    tbody tr:nth-child(even) { background: #fafafa; }
+    tbody tr:hover { background: #e6f7ff; }
+    .table-avatar { width: 32px; height: 32px; border-radius: 50%; background: #f0f0f0; display: inline-flex; align-items: center; justify-content: center; color: var(--text-secondary); font-size: 12px; vertical-align: middle; }
+    .table-img { width: 40px; height: 40px; border-radius: 4px; background: #f5f5f5; display: inline-flex; align-items: center; justify-content: center; color: #bfbfbf; font-size: 10px; vertical-align: middle; }
+    .table-actions { display: flex; gap: 8px; }
+    .table-actions button { background: none; border: none; font-size: 13px; cursor: pointer; padding: 0; }
+    .action-view { color: var(--primary); }
+    .action-edit { color: var(--primary); }
+    .action-danger { color: var(--danger); }
+    .action-success { color: var(--success); }
+    .action-warning { color: var(--warning); }
+
+    /* ========== 状态标签 ========== */
+    .tag { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 4px; font-size: 12px; line-height: 20px; white-space: nowrap; }
+    .tag-success { background: var(--success-bg); color: var(--success); }
+    .tag-warning { background: var(--warning-bg); color: #d48806; }
+    .tag-danger { background: var(--danger-bg); color: var(--danger); }
+    .tag-info { background: var(--primary-bg); color: var(--primary); }
+    .tag-default { background: #f5f5f5; color: var(--text-secondary); }
+
+    /* ========== 分页器 ========== */
+    .pagination { display: flex; align-items: center; justify-content: flex-end; gap: 4px; padding: 16px 0 0; }
+    .pagination-info { font-size: 13px; color: var(--text-secondary); margin-right: 12px; }
+    .pagination-btn { min-width: 32px; height: 32px; border: 1px solid #d9d9d9; border-radius: 6px; background: #fff; color: var(--text-primary); font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0 8px; transition: all .15s; }
+    .pagination-btn:hover { color: var(--primary); border-color: var(--primary); }
+    .pagination-btn.active { color: var(--primary); border-color: var(--primary); font-weight: 500; }
+    .pagination-btn.disabled { color: #bfbfbf; border-color: #d9d9d9; cursor: not-allowed; }
+
+    /* ========== 搜索栏 ========== */
+    .search-bar { background: #fff; border-radius: 8px; padding: 24px; margin-bottom: 16px; display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; }
+    .search-item { display: flex; flex-direction: column; gap: 6px; }
+    .search-item label { font-size: 13px; color: var(--text-secondary); }
+    .search-item input, .search-item select { height: 36px; padding: 0 12px; border: 1px solid #d9d9d9; border-radius: 6px; font-size: 14px; color: var(--text-primary); outline: none; font-family: inherit; min-width: 180px; }
+    .search-item input:focus, .search-item select:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(24,144,255,0.1); }
+    .search-btns { display: flex; gap: 8px; margin-left: auto; align-self: flex-end; }
+    .btn { height: 36px; padding: 0 16px; border-radius: 6px; font-size: 14px; cursor: pointer; transition: all .15s; border: 1px solid #d9d9d9; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .btn-primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
+    .btn-default { background: #fff; color: var(--text-primary); }
+    .btn-default:hover { color: var(--primary); border-color: var(--primary); }
+
+    /* ========== Tab 切换 ========== */
+    .tabs { display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 0; background: #fff; border-radius: 8px 8px 0 0; padding: 0 24px; }
+    .tab-item { padding: 12px 20px; font-size: 14px; color: var(--text-secondary); cursor: pointer; border-bottom: 2px solid transparent; transition: all .15s; white-space: nowrap; }
+    .tab-item:hover { color: var(--primary); }
+    .tab-item.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 500; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* ========== 弹窗 Modal ========== */
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.45); z-index: 10000; display: none; align-items: center; justify-content: center; }
+    .modal-overlay.show { display: flex; }
+    .modal { background: #fff; border-radius: 8px; width: 520px; max-height: 80vh; overflow-y: auto; box-shadow: 0 6px 16px rgba(0,0,0,0.08), 0 9px 28px rgba(0,0,0,0.05); }
+    .modal-header { padding: 16px 24px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; }
+    .modal-title { font-size: 16px; font-weight: 600; color: var(--text-primary); }
+    .modal-close { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-secondary); background: none; border: none; font-size: 18px; transition: all .15s; }
+    .modal-close:hover { background: var(--content-bg); color: var(--text-primary); }
+    .modal-body { padding: 24px; }
+    .modal-footer { padding: 12px 24px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 8px; }
+
+    /* ========== 表单 ========== */
+    .form-group { margin-bottom: 20px; }
+    .form-label { display: block; font-size: 14px; color: var(--text-primary); margin-bottom: 6px; font-weight: 500; }
+    .form-label .required { color: var(--danger); margin-right: 4px; }
+    .form-input { width: 100%; height: 36px; padding: 0 12px; border: 1px solid #d9d9d9; border-radius: 6px; font-size: 14px; color: var(--text-primary); outline: none; font-family: inherit; }
+    .form-input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(24,144,255,0.1); }
+    .form-textarea { width: 100%; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 6px; font-size: 14px; color: var(--text-primary); outline: none; font-family: inherit; resize: vertical; min-height: 80px; }
+    .form-textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(24,144,255,0.1); }
+    .form-select { width: 100%; height: 36px; padding: 0 12px; border: 1px solid #d9d9d9; border-radius: 6px; font-size: 14px; color: var(--text-primary); outline: none; font-family: inherit; background: #fff; }
+    .form-select:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(24,144,255,0.1); }
+    .form-upload { width: 100%; height: 120px; border: 1px dashed #d9d9d9; border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-secondary); cursor: pointer; transition: border-color .3s; }
+    .form-upload:hover { border-color: var(--primary); color: var(--primary); }
+    .form-upload-icon { font-size: 28px; margin-bottom: 8px; }
+    .form-upload-text { font-size: 13px; }
+
+    /* ========== 树形结构 ========== */
+    .tree { padding: 0; list-style: none; }
+    .tree-node { border-bottom: 1px solid var(--border-color); }
+    .tree-node-header { display: flex; align-items: center; padding: 10px 16px; gap: 8px; cursor: pointer; transition: background .15s; }
+    .tree-node-header:hover { background: #fafafa; }
+    .tree-expand { width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); font-size: 12px; transition: transform .2s; flex-shrink: 0; }
+    .tree-expand.open { transform: rotate(90deg); }
+    .tree-expand.empty { visibility: hidden; }
+    .tree-node-name { flex: 1; font-size: 14px; color: var(--text-primary); }
+    .tree-node-actions { display: flex; gap: 8px; opacity: 0; transition: opacity .15s; }
+    .tree-node-header:hover .tree-node-actions { opacity: 1; }
+    .tree-children { padding-left: 28px; display: none; }
+    .tree-children.open { display: block; }
+
+    /* ========== 待办事项 ========== */
+    .todo-list { list-style: none; }
+    .todo-item { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border-color); }
+    .todo-item:last-child { border-bottom: none; }
+    .todo-dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 12px; flex-shrink: 0; }
+    .todo-dot.urgent { background: var(--danger); }
+    .todo-dot.normal { background: var(--warning); }
+    .todo-dot.low { background: var(--primary); }
+    .todo-text { flex: 1; font-size: 14px; color: var(--text-primary); }
+    .todo-count { font-size: 20px; font-weight: 600; color: var(--primary); font-family: var(--font-mono); margin-left: 12px; }
+
+    /* ========== 详情 ========== */
+    .detail-section { margin-bottom: 24px; }
+    .detail-section-title { font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color); }
+    .detail-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .detail-item { font-size: 13px; }
+    .detail-item .label { color: var(--text-secondary); margin-bottom: 4px; }
+    .detail-item .value { color: var(--text-primary); }
+
+    /* ========== 时间线 ========== */
+    .timeline { padding: 0; list-style: none; }
+    .timeline-item { display: flex; gap: 16px; padding-bottom: 20px; position: relative; }
+    .timeline-item::before { content: ''; position: absolute; left: 7px; top: 20px; bottom: 0; width: 1px; background: var(--border-color); }
+    .timeline-item:last-child::before { display: none; }
+    .timeline-dot { width: 14px; height: 14px; border-radius: 50%; background: var(--primary); flex-shrink: 0; margin-top: 4px; position: relative; z-index: 1; }
+    .timeline-content { flex: 1; }
+    .timeline-text { font-size: 13px; color: var(--text-primary); }
+    .timeline-time { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+
+    /* ========== 页面标题 ========== */
+    .page-header { margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; }
+    .page-title { font-size: 20px; font-weight: 600; color: var(--text-primary); }
+    .page-desc { font-size: 14px; color: var(--text-secondary); margin-top: 4px; }
+
+    /* ========== 权限树 ========== */
+    .perm-tree { padding: 0; list-style: none; }
+    .perm-tree-node { margin-bottom: 4px; }
+    .perm-tree-header { display: flex; align-items: center; gap: 8px; padding: 6px 0; }
+    .perm-tree-header input[type="checkbox"] { accent-color: var(--primary); }
+    .perm-tree-children { padding-left: 24px; }
+
+    /* ========== 系统管理子菜单 ========== */
+    .sys-layout { display: flex; gap: 16px; }
+    .sys-sidebar { width: 200px; background: #fff; border-radius: 8px; flex-shrink: 0; }
+    .sys-sidebar-item { padding: 12px 20px; font-size: 14px; color: var(--text-secondary); cursor: pointer; transition: all .15s; border-left: 2px solid transparent; }
+    .sys-sidebar-item:hover { color: var(--primary); background: var(--primary-bg); }
+    .sys-sidebar-item.active { color: var(--primary); border-left-color: var(--primary); background: var(--primary-bg); font-weight: 500; }
+    .sys-content { flex: 1; min-width: 0; }
+
+    @media (max-width: 1200px) {
+      .stat-cards { grid-template-columns: repeat(2, 1fr); }
+      .row-2, .row-2-1 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ========== 原型导航条 ========== -->
+<nav class="proto-nav">
+  <div class="proto-nav-title">ShopMall Admin</div>
+  <div class="proto-nav-group">页面导航</div>
+  <button class="proto-nav-item active" onclick="switchPage('login')">1. 登录页</button>
+  <button class="proto-nav-item" onclick="switchPage('dashboard')">2. 仪表盘</button>
+  <button class="proto-nav-item" onclick="switchPage('users')">3. 用户管理</button>
+  <button class="proto-nav-item" onclick="switchPage('merchants')">4. 商家管理</button>
+  <button class="proto-nav-item" onclick="switchPage('products')">5. 商品管理</button>
+  <button class="proto-nav-item" onclick="switchPage('categories')">6. 分类管理</button>
+  <button class="proto-nav-item" onclick="switchPage('brands')">7. 品牌管理</button>
+  <button class="proto-nav-item" onclick="switchPage('orders')">8. 订单管理</button>
+  <button class="proto-nav-item" onclick="switchPage('refunds')">9. 退款管理</button>
+  <button class="proto-nav-item" onclick="switchPage('contents')">10. 内容管理</button>
+  <button class="proto-nav-item" onclick="switchPage('system')">11. 系统管理</button>
+  <button class="proto-nav-item" onclick="switchPage('security')">12. 安全审计</button>
+</nav>
+
+<div class="proto-display">
+
+<!-- ==================== 页面1: 登录页 ==================== -->
+<div class="proto-page active" id="page-login">
+  <div class="login-page">
+    <div class="login-brand">
+      <div class="login-brand-logo">Shop<span>Mall</span></div>
+      <div class="login-brand-slogan">一站式商城管理平台</div>
+      <div class="login-brand-features">
+        <div class="login-brand-feature"><div class="feature-icon">&#9733;</div><span>多商家入驻，统一管理</span></div>
+        <div class="login-brand-feature"><div class="feature-icon">&#9878;</div><span>完善的订单与退款流程</span></div>
+        <div class="login-brand-feature"><div class="feature-icon">&#9881;</div><span>精细化权限与安全审计</span></div>
+        <div class="login-brand-feature"><div class="feature-icon">&#9783;</div><span>实时数据看板，运营无忧</span></div>
+      </div>
+    </div>
+    <div class="login-form-area">
+      <div class="login-form-title">管理员登录</div>
+      <div class="login-form-subtitle">请输入您的账号信息以登录管理后台</div>
+      <div class="login-form-group">
+        <label class="login-form-label">用户名</label>
+        <input class="login-form-input" type="text" placeholder="请输入用户名" value="admin">
+      </div>
+      <div class="login-form-group">
+        <label class="login-form-label">密码</label>
+        <input class="login-form-input" type="password" placeholder="请输入密码" value="••••••••">
+      </div>
+      <div class="login-form-group">
+        <label class="login-form-label">验证码</label>
+        <div class="login-captcha-row">
+          <input class="login-form-input" type="text" placeholder="请输入验证码">
+          <canvas class="login-captcha-canvas" id="captchaCanvas" width="120" height="44" onclick="drawCaptcha()"></canvas>
+        </div>
+      </div>
+      <div class="login-form-options">
+        <label class="login-checkbox"><input type="checkbox" checked> 记住我</label>
+        <span class="login-forgot">忘记密码？</span>
+      </div>
+      <button class="login-btn" onclick="switchPage('dashboard')">登 录</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 页面2: 仪表盘 ==================== -->
+<div class="proto-page" id="page-dashboard">
+  <div class="admin-layout">
+    <aside class="admin-sidebar" id="sidebar-dashboard">
+      <div class="sidebar-logo"><div class="sidebar-logo-icon">S</div><div class="sidebar-logo-text">ShopMall</div></div>
+      <ul class="sidebar-menu">
+        <li class="sidebar-menu-item active"><span class="menu-icon">&#9632;</span><span class="sidebar-text">仪表盘</span></li>
+        <li class="sidebar-menu-item" onclick="switchPage('users')"><span class="menu-icon">&#9823;</span><span class="sidebar-text">用户管理</span></li>
+        <li class="sidebar-menu-item" onclick="switchPage('merchants')"><span class="menu-icon">&#9733;</span><span class="sidebar-text">商家管理</span></li>
+        <li class="sidebar-menu-item" onclick="toggleSubmenu(this)"><span class="menu-icon">&#9830;</span><span class="sidebar-text">商品中心</span><span class="sidebar-arrow">&#9654;</span>
+          <ul class="sidebar-submenu"><li class="sidebar-submenu-item" onclick="switchPage('products')">商品管理</li><li class="sidebar-submenu-item" onclick="switchPage('categories')">分类管理</li><li class="sidebar-submenu-item" onclick="switchPage('brands')">品牌管理</li></ul>
+        </li>
+        <li class="sidebar-menu-item" onclick="toggleSubmenu(this)"><span class="menu-icon">&#9998;</span><span class="sidebar-text">订单中心</span><span class="sidebar-arrow">&#9654;</span>
+          <ul class="sidebar-submenu"><li class="sidebar-submenu-item" onclick="switchPage('orders')">订单管理</li><li class="sidebar-submenu-item" onclick="switchPage('refunds')">退款管理</li></ul>
+        </li>
+        <li class="sidebar-menu-item" onclick="switchPage('contents')"><span class="menu-icon">&#9993;</span><span class="sidebar-text">内容管理</span></li>
+        <li class="sidebar-menu-item" onclick="toggleSubmenu(this)"><span class="menu-icon">&#9881;</span><span class="sidebar-text">系统管理</span><span class="sidebar-arrow">&#9654;</span>
+          <ul class="sidebar-submenu"><li class="sidebar-submenu-item" onclick="switchPage('system')">系统设置</li><li class="sidebar-submenu-item" onclick="switchPage('security')">安全审计</li></ul>
+        </li>
+      </ul>
+      <div class="sidebar-collapse-btn" onclick="toggleSidebar('sidebar-dashboard')">&#9664; <span class="sidebar-text"> 收起</span></div>
+    </aside>
+    <div class="admin-main">
+      <header class="admin-header">
+        <div class="header-left"><button class="header-trigger" onclick="toggleSidebar('sidebar-dashboard')">&#9776;</button><div class="header-breadcrumb"><span>首页</span> / <span class="current">仪表盘</span></div></div>
+        <div class="header-right"><button class="header-icon-btn" title="全屏">&#9974;</button><button class="header-icon-btn" title="消息"><span>&#128276;</span><span class="header-badge"></span></button><div class="header-user" onclick="toggleDropdown(this)"><div class="header-avatar">A</div><span class="header-username">Admin</span><div class="header-dropdown"><div class="header-dropdown-item">个人中心</div><div class="header-dropdown-item">修改密码</div><div class="header-dropdown-item danger" onclick="switchPage('login')">退出登录</div></div></div></div>
+      </header>
+      <div class="admin-content">
+        <div class="stat-cards">
+          <div class="stat-card"><div class="stat-card-info"><div class="stat-card-label">今日订单数</div><div class="stat-card-value">1,286</div><div class="stat-card-trend up">&#9650; 12.5%</div></div><div class="stat-card-icon blue">&#128230;</div></div>
+          <div class="stat-card"><div class="stat-card-info"><div class="stat-card-label">今日销售额</div><div class="stat-card-value">¥89,432</div><div class="stat-card-trend up">&#9650; 8.2%</div></div><div class="stat-card-icon green">&#128176;</div></div>
+          <div class="stat-card"><div class="stat-card-info"><div class="stat-card-label">今日新增用户</div><div class="stat-card-value">356</div><div class="stat-card-trend down">&#9660; 3.1%</div></div><div class="stat-card-icon orange">&#128101;</div></div>
+          <div class="stat-card"><div class="stat-card-info"><div class="stat-card-label">在线商家数</div><div class="stat-card-value">128</div><div class="stat-card-trend up">&#9650; 5.6%</div></div><div class="stat-card-icon red">&#127978;</div></div>
+        </div>
+        <div class="row-2-1">
+          <div class="card">
+            <div class="card-header"><div class="card-title">近7天销售趋势</div><span class="card-extra">查看更多 &#8594;</span></div>
+            <div class="card-body">
+              <svg viewBox="0 0 700 240" style="width:100%;height:260px;" preserveAspectRatio="none">
+                <line x1="60" y1="20" x2="680" y2="20" stroke="#f0f0f0" stroke-width="1"/><line x1="60" y1="70" x2="680" y2="70" stroke="#f0f0f0" stroke-width="1"/><line x1="60" y1="120" x2="680" y2="120" stroke="#f0f0f0" stroke-width="1"/><line x1="60" y1="170" x2="680" y2="170" stroke="#f0f0f0" stroke-width="1"/><line x1="60" y1="220" x2="680" y2="220" stroke="#f0f0f0" stroke-width="1"/>
+                <text x="50" y="24" text-anchor="end" fill="#8c8c8c" font-size="11">100k</text><text x="50" y="74" text-anchor="end" fill="#8c8c8c" font-size="11">75k</text><text x="50" y="124" text-anchor="end" fill="#8c8c8c" font-size="11">50k</text><text x="50" y="174" text-anchor="end" fill="#8c8c8c" font-size="11">25k</text><text x="50" y="224" text-anchor="end" fill="#8c8c8c" font-size="11">0</text>
+                <text x="148" y="238" text-anchor="middle" fill="#8c8c8c" font-size="11">06-11</text><text x="236" y="238" text-anchor="middle" fill="#8c8c8c" font-size="11">06-12</text><text x="324" y="238" text-anchor="middle" fill="#8c8c8c" font-size="11">06-13</text><text x="412" y="238" text-anchor="middle" fill="#8c8c8c" font-size="11">06-14</text><text x="500" y="238" text-anchor="middle" fill="#8c8c8c" font-size="11">06-15</text><text x="588" y="238" text-anchor="middle" fill="#8c8c8c" font-size="11">06-16</text><text x="676" y="238" text-anchor="middle" fill="#8c8c8c" font-size="11">06-17</text>
+                <defs><linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1890ff" stop-opacity="0.25"/><stop offset="100%" stop-color="#1890ff" stop-opacity="0.02"/></linearGradient></defs>
+                <polygon points="148,140 236,100 324,120 412,70 500,90 588,50 676,60 676,220 148,220" fill="url(#areaGrad)"/>
+                <polyline points="148,140 236,100 324,120 412,70 500,90 588,50 676,60" fill="none" stroke="#1890ff" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+                <circle cx="148" cy="140" r="4" fill="#fff" stroke="#1890ff" stroke-width="2"/><circle cx="236" cy="100" r="4" fill="#fff" stroke="#1890ff" stroke-width="2"/><circle cx="324" cy="120" r="4" fill="#fff" stroke="#1890ff" stroke-width="2"/><circle cx="412" cy="70" r="4" fill="#fff" stroke="#1890ff" stroke-width="2"/><circle cx="500" cy="90" r="4" fill="#fff" stroke="#1890ff" stroke-width="2"/><circle cx="588" cy="50" r="4" fill="#fff" stroke="#1890ff" stroke-width="2"/><circle cx="676" cy="60" r="4" fill="#fff" stroke="#1890ff" stroke-width="2"/>
+              </svg>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">订单状态分布</div></div>
+            <div class="card-body" style="display:flex;flex-direction:column;align-items:center;">
+              <div class="pie-chart" style="background: conic-gradient(#1890ff 0% 35%, #52c41a 35% 55%, #faad14 55% 72%, #ff4d4f 72% 85%, #8c8c8c 85% 100%);">
+                <div class="pie-chart-center"><div class="pie-total">1,286</div><div class="pie-label">总订单</div></div>
+              </div>
+              <div class="pie-legend">
+                <div class="pie-legend-item"><span class="pie-legend-dot" style="background:#1890ff"></span><span class="pie-legend-name">待发货</span><span class="pie-legend-value">450</span></div>
+                <div class="pie-legend-item"><span class="pie-legend-dot" style="background:#52c41a"></span><span class="pie-legend-name">已完成</span><span class="pie-legend-value">257</span></div>
+                <div class="pie-legend-item"><span class="pie-legend-dot" style="background:#faad14"></span><span class="pie-legend-name">待付款</span><span class="pie-legend-value">219</span></div>
+                <div class="pie-legend-item"><span class="pie-legend-dot" style="background:#ff4d4f"></span><span class="pie-legend-name">已退款</span><span class="pie-legend-value">167</span></div>
+                <div class="pie-legend-item"><span class="pie-legend-dot" style="background:#8c8c8c"></span><span class="pie-legend-name">已取消</span><span class="pie-legend-value">193</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row-2">
+          <div class="card">
+            <div class="card-header"><div class="card-title">最新订单</div><span class="card-extra" onclick="switchPage('orders')">查看全部 &#8594;</span></div>
+            <div class="card-body" style="padding:0;">
+              <table>
+                <thead><tr><th>订单号</th><th>用户</th><th>金额</th><th>状态</th><th>下单时间</th></tr></thead>
+                <tbody>
+                  <tr><td style="font-family:var(--font-mono);font-size:13px;">20260617180001</td><td>张*明</td><td style="font-family:var(--font-mono);">¥299.00</td><td><span class="tag tag-info">待发货</span></td><td>2026-06-17 18:00</td></tr>
+                  <tr><td style="font-family:var(--font-mono);font-size:13px;">20260617175632</td><td>李*华</td><td style="font-family:var(--font-mono);">¥1,580.00</td><td><span class="tag tag-warning">待付款</span></td><td>2026-06-17 17:56</td></tr>
+                  <tr><td style="font-family:var(--font-mono);font-size:13px;">20260617174218</td><td>王*丽</td><td style="font-family:var(--font-mono);">¥89.90</td><td><span class="tag tag-success">已完成</span></td><td>2026-06-17 17:42</td></tr>
+                  <tr><td style="font-family:var(--font-mono);font-size:13px;">20260617173005</td><td>赵*强</td><td style="font-family:var(--font-mono);">¥4,560.00</td><td><span class="tag tag-info">已发货</span></td><td>2026-06-17 17:30</td></tr>
+                  <tr><td style="font-family:var(--font-mono);font-size:13px;">20260617171549</td><td>陈*芳</td><td style="font-family:var(--font-mono);">¥128.00</td><td><span class="tag tag-danger">已退款</span></td><td>2026-06-17 17:15</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">待办事项</div></div>
+            <div class="card-body">
+              <ul class="todo-list">
+                <li class="todo-item"><span class="todo-dot urgent"></span><span class="todo-text">待审核商家</span><span class="todo-count">3</span></li>
+                <li class="todo-item"><span class="todo-dot urgent"></span><span class="todo-text">待审核商品</span><span class="todo-count">5</span></li>
+                <li class="todo-item"><span class="todo-dot normal"></span><span class="todo-text">待处理退款</span><span class="todo-count">2</span></li>
+                <li class="todo-item"><span class="todo-dot low"></span><span class="todo-text">库存预警</span><span class="todo-count">8</span></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 页面3: 用户管理 ==================== -->
+<div class="proto-page" id="page-users">
+  <div class="admin-layout">
+    <aside class="admin-sidebar" id="sidebar-users">
+      <div class="sidebar-logo"><div class="sidebar-logo-icon">S</div><div class="sidebar-logo-text">ShopMall</div></div>
+      <ul class="sidebar-menu">
+        <li class="sidebar-menu-item" onclick="switchPage('dashboard')"><span class="menu-icon">&#9632;</span><span class="sidebar-text">仪表盘</span></li>
+        <li class="sidebar-menu-item active"><span class="menu-icon">&#9823;</span><span class="sidebar-text">用户管理</span></li>
+        <li class="sidebar-menu-item" onclick="switchPage('merchants')"><span class="menu-icon">&#9733;</span><span class="sidebar-text">商家管理</span></li>
+        <li class="sidebar-menu-item" onclick="toggleSubmenu(this)"><span class="menu-icon">&#9830;</span><span class="sidebar-text">商品中心</span><span class="sidebar-arrow">&#9654;</span><ul class="sidebar-submenu"><li class="sidebar-submenu-item" onclick="switchPage('products')">商品管理</li><li class="sidebar-submenu-item" onclick="switchPage('categories')">分类管理</li><li class="sidebar-submenu-item" onclick="switchPage('brands')">品牌管理</li></ul></li>
+        <li class="sidebar-menu-item" onclick="toggleSubmenu(this)"><span class="menu-icon">&#9998;</span><span class="sidebar-text">订单中心</span><span class="sidebar-arrow">&#9654;</span><ul class="sidebar-submenu"><li class="sidebar-submenu-item" onclick="switchPage('orders')">订单管理</li><li class="sidebar-submenu-item" onclick="switchPage('refunds')">退款管理</li></ul></li>
+        <li class="sidebar-menu-item" onclick="switchPage('contents')"><span class="menu-icon">&#9993;</span><span class="sidebar-text">内容管理</span></li>
+        <li class="sidebar-menu-item" onclick="toggleSubmenu(this)"><span class="menu-icon">&#9881;</span><span class="sidebar-text">系统管理</span><span class="sidebar-arrow">&#9654;</span><ul class="sidebar-submenu"><li class="sidebar-submenu-item" onclick="switchPage('system')">系统设置</li><li class="sidebar-submenu-item" onclick="switchPage('security')">安全审计</li></ul></li>
+      </ul>
+      <div class="sidebar-collapse-btn" onclick="toggleSidebar('sidebar-users')">&#9664; <span class="sidebar-text"> 收起</span></div>
+    </aside>
+    <div class="admin-main">
+      <header class="admin-header"><div class="header-left"><button class="header-trigger" onclick="toggleSidebar('sidebar-users')">&#9776;</button><div class="header-breadcrumb"><span>首页</span> / <span class="current">用户管理</span></div></div><div class="header-right"><button class="header-icon-btn">&#9974;</button><button class="header-icon-btn"><span>&#128276;</span><span class="header-badge"></span></button><div class="header-user" onclick="toggleDropdown(this)"><div class="header-avatar">A</div><span class="header-username">Admin</span><div class="header-dropdown"><div class="header-dropdown-item">个人中心</div><div class="header-dropdown-item danger" onclick="switchPage('login')">退出登录</div></div></div></div></header>
+      <div class="admin-content">
+        <div class="page-header"><div><div class="page-title">用户管理</div><div class="page-desc">管理平台注册用户信息</div></div></div>
+        <div class="search-bar">
+          <div class="search-item"><label>手机号</label><input placeholder="请输入手机号"></div>
+          <div class="search-item"><label>昵称</label><input placeholder="请输入昵称"></div>
+          <div class="search-item"><label>状态</label><select><option>全部</option><option>正常</option><option>禁用</option></select></div>
+          <div class="search-item"><label>注册时间</label><input type="date"></div>
+          <div class="search-btns"><button class="btn btn-primary">查询</button><button class="btn btn-default">重置</button></div>
+        </div>
+        <div class="card"><div class="card-body" style="padding:0;"><div class="table-wrapper"><table>
+          <thead><tr><th>ID</th><th>头像</th><th>昵称</th><th>手机号</th><th>注册时间</th><th>状态</th><th>操作</th></tr></thead>
+          <tbody>
+            <tr><td>1001</td><td><span class="table-avatar">张</span></td><td>张小明</td><td>138****1234</td><td>2026-01-15 10:23</td><td><span class="tag tag-success">正常</span></td><td class="table-actions"><button class="action-view">查看</button><button class="action-edit">编辑</button><button class="action-danger" onclick="showModal('modal-user-disable')">禁用</button></td></tr>
+            <tr><td>1002</td><td><span class="table-avatar">李</span></td><td>李大华</td><td>139****5678</td><td>2026-02-03 14:30</td><td><span class="tag tag-success">正常</span></td><td class="table-actions"><button class="action-view">查看</button><button class="action-edit">编辑</button><button class="action-danger" onclick="showModal('modal-user-disable')">禁用</button></td></tr>
+            <tr><td>1003</td><td><span class="table-avatar">王</span></td><td>王美丽</td><td>137****9012</td><td>2026-03-08 09:15</td><td><span class="tag tag-danger">禁用</span></td><td class="table-actions"><button class="action-view">查看</button><button class="action-edit">编辑</button><button class="action-success">启用</button></td></tr>
+            <tr><td>1004</td><td><span class="table-avatar">赵</span></td><td>赵强强</td><td>136****3456</td><td>2026-04-12 16:45</td><td><span class="tag tag-success">正常</span></td><td class="table-actions"><button class="action-view">查看</button><button class="action-edit">编辑</button><button class="action-danger" onclick="showModal('modal-user-disable')">禁用</button></td></tr>
+            <tr><td>1005</td><td><span class="table-avatar">陈</span></td><td>陈芳芳</td><td>135****7890</td><td>2026-05-20 11:20</td><td><span class="tag tag-success">正常</span></td><td class="table-actions"><button class="action-view">查看</button><button class="action-edit">编辑</button><button class="action-danger" onclick="showModal('modal-user-disable')">禁用</button></td></tr>
+            <tr><td>1006</td><td><span class="table-avatar">刘</span></td><td>刘伟伟</td><td>134****2345</td><td>2026-05-28 08:50</td><td><span class="tag tag-success">正常</span></td><td class="table-actions"><button class="action-view">查看</button><button class="action-edit">编辑</button><button class="action-danger" onclick="showModal('modal-user-disable')">禁用</button></td></tr>
+          </tbody>
+        </table></div></div></div>
+        <div class="pagination"><span class="pagination-info">共 86 条</span><button class="pagination-btn disabled">&#9664;</button><button class="pagination-btn active">1</button><button class="pagination-btn">2</button><button class="pagination-btn">3</button><button class="pagination-btn">...</button><button class="pagination-btn">9</button><button class="pagination-btn">&#9654;</button></div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-overlay" id="modal-user-disable"><div class="modal"><div class="modal-header"><div class="modal-title">确认禁用</div><button class="modal-close" onclick="hideModal('modal-user-disable')">&#10005;</button></div><div class="modal-body"><p>确定要禁用该用户吗？禁用后用户将无法登录和使用平台服务。</p></div><div class="modal-footer"><button class="btn btn-default" onclick="hideModal('modal-user-disable')">取消</button><button class="btn btn-primary" style="background:var(--danger);border-color:var(--danger);" onclick="hideModal('modal-user-disable')">确认禁用</button></div></div></div>
+</div>
+
+<!-- ==================== 页面4: 商家管理 ==================== -->
+<div class="proto-page" id="page-merchants">
+  <div class="admin-layout">
+    <aside class="admin-sidebar" id="sidebar-merchants">
+      <div class="sidebar-logo"><div class="sidebar-logo-icon">S</div><div class="sidebar-logo-text">ShopMall</div></div>
+      <ul class="sidebar-menu">
+        <li class="sidebar-menu-item" onclick="switchPage('dashboard')"><span class="menu-icon">&#9632;</span><span class="sidebar-text">仪表盘</span></li>
+        <li class="sidebar-menu-item" onclick="switchPage('users')"><span class="menu-icon">&#9823;</span><span class="sidebar-text">用户管理</span></li>
+        <li class="sidebar-menu-item active"><span class="menu-icon">&#9733;</span><span class="sidebar-text">商家管理</span></li>
+        <li class="sidebar-menu-item" onclick="toggleSubmenu(this)"><span class="menu-icon">&#9830;</span><span class="sidebar-text">商品中心</span><span class="sidebar-arrow">&#9654;</span><ul class="sidebar-submenu"><li class="sidebar-submenu-item" onclick="switchPage('products')">商品管理</li><li class="sidebar-submenu-item" onclick="switchPage('categories')">分类管理</li><li class="sidebar-submenu-item" onclick="switchPage('brands')">品牌管理</li></ul></li>
+        <li class="sidebar-menu-item" onclick="toggleSubmenu(this)"><span class="menu-icon">&#9998;</span><span class="sidebar-text">订单中心</span><span class="sidebar-arrow">&#9654;</span><ul class="sidebar-submenu"><li class="sidebar-submenu-item" onclick="switchPage('orders')">订单管理</li><li class="sidebar-submenu-item" onclick="switchPage('refunds')">退款管理</li></ul></li>
+        <li class="sidebar-menu-item" onclick="switchPage('contents')"><span class="menu-icon">&#9993;</span><span class="sidebar-text">内容管理</span></li>
+        <li class="sidebar-menu-item" onclick="toggleSubmenu(this)"><span class="menu-icon">&#9881;</span><span class="sidebar-text">系统管理</span><span class="sidebar-arrow">&#9654;</span><ul class="sidebar-submenu"><li class="sidebar-submenu-item" onclick="switchPage('system')">系统设置</li><li class="sidebar-submenu-item" onclick="switchPage('security')">安全审计</li></ul></li>
+      </ul>
+      <div class="sidebar-collapse-btn" onclick="toggleSidebar('sidebar-merchants')">&#9664; <span class="sidebar-text"> 收起</span></div>
+    </aside>
+    <div class="admin-main">
+      <header class="admin-header"><div class="header-left"><button class="header-trigger" onclick="toggleSidebar('sidebar-merchants')">&#9776;</button><div class="header-breadcrumb"><span>首页</span> / <span class="current">商家管理</span></div></div><div class="header-right"><button class="header-icon-btn">&#9974;</button><button class="header-icon-btn"><span>&#128276;</span><span class="header-badge"></span></button><div class="header-user" onclick="toggleDropdown(this)"><div class="header-avatar">A</div><span class="header-username">Admin</span><div class="header-dropdown"><div class="header-dropdown-item">个人中心</div><div class="header-dropdown-item danger" onclick="switchPage('login')">退出登录</div></div></div></div></header>
+      <div class="admin-content">
+        <div class="page-header"><div><div class="page-title">商家管理</div><div class="page-desc">审核与管理入驻商家</div></div></div>
+        <div class="card">
+          <div class="tabs">
+            <div class="tab-item active" onclick="switchTab(this)">全部 <span style="color:var(--text-secondary);font-size:12px;">(128)</span></div>
+            <div class="tab-item" onclick="switchTab(this)">待审核 <span style="color:var(--danger);font-size:12px;">(3)</span></div>
+            <div class="tab-item" onclick="switchTab(this)">已通过</div>
+            <div class="tab-item" onclick="switchTab(this)">已拒绝</div>
+            <div class="tab-item" onclick="switchTab(this)">已禁用</div>
+          </div>
+          <div class="card-body" style="padding:0;"><div class="table-wrapper"><table>
+            <thead><tr><th>ID</th><th>店铺名</th><th>联系人</th><th>手机号</th><th>申请时间</th><th>状态</th><th>操作</th></tr></thead>
+            <tbody>
+              <tr><td>2001</td><td>优品数码旗舰店</td><td>周明</td><td>158****1111</td><td>2026-06-15 09:30</td><td><span class="tag tag-warning">待审核</span></td><td class="table-actions"><button class="action-view">查看</button><button class="action-success" onclick="showModal('modal-merchant-audit')">审核</button></td></tr>
+              <tr><td>2002</td><td>潮流服饰屋</td><td>孙丽</td><td>159****2222</td><td>2026-06-14 14:20</td><td><span class="tag tag-warning">待审核</span></td><td class="table-actions"><button class="action-view">查看</button><button class="action-success" onclick="showModal('modal-merchant-audit')">审核</button></td></tr>
+              <tr><td>2003</td><td>美味零食铺</td><td>吴刚</td><td>157****3333</td><td>2026-06-13 11:45</td><td><span class="tag tag-success">已通过</span></td><td class="table-actions"><button class="action-view">查看</button><button class="action-danger">禁用</button></td></tr>
+              <tr><td>2004</td><td>家居生活馆</td><td>郑华</td><td>156****4444</td><td>2026-06-12 16:00</td><td><span class="tag tag-success">已通过</span></td><td class="table-actions"><button class="action-view">查看</button><button class="action-danger">禁用</button></td></tr>
+              <tr><td>2005</td><td>运动达人店</td><td>王强</td><td>155****5555</td><td>2026-06-11 08:30</td><td><span class="tag tag-danger">已拒绝</span></td><td class="table-actions"><button class="action-view">查看</button></td></tr>
+              <tr><td>2006</td><td>母婴好物店</td><td>林芳</td><td>153****6666</td><td>2026-06-10 10:15</td><td><span class="tag tag-success">已通过</span></td><td class="table-actions"><button class="action-view">查看</button><button class="action-danger">禁用</button></td></tr>
+            </tbody>
+          </table></div></div>
+        </div>
+        <div class="pagination"><span class="pagination-info">共 128 条</span><button class="pagination-btn disabled">&#9664;</button><button class="pagination-btn active">1</button><button class="pagination-btn">2</button><button class="pagination-btn">3</button><button class="pagination-btn">&#9654;</button></div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-overlay" id="modal-merchant-audit"><div class="modal"><div class="modal-header"><div class="modal-title">商家审核</div><button class="modal-close" onclick="hideModal('modal-merchant-audit')">&#10005;</button></div><div class="modal-body"><div class="form-group"><label class="form-label">审核结果</label><select class="form-select"><option>通过</option><option>拒绝</option></select></div><div class="form-group"><label class="form-label">审核备注</label><textarea class="form-textarea" placeholder="请输入审核备注"></textarea></div></div><div class="modal-footer"><button class="btn btn-default" onclick="hideModal('modal-merchant-audit')">取消</button><button class="btn btn-primary" onclick="hideModal('modal-merchant-audit')">提交</button></div></div></div>
+</div>
+
+<!-- ==================== 页面5: 商品管理 ==================== -->
+<div class="proto-page" id="page-products">
+  <div class="admin-layout">
+    <aside class="admin-sidebar" id="sidebar-products">
+      <div class="sidebar-logo"><div class="sidebar-logo-icon">S</div><div class="sidebar-logo-text">ShopMall</div></div>
+      <ul class="sidebar-menu">
+        <li class="sidebar-menu-item" onclick="switchPage('dashboard')"><span class="menu-icon">&#9632;</span><span class="sidebar-text">仪表盘</span></li>
+        <li class="sidebar-menu-item" onclick="switchPage('users')"><span class="menu-icon">&#9823;</span><span class="sidebar-text">用户管理</span></li>
+        <li class="sidebar-menu-item" onclick="switchPage('merchants')"><span class="menu-icon">&#9733;</span><span class="sidebar-text">商家管理</span></li>
+        <li class="sidebar-menu-item active" onclick="toggleSubmenu(this)"><span class="menu-icon">&#9830;</span><span class="sidebar-text">商品中心</span><span class="sidebar-arrow open">&#9654;</span><ul class="sidebar-submenu open"><li class="sidebar-submenu-item active">商品管理</li><li class="sidebar-submenu-item" onclick="switchPage('categories')">分类管理</li><li class="sidebar-submenu-item" onclick="switchPage('brands')">品牌管理</li></ul></li>
+        <li class="sidebar-menu-item" onclick="toggleSubmenu(this)"><span class="menu-icon">&#9998;</span><span class="sidebar-text">订单中心</span><span class="sidebar-arrow">&#9654;</span><ul class="sidebar-submenu"><li class="sidebar-submenu-item" onclick="switchPage('orders')">订单管理</li><li class="sidebar-submenu-item" onclick="switchPage('refunds')">退款管理</li></ul></li>
+        <li class="sidebar-menu-item" onclick="switchPage('contents')"><span class="menu-icon">&#9993;</span><span class="sidebar-text">内容管理</span></li>
+        <li class="sidebar-menu-item" onclick="toggleSubmenu(this)"><span class="menu-icon">&#9881;</span><span class="sidebar-text">系统管理</span><span class="sidebar-arrow">&#9654;</span><ul class="sidebar-submenu"><li class="sidebar-submenu-item" onclick="switchPage('system')">系统设置</li><li class="sidebar-submenu-item" onclick="switchPage('security')">安全审计</li></ul></li>
+      </ul>
+      <div class="sidebar-collapse-btn" onclick="toggleSidebar('sidebar-products')">&#9664; <span class="sidebar-text"> 收起</span></div>
+    </aside>
+    <div class="admin-main">
+      <header class="admin-header"><div class="header-left"><button class="header-trigger" onclick="toggleSidebar('sidebar-products')">&#9776;</button><div class="header-breadcrumb"><span>首页</span> / <span>商品中心</span> / <span class="current">商品管理</span></div></div><div class="header-right"><button class="header-icon-btn">&#9974;</button><button class="header-icon-btn"><span>&#128276;</span><span class="header-badge"></span></button><div class="header-user" onclick="toggleDropdown(this)"><div class="header-avatar">A</div><span class="header-username">Admin</span><div class="header-dropdown"><div class="header-dropdown-item">个人中心</div><div class="header-dropdown-item danger" onclick="switchPage('login')">退出登录</div></div></div></div></header>
+      <div class="admin-content">
+        <div class="page-header"><div><div class="page-title">商品管理</div><div class="page-desc">管理平台商品信息与审核</div></div><button class="btn btn-primary">+ 新增商品</button></div>
+        <div class="search-bar">
+          <div class="search-item"><label>商品名</label><input placeholder="请输入商品名"></div>
+          <div class="search-item"><label>分类</label><select><option>全部分类</option><option>数码电子</option><option>服饰鞋包</option><option>食品饮料</option><option>家居生活</option></select></div>
+          <div class="search-item"><label>状态</label><select><option>全部状态</option><option>上架</option><option>下架</option><option>待审核</option></select></div>
+          <div class="search-item"><label>价格范围</label><input placeholder="最低价" style="min-width:100px;"> - <input placeholder="最高价" style="min-width:100px;"></div>
+          <div class="search-btns"><button class="btn btn-primary">查询</button><button class="btn btn-default">重置</button></div>
+        </div>
+        <div class="card"><div class="card-body" style="padding:0;"><div class="table-wrapper"><table>
+          <thead><tr><th>ID</th><th>商品图</th><th>商品名</th><th>分类</th><th>价格</th><th>库存</th><th>状态</th><th>操作</th></tr></thead>
+          <tbody>
+            <tr><td>3001</td><td><span class="table-img">&#128241;</span></td><td>iPhone 16 Pro Max 256GB</td><td>数码电子</td><td style="font-family:var(--font-mono);">¥9,999.00</td><td style="font-family:var(--font-mono);">580</td><td><span class="tag tag-success">上架</span></td><td class="table-actions"><button class="action-view">查看</button><button class="action-warning">下架</button><button class="action-danger">删除</button></td></tr>
+            <tr><td>3002</td><td><span class="table-img">&#128085;</span></td><td>夏季新款连衣裙</td><td>服饰鞋包</td><td style="font-family:var(--font-mono);">¥299.00</td><td style="font-family:var(--font-mono);">1,200</td><td><span class="tag tag-success">上架</span></td><td class="table-actions"><button class="action-view">查看</button><button class="action-warning">下架</button><button class="action-danger">删除</button></td></tr>
+            <tr><td>3003</td><td><span class="table-img">&#127852;</span></td><td>进口坚果礼盒装</td><td>食品饮料</td><td style="font-family:var(--font-mono);">¥168.00</td><td style="font-family:var(--font-mono);">340</td><td><span class="tag tag-warning">待审核</span></td><td class="table-actions"><button class="action-view">查看</button><button class="action-success" onclick="showModal('modal-product-audit')">审核</button></td></tr>
+            <tr><td>3004</td><td><span class="table-img">&#128715;</span></td><td>智能保温杯500ml</td><td>家居生活</td><td style="font-family:var(--font-mono);">¥89.90</td><td style="font-family:var(--font-mono);">0</td><td><span class="tag tag-default">下架</span></td><td class="table-actions"><button class="action-view">查看</button><button class="action-success">上架</button><button class="action-danger">删除</button></td></tr>
+            <tr><td>3005</td><td><span class="table-img">&#9917;</span></td><td>专业跑步鞋透气款</td><td>服饰鞋包</td><td style="font-family:var(--font-mono);">¥459.00</td><td style="font-family:var(--font-mono);">860</td><td><span class="tag tag-success">上架</span></td><td class="table-actions"><button class="action-view">查看</button><button class="action-warning">下架</button><button class="action-danger">删除</button></td></tr>
+          </tbody>
+        </table></div></div></div>
+        <div class="pagination"><span class="pagination-info">共 2,456 条</span><button class="pagination-btn disabled">&#9664;</button><button class="pagination-btn active">1</button><button class="pagination-btn">2</button><button class="pagination-btn">3</button><button class="pagination-btn">...</button><button class="pagination-btn">246</button><button class="pagination-btn">&#9654;</button></div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-overlay" id="modal-product-audit"><div class="modal"><div class="modal-header"><div class="modal-title">商品审核</div><button class="modal-close" onclick="hideModal('modal-product-audit')">&#10005;</button></div><div class="modal-body"><div class="form-group"><label class="form-label">审核结果</label><select class="form-select"><option>通过</option><option>拒绝</option></select></div><div class="form-group"><label class="form-label">审核备注</label><textarea class="form-textarea" placeholder="请输入审核备注"></textarea></div></div><div class="modal-footer"><button class="btn btn-default" onclick="hideModal('modal-product-audit')">取消</button><button class="btn btn-primary" onclick="hideModal('modal-product-audit')">提交</button></div></div></div>
+</div>
+
+<!-- ==================== 页面6: 分类管理 ==================== -->
+<div class="proto-page" id="page-categories">
+  <div class="admin-layout">
+    <aside class="admin-sidebar" id="sidebar-categories">
+      <div class="sidebar-logo"><div class="sidebar-logo-icon">S</div><div class="sidebar-logo-text">ShopMall</div></div>
+      <ul class="sidebar-menu">
+        <li class="sidebar-menu-item" onclick="switchPage('dashboard')"><span class="menu-icon">&#9632;</span><span class="sidebar-text">仪表盘</span></li>
+        <li class="sidebar-menu-item" onclick="switchPage('users')"><span class="menu-icon">&#9823;</span><span class="sidebar-text">用户管理</span></li>
+        <li class="sidebar-menu-item" onclick="switchPage('merchants')"><span class="menu-icon">&#9733;</span><span class="sidebar-text">商家管理</span></li>
+        <li class="sidebar-menu-item active" onclick="toggleSubmenu(this)"><span class="menu-icon">&#9830;</span><span class="sidebar-text">商品中心</span><span class="sidebar-arrow open">&#9654;</span><ul class="sidebar-submenu open"><li class="sidebar-submenu-item" onclick="switchPage('products')">商品管理</li><li class="sidebar-submenu-item active">分类管理</li><li class="sidebar-submenu-item" onclick="switchPage('brands')">品牌管理</li></ul></li>
+        <li class="sidebar-menu-item" onclick="toggleSubmenu(this)"><span class="menu-icon">&#9998;</span><span class="sidebar-text">订单中心</span><span class="sidebar-arrow">&#9654;</span><ul class="sidebar-submenu"><li class="sidebar-submenu-item" onclick="switchPage('orders')">订单管理</li><li class="sidebar-submenu-item" onclick="switchPage('refunds')">退款管理</li></ul></li>
+        <li class="sidebar-menu-item" onclick="switchPage('contents')"><span class="menu-icon">&#9993;</span><span class="sidebar-text">内容管理</span></li>
+        <li class="sidebar-menu-item" onclick="toggleSubmenu(this)"><span class="menu-icon">&#9881;</span><span class="sidebar-text">系统管理</span><span class="sidebar-arrow">&#9654;</span><ul class="sidebar-submenu"><li class="sidebar-submenu-item" onclick="switchPage('system')">系统设置</li><li class="sidebar-submenu-item" onclick="switchPage('security')">安全审计</li></ul></li>
+      </ul>
+      <div class="sidebar-collapse-btn" onclick="toggleSidebar('sidebar-categories')">&#9664; <span class="sidebar-text"> 收起</span></div>
+    </aside>
+    <div class="admin-main">
+      <header class="admin-header"><div class="header-left"><button class="header-trigger" onclick="toggleSidebar('sidebar-categories')">&#9776;</button><div class="header-breadcrumb"><span>首页</span> / <span>商品中心</span> / <span class="current">分类管理</span></div></div><div class="header-right"><button class="header-icon-btn">&#9974;</button><button class="header-icon-btn"><span>&#128276;</span><span class="header-badge"></span></button><div class="header-user" onclick="toggleDropdown(this)"><div class="header-avatar">A</div><span class="header-username">Admin</span><div class="header-dropdown"><div class="header-dropdown-item">个人中心</div><div class="header-dropdown-item danger" onclick="switchPage('login')">退出登录</div></div></div></div></header>
+      <div class="admin-content">
+        <div class="page-header"><div><div class="page-title">分类管理</div><div class="page-desc">管理商品三级分类结构</div></div><button class="btn btn-primary" onclick="showModal('modal-category-edit')">+ 新增一级分类</button></div>
+        <div class="card"><div class="card-body" style="padding:0;">
+          <ul class="tree">
+            <li class="tree-node"><div class="tree-node-header" onclick="toggleTreeNode(this)"><span class="tree-expand open">&#9654;</span><span class="tree-node-name">&#128241; 数码电子</span><div class="tree-node-actions"><button class="action-edit" onclick="event.stopPropagation();showModal('modal-category-edit')">编辑</button><button class="action-success" onclick="event.stopPropagation();showModal('modal-category-edit')">新增子分类</button><button class="action-danger" onclick="event.stopPropagation()">删除</button></div></div>
+              <ul class="tree-children open">
+                <li class="tree-node"><div class="tree-node-header" onclick="toggleTreeNode(this)"><span class="tree-expand open">&#9654;</span><span class="tree-node-name">&#128241; 手机通讯</span><div class="tree-node-actions"><button class="action-edit" onclick="event.stopPropagation();showModal('modal-category-edit')">编辑</button><button class="action-success" onclick="event.stopPropagation();showModal('modal-category-edit')">新增子分类</button><button class="action-danger" onclick="event.stopPropagation()">删除</button></div></div>
+                  <ul class="tree-children open">
+                    <li class="tree-node"><div class="tree-node-header"><span class="tree-expand empty">&#9654;</span><span class="tree-node-name">智能手机</span><div class="tree-node-actions"><button class="action-edit" onclick="event.stopPropagation();showModal('modal-category-edit')">编辑</button><button class="action-danger" onclick="event.stopPropagation()">删除</button></div></div></li>
+                    <li class="tree-node"><div class="tree-node-header"><span class="tree-expand empty">&#9654;</span><span class="tree-node-name">功能手机</span><div class="tree-node-actions"><button class="action-edit" onclick="event.stopPropagation();showModal('modal-category-edit')">编辑</button><button class="action-danger" onclick="event.stopPropagation()">删除</button></div></div></li>
+                  </ul>
+                </li>
+                <li class="tree-node"><div class="tree-node-header"><span class="tree-expand empty">&#9654;</span><span class="tree-node-name">&#128187; 电脑办公</span><div class="tree-node-actions"><button class="action-edit" onclick="event.stopPropagation();showModal('modal-category-edit')">编辑</button><button class="action-success" onclick="event.stopPropagation();showModal('modal-category-edit')">新增子分类</button><button class="action-danger" onclick="event.stopPropagation()">删除</button></div></div></li>
+                <li class="tree-node"><div class="tree-node-header"><span class="tree-expand empty">&#9654;</span><span class="tree-node-name">&#127925; 智能穿戴</span><div class="tree-node-actions"><button class="action-edit" onclick="event.stopPropagation();showModal('modal-category-edit')">编辑</button><button class="action-success" onclick="event.stopPropagation();showModal('modal-category-edit')">新增子分类</button><button class="action-danger" onclick="event.stopPropagation()">删除</button></div></div></li>
+              </ul>
+            </li>
+            <li class="tree-node"><div class="tree-node-header" onclick="toggleTreeNode(this)"><span class="tree-expand">&#9654;</span><span class="tree-node-name">&#128085; 服饰鞋包</span><div class="tree-node-actions"><button class="action-edit" onclick="event.stopPropagation();showModal('modal-category-edit')">编辑</button><button class="action-success" onclick="event.stopPropagation();showModal('modal-category-edit')">新增子分类</button><button class="action-danger" onclick="event.stopPropagation()">删除</button></div></div>
+              <ul class="tree-children">
+                <li class="tree-node"><div class="tree-node-header"><span class="tree-expand empty">&#9654;</span><span class="tree-node-name">女装</span><div class="tree-node-actions"><button class="action-edit" onclick="event.stopPropagation();showModal('modal-category-edit')">编辑</button><button class="action-danger" onclick="event.stopPropagation()">删除</button></div></div></li>
+                <li class="tree-node"><div class="tree-node-header"><span class="tree-expand empty">&#9654;</span><span class="tree-node-name">男装</span><div class="tree-node-actions"><button class="action-edit" onclick="event.stopPropagation();showModal('modal-category-edit')">编辑</button><button class="action-danger" onclick="event.stopPropagation()">删除</button></div></div></li>
+                <li class="tree-node"><div class="tree-node-header"><span class="tree-expand empty">&#9654;</span><span class="tree-node-name">鞋靴</span><div class="tree-node-actions"><button class="action-edit" onclick="event.stopPropagation();showModal('modal-category-edit')">编辑</button><button class="action-danger" onclick="event.stopPropagation()">删除</button></div></div></li>
+              </ul>
+            </li>
+            <li class="tree-node"><div class="tree-node-header" onclick="toggleTreeNode(this)"><span class="tree-expand">&#9654;</span><span class="tree-node-name">&#127852; 食品饮料</span><div class="tree-node-actions"><button class="action-edit" onclick="event.stopPropagation();showModal('modal-category-edit')">编辑</button><button class="action-success" onclick="event.stopPropagation();showModal('modal-category-edit')">新增子分类</button><button class="action-danger" onclick="event.stopPropagation()">删除</button></div></div>
+              <ul class="tree-children">
+                <li class="tree-node"><div class="tree-node-header"><span class="tree-expand empty">&#9654;</span><span class="tree-node-name">休闲零食</span><div class="tree-node-actions"><button class="action-edit" onclick="event.stopPropagation();showModal('modal-category-edit')">编辑</button><button class="action-danger" onclick="event.stopPropagation()">删除</button></div></div></li>
+                <li class="tree-node"><div class="tree-node-header"><span class="tree-expand empty">&#9654;</span><span class="tree-node-name">酒水饮料</span><div class="tree-node-actions"><button class="action-edit" onclick="event.stopPropagation();showModal('modal-category-edit')">编辑</button><button class="action-danger" onclick="event.stopPropagation()">删除</button></div></div></li>
+              </ul>
+            </li>
+            <li class="tree-node"><div class="tree-node-header" onclick="toggleTreeNode(this)"><span class="tree-expand">&#9654;</span><span class="tree-node-name">&#127968; 家居生活</span><div class="tree-node-actions"><button class="action-edit" onclick="event.stopPropagation();showModal('modal-category-edit')">编辑</button><button class="action-success" onclick="event.stopPropagation();showModal('modal-category-edit')">新增子分类</button><button class="action-danger" onclick="event.stopPropagation()">删除</button></div></div>
+              <ul class="tree-children">
+                <li class="tree-node"><div class="tree-node-header"><span class="tree-expand empty">&#9654;</span><span class="tree-node-name">家纺用品</span><div class="tree-node-actions"><button class="action-edit" onclick="event.stopPropagation();showModal('modal-category-edit')">编辑</button><button class="action-danger" onclick="event.stopPropagation()">删除</button></div></div></li>
+                <li class="tree-node"><div class="tree-node-header"><span class="tree-expand empty">&#9654;</span><span class="tree-node-name">厨房用品</span><div class="tree-node-actions"><button class="action-edit" onclick="event.stopPropagation();showModal('modal-category-edit')">编辑</button><button class="action-danger" onclick="event.stopPropagation()">删除</button></div></div></li>
+              </ul>
+            </li>
+          </ul>
+        </div></div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-overlay" id="modal-category-edit"><div class="modal"><div class="modal-header"><div class="modal-title">编辑分类</div><button class="modal-close" onclick="hideModal('modal-category-edit')">&#10005;</button></div><div class="modal-body"><div class="form-group"><label class="form-label"><span class="required">*</span>分类名称</label><input class="form-input" placeholder="请输入分类名称" value="数码电子"></div><div class="form-group"><label class="form-label">分类图标</label><input class="form-input" placeholder="请输入图标标识" value="electronics"></div><div class="form-group"><label class="form-label">排序</label><input class="form-input" type="number" value="1"></div><div class="form-group"><label class="form-label">状态</label><select class="form-select"><option>启用</option><option>禁用</option></select></div></div><div class="modal-footer"><button class="btn btn-default" onclick="hideModal('modal-category-edit')">取消</button><button class="btn btn-primary" onclick="hideModal('modal-category-edit')">保存</button></div></div></div>
+</div>
+
+<!-- ==================== 页面7: 品牌管理 ==================== -->
+<div class="proto-page" id="page-brands">
+  <div class="admin-layout">
+    <aside class="admin-sidebar" id="sidebar-brands">
+      <div class="sidebar-logo"><div class="sidebar-logo-icon">S</div><div class="sidebar-logo-text">ShopMall</div></div>
+      <ul class="sidebar-menu">
+        <li class="sidebar-menu-item" onclick="switchPage('dashboard')"><span class="menu-icon">&#9632;</span><span class="sidebar-text">仪表盘</span></li>
+        <li class="sidebar-menu-item" onclick="switchPage('users')"><span class="menu-icon">&#9823;</span><span class="sidebar-text">用户管理</span></li>
+        <li class="sidebar-menu-item" onclick="switchPage('merchants')"><span class="menu-icon">&#9733;</span><span class="sidebar-text">商家管理</span></li>
+        <li class="sidebar-menu-item active" onclick="toggleSubmenu(this)"><span class="menu-icon">&#9830;</span><span class="sidebar-text">商品中心</span><span class="sidebar-arrow open">&#9654;</span><ul class="sidebar-submenu open"><li class="sidebar-submenu-item" onclick="switchPage('products')">商品管理</li><li class="sidebar-submenu-item" onclick="switchPage('categories')">分类管理</li><li class="sidebar-submenu-item active">品牌管理</li></ul></li>
+        <li class="sidebar-menu-item" onclick="toggleSubmenu(this)"><span class="menu-icon">&#9998;</span><span class="sidebar-text">订单中心</span><span class="sidebar-arrow">&#9654;</span><ul class="sidebar-submenu"><li class="sidebar-submenu-item" onclick="switchPage('orders')">订单管理</li><li class="sidebar-submenu-item" onclick="switchPage('refunds')">退款管理</li></ul></li>
+        <li class="sidebar-menu-item" onclick="switchPage('contents')"><span class="menu-icon">&#9993;</span><span class="sidebar-text">内容管理</span></li>
+        <li class="sidebar-menu-item" onclick="toggleSubmenu(this)"><span class="menu-icon">&#9881;</span><span class="sidebar-text">系统管理</span><span class="sidebar-arrow">&#9654;</span><ul class="sidebar-submenu"><li class="sidebar-submenu-item" onclick="switchPage('system')">系统设置</li><li class="sidebar-submenu-item" onclick="switchPage('security')">安全审计</li></ul></li>
+      </ul>
+      <div class="sidebar-collapse-btn" onclick="toggleSidebar('sidebar-brands')">&#9664; <span class="sidebar-text"> 收起</span></div>
+    </aside>
+    <div class="admin-main">
+      <header class="admin-header"><div class="header-left"><button class="header-trigger" onclick="toggleSidebar('sidebar-brands')">&#9776;</button><div class="header-breadcrumb"><span>首页</span> / <span>商品中心</span> / <span class="current">品牌管理</span></div></div><div class="header-right"><button class="header-icon-btn">&#9974;</button><button class="header-icon-btn"><span>&#128276;</span><span class="header-badge"></span></button><div class="header-user" onclick="toggleDropdown(this)"><div class="header-avatar">A</div><span class="header-username">Admin</span><div class="header-dropdown"><div class="header-dropdown-item">个人中心</div><div class="header-dropdown-item danger" onclick="switchPage('login')">退出登录</div></div></div></div></header>
+      <div class="admin-content">
+        <div class="page-header"><div><div class="page-title">品牌管理</div><div class="page-desc">管理商品品牌信息</div></div><button class="btn btn-primary" onclick="showModal('modal-brand-edit')">+ 新增品牌</button></div>
+        <div class="card"><div class="card-body" style="padding:0;"><div class="table-wrapper"><table>
+          <thead><tr><th>ID</th><th>Logo</th><th>品牌名</th><th>描述</th><th>状态</th><th>操作</th></tr></thead>
+          <tbody>
+            <tr><td>4001</td><td><span class="table-img" style="font-size:14px;">A</span></td><td>Apple</td><td>美国科技巨头，全球知名消费电子品牌</td><td><span class="tag tag-success">启用</span></td><td class="table-actions"><button class="action-edit" onclick="showModal('modal-brand-edit')">编辑</button><button class="action-danger">删除</button></td></tr>
+            <tr><td>4002</td><td><span class="table-img" style="font-size:14px;">S</span></td><td>Samsung</td><td>韩国最大的综合性企业集团</td><td><span class="tag tag-success">启用</span></td><td class="table-actions"><button class="action-edit" onclick="showModal('modal-brand-edit')">编辑</button><button class="action-danger">删除</button></td></tr>
+            <tr><td>4003</td><td><span class="table-img" style="font-size:14px;">H</span></td><td>HUAWEI</td><td>中国领先的ICT基础设施和智能终端提供商</td><td><span class="tag tag-success">启用</span></td><td class="table-actions"><button class="action-edit" onclick="showModal('modal-brand-edit')">编辑</button><button class="action-danger">删除</button></td></tr>
+            <tr><td>4004</td><td><span class="table-img" style="font-size:14px;">N</span></td><td>Nike</td><td>全球著名的体育运动品牌</td><td><span class="tag tag-success">启用</span></td><td class="table-actions"><button class="action-edit" onclick="showModal('modal-brand-edit')">编辑</button><button class="action-danger">删除</button></td></tr>
+            <tr><td>4005</td><td><span class="table-img" style="font-size:14px;">U</span></td><td>UNIQLO</td><td>日本服装品牌，注重基础款与品质</td><td><span class="tag tag-default">禁用</span></td><td class="table-actions"><button class="action-edit" onclick="showModal('modal-brand-edit')">编辑</button><button class="action-danger">删除</button></td></tr>
+          </tbody>
+        </table></div></div></div>
+        <div class="pagination"><span class="pagination-info">共 56 条</span><button class="pagination-btn disabled">&#9664;</button><button class="pagination-btn active">1</button><button class="pagination-btn">2</button><button class="pagination-btn">3</button><button class="pagination-btn">&#9654;</button></div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-overlay" id="modal-brand-edit"><div class="modal"><div class="modal-header"><div class="modal-title">新增品牌</div><button class="modal-close" onclick="hideModal('modal-brand-edit')">&#10005;</button></div><div class="modal-body"><div class="form-group"><label class="form-label"><span class="required">*</span>品牌名称</label><input class="form-input" placeholder="请输入品牌名称"></div><div class="form-group"><label class="form-label">品牌Logo</label><div class="form-upload"><div class="form-upload-icon">&#128247;</div><div class="form-upload-text">点击上传Logo图片</div></div></div><div class="form-group"><label class="form-label">品牌描述</label><textarea class="form-textarea" placeholder="请输入品牌描述"></textarea></div><div class="form-group"><label class="form-label">状态</label><select class="form-select"><option>启用</option><option>禁用</option></select></div></div><div class="modal-footer"><button class="btn btn-default" onclick="hideModal('modal-brand-edit')">取消</button><button class="btn btn-primary" onclick="hideModal('modal-brand-edit')">保存</button></div></div></div>
+</div>
+
+<!-- ==================== 页面8: 订单管理 ==================== -->
+<div class="proto-page" id="page-orders">
+  <div class="admin-layout">
+    <aside class="admin-sidebar" id="sidebar-orders">
+      <div class="sidebar-logo"><div class="sidebar-logo-icon">S</div><div class="sidebar-logo-text">ShopMall</div></div>
+      <ul class="sidebar-menu">
+        <li class="sidebar-menu-item" onclick="switchPage('dashboard')"><span class="menu-icon">&#9632;</span><span class="sidebar-text">仪表盘</span></li>
+        <li class="sidebar-menu-item" onclick="switchPage('users')"><span class="menu-icon">&#9823;</span><span class="sidebar-text">用户管理</span></li>
+        <li class="sidebar-menu-item" onclick="switchPage('merchants')"><span class="menu-icon">&#9733;</span><span class="sidebar-text">商家管理</span></li>
+        <li class="sidebar-menu-item" onclick="toggleSubmenu(this)"><span class="menu-icon">&#9830;</span><span class="sidebar-text">商品中心</span><span class="sidebar-arrow">&#9654;</span><ul class="sidebar-submenu"><li class="sidebar-submenu-item" onclick="switchPage('products')">商品管理</li><li class="sidebar-submenu-item" onclick="switchPage('categories')">分类管理</li><li class="sidebar-submenu-item" onclick="switchPage('brands')">品牌管理</li></ul></li>
+        <li class="sidebar-menu-item active" onclick="toggleSubmenu(this)"><span class="menu-icon">&#9998;</span><span class="sidebar-text">订单中心</span><span class="sidebar-arrow open">&#9654;</span><ul class="sidebar-submenu open"><li class="sidebar-submenu-item active">订单管理</li><li class="sidebar-submenu-item" onclick="switchPage('refunds')">退款管理</li></ul></li>
+        <li class="sidebar-menu-item" onclick="switchPage('contents')"><span class="menu-icon">&#9993;</span><span class="sidebar-text">内容管理</span></li>
+        <li class="sidebar-menu-item" onclick="toggleSubmenu(this)"><span class="menu-icon">&#9881;</span><span class="sidebar-text">系统管理</span><span class="sidebar-arrow">&#9654;</span><ul class="sidebar-submenu"><li class="sidebar-submenu-item" onclick="switchPage('system')">系统设置</li><li class="sidebar-submenu-item" onclick="switchPage('security')">安全审计</li></ul></li>
+      </ul>
+      <div class="sidebar-collapse-btn" onclick="toggleSidebar('sidebar-orders')">&#9664; <span class="sidebar-text"> 收起</span></div>
+    </aside>
+    <div class="admin-main">
+      <header class="admin-header"><div class="header-left"><button class="header-trigger" onclick="toggleSidebar('sidebar-orders')">&#9776;</button><div class="header-breadcrumb"><span>首页</span> / <span>订单中心</span> / <span class="current">订单管理</span></div></div><div class="header-right"><button class="header-icon-btn">&#9974;</button><button class="header-icon-btn"><span>&#128276;</span><span class="header-badge"></span></button><div class="header-user" onclick="toggleDropdown(this)"><div class="header-avatar">A</div><span class="header-username">Admin</span><div class="header-dropdown"><div class="header-dropdown-item">个人中心</div><div class="header-dropdown-item danger" onclick="switchPage('login')">退出登录</div></div></div></div></header>
+      <div class="admin-content">
+        <div class="page-header"><div><div class="page-title">订单管理</div><div class="page-desc">查看和管理所有订单</div></div></div>
+        <div class="card">
+          <div class="tabs">
+            <div class="tab-item active" onclick="switchTab(this)">全部</div>
+            <div class="tab-item" onclick="switchTab(this)">待付款</div>
+            <div class="tab-item" onclick="switchTab(this)">待发货</div>
+            <div class="tab-item" onclick="switchTab(this)">已发货</div>
+            <div class="tab-item" onclick="switchTab(this)">已完成</div>
+            <div class="tab-item" onclick="switchTab(this)">已取消</div>
+            <div class="tab-item" onclick="switchTab(this)">已退款</div>
+          </div>
+          <div class="card-body" style="padding:0;"><div class="table-wrapper"><table>
+            <thead><tr><th>订单号</th><th>用户</th><th>商品摘要</th><th>金额</th><th>状态</th><th>下单时间</th><th>操作</th></tr></thead>
+            <tbody>
+              <tr><td style="font-family:var(--font-mono);font-size:13px;">20260617180001</td><td>张小明</td><td>iPhone 16 Pro Max 等1件</td><td style="font-family:var(--font-mono);">¥9,999.00</td><td><span class="tag tag-info">待发货</span></td><td>2026-06-17 18:00</td><td class="table-actions"><button class="action-view" onclick="showModal('modal-order-detail')">详情</button></td></tr>
+              <tr><td style="font-family:var(--font-mono);font-size:13px;">20260617175632</td><td>李大华</td><td>夏季新款连衣裙 等2件</td><td style="font-family:var(--font-mono);">¥1,580.00</td><td><span class="tag tag-warning">待付款</span></td><td>2026-06-17 17:56</td><td class="table-actions"><button class="action-view" onclick="showModal('modal-order-detail')">详情</button></td></tr>
+              <tr><td style="font-family:var(--font-mono);font-size:13px;">20260617174218</td><td>王美丽</td><td>进口坚果礼盒 等3件</td><td style="font-family:var(--font-mono);">¥489.90</td><td><span class="tag tag-success">已完成</span></td><td>2026-06-17 17:42</td><td class="table-actions"><button class="action-view" onclick="showModal('modal-order-detail')">详情</button></td></tr>
+              <tr><td style="font-family:var(--font-mono);font-size:13px;">20260617173005</td><td>赵强强</td><td>专业跑步鞋 等1件</td><td style="font-family:var(--font-mono);">¥4,560.00</td><td><span class="tag tag-info">已发货</span></td><td>2026-06-17 17:30</td><td class="table-actions"><button class="action-view" onclick="showModal('modal-order-detail')">详情</button></td></tr>
+              <tr><td style="font-family:var(--font-mono);font-size:13px;">20260617171549</td><td>陈芳芳</td><td>智能保温杯 等1件</td><td style="font-family:var(--font-mono);">¥128.00</td><td><span class="tag tag-danger">已退款</span></td><td>2026-06-17 17:15</td><td class="table-actions"><button class="action-view" onclick="showModal('modal-order-detail')">详情</button></td></tr>
+              <tr><td style="font-family:var(--font-mono);font-size:13px;">20260617160023</td><td>刘伟伟</td><td>MacBook Air M4 等1件</td><td style="font-family:var(--font-mono);">¥8,999.00</td><td><span class="tag tag-default">已取消</span></td><td>2026-06-17 16:00</td><td class="table-actions"><button class="action-view" onclick="showModal('modal-order-detail')">详情</button></td></tr>
+            </tbody>
+          </table></div></div>
+        </div>
+        <div class="pagination"><span class="pagination-info">共 3,567 条</span><button class="pagination-btn disabled">&#9664;</button><button class="pagination-btn active">1</button><button class="pagination-btn">2</button><button class="pagination-btn">3</button><button class="pagination-btn">...</button><button class="pagination-btn">357</button><button class="pagination-btn">&#9654;</button></div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-overlay" id="modal-order-detail"><div class="modal" style="width:680px;"><div class="modal-header"><div class="modal-title">订单详情</div><button class="modal-close" onclick="hideModal('modal-order-detail')">&#10005;</button></div><div class="modal-body">
+    <div class="detail-section"><div class="detail-section-title">基本信息</div><div class="detail-grid"><div class="detail-item"><div class="label">订单号</div><div class="value" style="font-family:var(--font-mono);">20260617180001</div></div><div class="detail-item"><div class="label">下单时间</div><div class="value">2026-06-17 18:00:23</div></div><div class="detail-item"><div class="label">订单状态</div><div class="value"><span class="tag tag-info">待发货</span></div></div></div></div>
+    <div class="detail-section"><div class="detail-section-title">收货地址</div><div class="detail-grid"><div class="detail-item"><div class="label">收货人</div><div class="value">张小明</div></div><div class="detail-item"><div class="label">联系电话</div><div class="value">138****1234</div></div><div class="detail-item"><div class="label">收货地址</div><div class="value">北京市朝阳区建国路88号SOHO现代城A座1201</div></div></div></div>
+    <div class="detail-section"><div class="detail-section-title">商品列表</div><table><thead><tr><th>商品</th><th>单价</th><th>数量</th><th>小计</th></tr></thead><tbody><tr><td>iPhone 16 Pro Max 256GB 深空黑</td><td style="font-family:var(--font-mono);">¥9,999.00</td><td>1</td><td style="font-family:var(--font-mono);">¥9,999.00</td></tr></tbody></table></div>
+    <div class="detail-section"><div class="detail-section-title">物流信息</div><div style="color:var(--text-secondary);font-size:13px;">暂无物流信息，等待商家发货</div></div>
+    <div class="detail-section"><div class="detail-section-title">操作日志</div><ul class="timeline"><li class="timeline-item"><div class="timeline-dot"></div><div class="timeline-content"><div class="timeline-text">用户提交订单</div><div class="timeline-time">2026-06-17 18:00:23</div></div></li><li class="timeline-item"><div class="timeline-dot" style="background:var(--success);"></div><div class="timeline-content"><div class="timeline-text">支付成功，支付金额 ¥9,999.00</div><div class="timeline-time">2026-06-17 18:01:05</div></div></li></ul></div>
+  </div><div class="modal-footer"><button class="btn btn-default" onclick="hideModal('modal-order-detail')">关闭</button></div></div></div>
+</div>
+
+<!-- ==================== 页面9: 退款管理 ==================== -->
+<div class="proto-page" id="page-refunds">
+  <div class="admin-layout">
+    <aside class="admin-sidebar" id="sidebar-refunds">
+      <div class="sidebar-logo"><div class="sidebar-logo-icon">S</div><div class="sidebar-logo-text">ShopMall</div></div>
+      <ul class="sidebar-menu">
+        <li class="sidebar-menu-item" onclick="switchPage('dashboard')"><span class="menu-icon">&#9632;</span><span class="sidebar-text">仪表盘</span></li>
+        <li class="sidebar-menu-item" onclick="switchPage('users')"><span class="menu-icon">&#9823;</span><span class="sidebar-text">用户管理</span></li>
+        <li class="sidebar-menu-item" onclick="switchPage('merchants')"><span class="menu-icon">&#9733;</span><span class="sidebar-text">商家管理</span></li>
+        <li class="sidebar-menu-item" onclick="toggleSubmenu(this)"><span class="menu-icon">&#9830;</span><span class="sidebar-text">商品中心</span><span class="sidebar-arrow">&#9654;</span><ul class="sidebar-submenu"><li class="sidebar-submenu-item" onclick="switchPage('products')">商品管理</li><li class="sidebar-submenu-item" onclick="switchPage('categories')">分类管理</li><li class="sidebar-submenu-item" onclick="switchPage('brands')">品牌管理</li></ul></li>
+        <li class="sidebar-menu-item active" onclick="toggleSubmenu(this)"><span class="menu-icon">&#9998;</span><span class="sidebar-text">订单中心</span><span class="sidebar-arrow open">&#9654;</span><ul class="sidebar-submenu open"><li class="sidebar-submenu-item" onclick="switchPage('orders')">订单管理</li><li class="sidebar-submenu-item active">退款管理</li></ul></li>
+        <li class="sidebar-menu-item" onclick="switchPage('contents')"><span class="menu-icon">&#9993;</span><span class="sidebar-text">内容管理</span></li>
+        <li class="sidebar-menu-item" onclick="toggleSubmenu(this)"><span class="menu-icon">&#9881;</span><span class="sidebar-text">系统管理</span><span class="sidebar-arrow">&#9654;</span><ul class="sidebar-submenu"><li class="sidebar-submenu-item" onclick="switchPage('system')">系统设置</li><li class="sidebar-submenu-item" onclick="switchPage('security')">安全审计</li></ul></li>
+      </ul>
+      <div class="sidebar-collapse-btn" onclick="toggleSidebar('sidebar-refunds')">&#9664; <span class="sidebar-text"> 收起</span></div>
+    </aside>
+    <div class="admin-main">
+      <header class="admin-header"><div class="header-left"><button class="header-trigger" onclick="toggleSidebar('sidebar-refunds')">&#9776;</button><div class="header-breadcrumb"><span>首页</span> / <span>订单中心</span> / <span class="current">退款管理</span></div></div><div class="header-right"><button class="header-icon-btn">&#9974;</button><button class="header-icon-btn"><span>&#128276;</span><span class="header-badge"></span></button><div class="header-user" onclick="toggleDropdown(this)"><div class="header-avatar">A</div><span class="header-username">Admin</span><div class="header-dropdown"><div class="header-dropdown-item">个人中心</div><div class="header-dropdown-item danger" onclick="switchPage('login')">退出登录</div></div></div></div></header>
+      <div class="admin-content">
+        <div class="page-header"><div><div class="page-title">退款管理</div><div class="page-desc">处理退款申请与审核</div></div></div>
+        <div class="card"><div class="card-body" style="padding:0;"><div class="table-wrapper"><table>
+          <thead><tr><th>退款单号</th><th>订单号</th><th>用户</th><th>退款金额</th><th>原因</th><th>状态</th><th>操作</th></tr></thead>
+          <tbody>
+            <tr><td style="font-family:var(--font-mono);font-size:13px;">RF20260617001</td><td style="font-family:var(--font-mono);font-size:13px;">20260617171549</td><td>陈芳芳</td><td style="font-family:var(--font-mono);">¥128.00</td><td>商品质量问题</td><td><span class="tag tag-warning">待审核</span></td><td class="table-actions"><button class="action-view">查看</button><button class="action-success" onclick="showModal('modal-refund-audit')">审核</button></td></tr>
+            <tr><td style="font-family:var(--font-mono);font-size:13px;">RF20260616003</td><td style="font-family:var(--font-mono);font-size:13px;">20260616140522</td><td>周明</td><td style="font-family:var(--font-mono);">¥2,399.00</td><td>不想要了</td><td><span class="tag tag-warning">待审核</span></td><td class="table-actions"><button class="action-view">查看</button><button class="action-success" onclick="showModal('modal-refund-audit')">审核</button></td></tr>
+            <tr><td style="font-family:var(--font-mono);font-size:13px;">RF20260615002</td><td style="font-family:var(--font-mono);font-size:13px;">20260615093011</td><td>孙丽</td><td style="font-family:var(--font-mono);">¥599.00</td><td>发错货了</td><td><span class="tag tag-success">已退款</span></td><td class="table-actions"><button class="action-view">查看</button></td></tr>
+            <tr><td style="font-family:var(--font-mono);font-size:13px;">RF20260614001</td><td style="font-family:var(--font-mono);font-size:13px;">20260614162245</td><td>吴刚</td><td style="font-family:var(--font-mono);">¥89.90</td><td>与描述不符</td><td><span class="tag tag-danger">已拒绝</span></td><td class="table-actions"><button class="action-view">查看</button></td></tr>
+            <tr><td style="font-family:var(--font-mono);font-size:13px;">RF20260613005</td><td style="font-family:var(--font-mono);font-size:13px;">20260613110833</td><td>郑华</td><td style="font-family:var(--font-mono);">¥3,280.00</td><td>商品损坏</td><td><span class="tag tag-success">已退款</span></td><td class="table-actions"><button class="action-view">查看</button></td></tr>
+          </tbody>
+        </table></div></div></div>
+        <div class="pagination"><span class="pagination-info">共 89 条</span><button class="pagination-btn disabled">&#9664;</button><button class="pagination-btn active">1</button><button class="pagination-btn">2</button><button class="pagination-btn">3</button><button class="pagination-btn">&#9654;</button></div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-overlay" id="modal-refund-audit"><div class="modal"><div class="modal-header"><div class="modal-title">退款审核</div><button class="modal-close" onclick="hideModal('modal-refund-audit')">&#10005;</button></div><div class="modal-body"><div class="form-group"><label class="form-label">审核结果</label><select class="form-select"><option>同意退款</option><option>拒绝退款</option></select></div><div class="form-group"><label class="form-label">审核备注</label><textarea class="form-textarea" placeholder="请输入审核备注"></textarea></div></div><div class="modal-footer"><button class="btn btn-default" onclick="hideModal('modal-refund-audit')">取消</button><button class="btn btn-primary" onclick="hideModal('modal-refund-audit')">提交</button></div></div></div>
+</div>
+
+<!-- ==================== 页面10: 内容管理 ==================== -->
+<div class="proto-page" id="page-contents">
+  <div class="admin-layout">
+    <aside class="admin-sidebar" id="sidebar-contents">
+      <div class="sidebar-logo"><div class="sidebar-logo-icon">S</div><div class="sidebar-logo-text">ShopMall</div></div>
+      <ul class="sidebar-menu">
+        <li class="sidebar-menu-item" onclick="switchPage('dashboard')"><span class="menu-icon">&#9632;</span><span class="sidebar-text">仪表盘</span></li>
+        <li class="sidebar-menu-item" onclick="switchPage('users')"><span class="menu-icon">&#9823;</span><span class="sidebar-text">用户管理</span></li>
+        <li class="sidebar-menu-item" onclick="switchPage('merchants')"><span class="menu-icon">&#9733;</span><span class="sidebar-text">商家管理</span></li>
+        <li class="sidebar-menu-item" onclick="toggleSubmenu(this)"><span class="menu-icon">&#9830;</span><span class="sidebar-text">商品中心</span><span class="sidebar-arrow">&#9654;</span><ul class="sidebar-submenu"><li class="sidebar-submenu-item" onclick="switchPage('products')">商品管理</li><li class="sidebar-submenu-item" onclick="switchPage('categories')">分类管理</li><li class="sidebar-submenu-item" onclick="switchPage('brands')">品牌管理</li></ul></li>
+        <li class="sidebar-menu-item" onclick="toggleSubmenu(this)"><span class="menu-icon">&#9998;</span><span class="sidebar-text">订单中心</span><span class="sidebar-arrow">&#9654;</span><ul class="sidebar-submenu"><li class="sidebar-submenu-item" onclick="switchPage('orders')">订单管理</li><li class="sidebar-submenu-item" onclick="switchPage('refunds')">退款管理</li></ul></li>
+        <li class="sidebar-menu-item active"><span class="menu-icon">&#9993;</span><span class="sidebar-text">内容管理</span></li>
+        <li class="sidebar-menu-item" onclick="toggleSubmenu(this)"><span class="menu-icon">&#9881;</span><span class="sidebar-text">系统管理</span><span class="sidebar-arrow">&#9654;</span><ul class="sidebar-submenu"><li class="sidebar-submenu-item" onclick="switchPage('system')">系统设置</li><li class="sidebar-submenu-item" onclick="switchPage('security')">安全审计</li></ul></li>
+      </ul>
+      <div class="sidebar-collapse-btn" onclick="toggleSidebar('sidebar-contents')">&#9664; <span class="sidebar-text"> 收起</span></div>
+    </aside>
+    <div class="admin-main">
+      <header class="admin-header"><div class="header-left"><button class="header-trigger" onclick="toggleSidebar('sidebar-contents')">&#9776;</button><div class="header-breadcrumb"><span>首页</span> / <span class="current">内容管理</span></div></div><div class="header-right"><button class="header-icon-btn">&#9974;</button><button class="header-icon-btn"><span>&#128276;</span><span class="header-badge"></span></button><div class="header-user" onclick="toggleDropdown(this)"><div class="header-avatar">A</div><span class="header-username">Admin</span><div class="header-dropdown"><div class="header-dropdown-item">个人中心</div><div class="header-dropdown-item danger" onclick="switchPage('login')">退出登录</div></div></div></div></header>
+      <div class="admin-content">
+        <div class="page-header"><div><div class="page-title">内容管理</div><div class="page-desc">管理Banner、推荐位和公告</div></div></div>
+        <div class="card">
+          <div class="tabs">
+            <div class="tab-item active" onclick="switchContentTab(this, 'content-banner')">Banner管理</div>
+            <div class="tab-item" onclick="switchContentTab(this, 'content-recommend')">推荐位管理</div>
+            <div class="tab-item" onclick="switchContentTab(this, 'content-notice')">公告管理</div>
+          </div>
+          <div class="tab-content active" id="content-banner">
+            <div class="card-body" style="padding:16px 24px;">
+              <div style="display:flex;justify-content:flex-end;margin-bottom:16px;"><button class="btn btn-primary" onclick="showModal('modal-banner-edit')">+ 新增Banner</button></div>
+              <div class="table-wrapper"><table>
+                <thead><tr><th>ID</th><th>图片</th><th>标题</th><th>链接</th><th>排序</th><th>状态</th><th>操作</th></tr></thead>
+                <tbody>
+                  <tr><td>5001</td><td><span class="table-img" style="width:80px;">&#127912;</span></td><td>618大促主会场</td><td>/activity/618</td><td>1</td><td><span class="tag tag-success">启用</span></td><td class="table-actions"><button class="action-edit" onclick="showModal('modal-banner-edit')">编辑</button><button class="action-danger">删除</button></td></tr>
+                  <tr><td>5002</td><td><span class="table-img" style="width:80px;">&#127912;</span></td><td>新品首发专区</td><td>/new-arrivals</td><td>2</td><td><span class="tag tag-success">启用</span></td><td class="table-actions"><button class="action-edit" onclick="showModal('modal-banner-edit')">编辑</button><button class="action-danger">删除</button></td></tr>
+                  <tr><td>5003</td><td><span class="table-img" style="width:80px;">&#127912;</span></td><td>会员专享福利</td><td>/vip-benefits</td><td>3</td><td><span class="tag tag-default">禁用</span></td><td class="table-actions"><button class="action-edit" onclick="showModal('modal-banner-edit')">编辑</button><button class="action-danger">删除</button></td></tr>
+                </tbody>
+              </table></div>
+            </div>
+          </div>
+          <div class="tab-content" id="content-recommend">
+            <div class="card-body" style="padding:16px 24px;">
+              <div style="display:flex;justify-content:flex-end;margin-bottom:16px;"><button class="btn btn-primary">+ 新增推荐位</button></div>
+              <div class="table-wrapper"><table>
+                <thead><tr><th>ID</th><th>推荐位名称</th><th>位置</th><th>商品数</th><th>状态</th><th>操作</th></tr></thead>
+                <tbody>
+                  <tr><td>6001</td><td>首页热销榜</td><td>首页-中部</td><td>10</td><td><span class="tag tag-success">启用</span></td><td class="table-actions"><button class="action-edit">编辑</button><button class="action-danger">删除</button></td></tr>
+                  <tr><td>6002</td><td>猜你喜欢</td><td>首页-底部</td><td>20</td><td><span class="tag tag-success">启用</span></td><td class="table-actions"><button class="action-edit">编辑</button><button class="action-danger">删除</button></td></tr>
+                  <tr><td>6003</td><td>限时特惠</td><td>分类页-顶部</td><td>8</td><td><span class="tag tag-success">启用</span></td><td class="table-actions"><button class="action-edit">编辑</button><button class="action-danger">删除</button></td></tr>
+                </tbody>
+              </table></div>
+            </div>
+          </div>
+          <div class="tab-content" id="content-notice">
+            <div class="card-body" style="padding:16px 24px;">
+              <div style="display:flex;justify-content:flex-end;margin-bottom:16px;"><button class="btn btn-primary">+ 新增公告</button></div>
+              <div class="table-wrapper"><table>
+                <thead><tr><th>ID</th><th>公告标题</th><th>类型</th><th>发布时间</th><th>状态</th><th>操作</th></tr></thead>
+                <tbody>
+                  <tr><td>7001</td><td>关于618大促物流延迟的公告</td><td><span class="tag tag-warning">通知</span></td><td>2026-06-15 10:00</td><td><span class="tag tag-success">已发布</span></td><td class="table-actions"><button class="action-edit">编辑</button><button class="action-danger">删除</button></td></tr>
+                  <tr><td>7002</td><td>平台服务协议更新通知</td><td><span class="tag tag-info">公告</span></td><td>2026-06-10 09:00</td><td><span class="tag tag-success">已发布</span></td><td class="table-actions"><button class="action-edit">编辑</button><button class="action-danger">删除</button></td></tr>
+                  <tr><td>7003</td><td>系统维护通知（6月20日）</td><td><span class="tag tag-danger">紧急</span></td><td>2026-06-17 08:00</td><td><span class="tag tag-default">草稿</span></td><td class="table-actions"><button class="action-edit">编辑</button><button class="action-danger">删除</button></td></tr>
+                </tbody>
+              </table></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-overlay" id="modal-banner-edit"><div class="modal"><div class="modal-header"><div class="modal-title">新增Banner</div><button class="modal-close" onclick="hideModal('modal-banner-edit')">&#10005;</button></div><div class="modal-body"><div class="form-group"><label class="form-label"><span class="required">*</span>标题</label><input class="form-input" placeholder="请输入Banner标题"></div><div class="form-group"><label class="form-label">图片</label><div class="form-upload"><div class="form-upload-icon">&#128247;</div><div class="form-upload-text">点击上传Banner图片（建议尺寸 1200x400）</div></div></div><div class="form-group"><label class="form-label">链接地址</label><input class="form-input" placeholder="请输入跳转链接"></div><div class="form-group"><label class="form-label">排序</label><input class="form-input" type="number" value="1"></div><div class="form-group"><label class="form-label">展示时间</label><div style="display:flex;gap:8px;"><input class="form-input" type="date" style="flex:1;"><input class="form-input" type="date" style="flex:1;"></div></div></div><div class="modal-footer"><button class="btn btn-default" onclick="hideModal('modal-banner-edit')">取消</button><button class="btn btn-primary" onclick="hideModal('modal-banner-edit')">保存</button></div></div></div>
+</div>
+
+<!-- ==================== 页面11: 系统管理 ==================== -->
+<div class="proto-page" id="page-system">
+  <div class="admin-layout">
+    <aside class="admin-sidebar" id="sidebar-system">
+      <div class="sidebar-logo"><div class="sidebar-logo-icon">S</div><div class="sidebar-logo-text">ShopMall</div></div>
+      <ul class="sidebar-menu">
+        <li class="sidebar-menu-item" onclick="switchPage('dashboard')"><span class="menu-icon">&#9632;</span><span class="sidebar-text">仪表盘</span></li>
+        <li class="sidebar-menu-item" onclick="switchPage('users')"><span class="menu-icon">&#9823;</span><span class="sidebar-text">用户管理</span></li>
+        <li class="sidebar-menu-item" onclick="switchPage('merchants')"><span class="menu-icon">&#9733;</span><span class="sidebar-text">商家管理</span></li>
+        <li class="sidebar-menu-item" onclick="toggleSubmenu(this)"><span class="menu-icon">&#9830;</span><span class="sidebar-text">商品中心</span><span class="sidebar-arrow">&#9654;</span><ul class="sidebar-submenu"><li class="sidebar-submenu-item" onclick="switchPage('products')">商品管理</li><li class="sidebar-submenu-item" onclick="switchPage('categories')">分类管理</li><li class="sidebar-submenu-item" onclick="switchPage('brands')">品牌管理</li></ul></li>
+        <li class="sidebar-menu-item" onclick="toggleSubmenu(this)"><span class="menu-icon">&#9998;</span><span class="sidebar-text">订单中心</span><span class="sidebar-arrow">&#9654;</span><ul class="sidebar-submenu"><li class="sidebar-submenu-item" onclick="switchPage('orders')">订单管理</li><li class="sidebar-submenu-item" onclick="switchPage('refunds')">退款管理</li></ul></li>
+        <li class="sidebar-menu-item" onclick="switchPage('contents')"><span class="menu-icon">&#9993;</span><span class="sidebar-text">内容管理</span></li>
+        <li class="sidebar-menu-item active" onclick="toggleSubmenu(this)"><span class="menu-icon">&#9881;</span><span class="sidebar-text">系统管理</span><span class="sidebar-arrow open">&#9654;</span><ul class="sidebar-submenu open"><li class="sidebar-submenu-item active">系统设置</li><li class="sidebar-submenu-item" onclick="switchPage('security')">安全审计</li></ul></li>
+      </ul>
+      <div class="sidebar-collapse-btn" onclick="toggleSidebar('sidebar-system')">&#9664; <span class="sidebar-text"> 收起</span></div>
+    </aside>
+    <div class="admin-main">
+      <header class="admin-header"><div class="header-left"><button class="header-trigger" onclick="toggleSidebar('sidebar-system')">&#9776;</button><div class="header-breadcrumb"><span>首页</span> / <span class="current">系统管理</span></div></div><div class="header-right"><button class="header-icon-btn">&#9974;</button><button class="header-icon-btn"><span>&#128276;</span><span class="header-badge"></span></button><div class="header-user" onclick="toggleDropdown(this)"><div class="header-avatar">A</div><span class="header-username">Admin</span><div class="header-dropdown"><div class="header-dropdown-item">个人中心</div><div class="header-dropdown-item danger" onclick="switchPage('login')">退出登录</div></div></div></div></header>
+      <div class="admin-content">
+        <div class="page-header"><div><div class="page-title">系统管理</div><div class="page-desc">管理员、角色、权限与日志管理</div></div></div>
+        <div class="sys-layout">
+          <div class="sys-sidebar">
+            <div class="sys-sidebar-item active" onclick="switchSysTab(this, 'sys-admin')">管理员列表</div>
+            <div class="sys-sidebar-item" onclick="switchSysTab(this, 'sys-role')">角色管理</div>
+            <div class="sys-sidebar-item" onclick="switchSysTab(this, 'sys-perm')">权限管理</div>
+            <div class="sys-sidebar-item" onclick="switchSysTab(this, 'sys-log')">操作日志</div>
+          </div>
+          <div class="sys-content">
+            <div class="tab-content active" id="sys-admin">
+              <div class="card"><div class="card-body" style="padding:0;"><div class="table-wrapper"><table>
+                <thead><tr><th>用户名</th><th>角色</th><th>最后登录时间</th><th>状态</th><th>操作</th></tr></thead>
+                <tbody>
+                  <tr><td>admin</td><td><span class="tag tag-info">超级管理员</span></td><td>2026-06-17 18:30</td><td><span class="tag tag-success">正常</span></td><td class="table-actions"><button class="action-edit">编辑</button></td></tr>
+                  <tr><td>operator01</td><td><span class="tag tag-default">运营人员</span></td><td>2026-06-17 16:20</td><td><span class="tag tag-success">正常</span></td><td class="table-actions"><button class="action-edit">编辑</button><button class="action-danger">禁用</button></td></tr>
+                  <tr><td>auditor01</td><td><span class="tag tag-default">审核人员</span></td><td>2026-06-17 14:10</td><td><span class="tag tag-success">正常</span></td><td class="table-actions"><button class="action-edit">编辑</button><button class="action-danger">禁用</button></td></tr>
+                  <tr><td>cs01</td><td><span class="tag tag-default">客服人员</span></td><td>2026-06-16 09:45</td><td><span class="tag tag-danger">禁用</span></td><td class="table-actions"><button class="action-edit">编辑</button><button class="action-success">启用</button></td></tr>
+                </tbody>
+              </table></div></div></div>
+            </div>
+            <div class="tab-content" id="sys-role">
+              <div class="card"><div class="card-body" style="padding:0;"><div class="table-wrapper"><table>
+                <thead><tr><th>角色名</th><th>描述</th><th>权限数</th><th>操作</th></tr></thead>
+                <tbody>
+                  <tr><td>超级管理员</td><td>拥有系统所有权限</td><td>全部</td><td class="table-actions"><button class="action-edit">编辑权限</button></td></tr>
+                  <tr><td>运营人员</td><td>负责商品和内容管理</td><td>32</td><td class="table-actions"><button class="action-edit">编辑权限</button><button class="action-danger">删除</button></td></tr>
+                  <tr><td>审核人员</td><td>负责商家和商品审核</td><td>18</td><td class="table-actions"><button class="action-edit">编辑权限</button><button class="action-danger">删除</button></td></tr>
+                  <tr><td>客服人员</td><td>负责订单和退款处理</td><td>15</td><td class="table-actions"><button class="action-edit">编辑权限</button><button class="action-danger">删除</button></td></tr>
+                </tbody>
+              </table></div></div></div>
+            </div>
+            <div class="tab-content" id="sys-perm">
+              <div class="card"><div class="card-header"><div class="card-title">权限树 - 运营人员</div></div><div class="card-body">
+                <ul class="perm-tree">
+                  <li class="perm-tree-node"><div class="perm-tree-header"><input type="checkbox" checked> <span>仪表盘</span></div></li>
+                  <li class="perm-tree-node"><div class="perm-tree-header"><input type="checkbox" checked> <span>用户管理</span></div><div class="perm-tree-children"><div class="perm-tree-header"><input type="checkbox" checked> <span>查看用户</span></div><div class="perm-tree-header"><input type="checkbox"> <span>编辑用户</span></div><div class="perm-tree-header"><input type="checkbox"> <span>禁用用户</span></div></div></li>
+                  <li class="perm-tree-node"><div class="perm-tree-header"><input type="checkbox" checked> <span>商品中心</span></div><div class="perm-tree-children"><div class="perm-tree-header"><input type="checkbox" checked> <span>查看商品</span></div><div class="perm-tree-header"><input type="checkbox" checked> <span>编辑商品</span></div><div class="perm-tree-header"><input type="checkbox"> <span>删除商品</span></div><div class="perm-tree-header"><input type="checkbox" checked> <span>分类管理</span></div><div class="perm-tree-header"><input type="checkbox" checked> <span>品牌管理</span></div></div></li>
+                  <li class="perm-tree-node"><div class="perm-tree-header"><input type="checkbox" checked> <span>内容管理</span></div><div class="perm-tree-children"><div class="perm-tree-header"><input type="checkbox" checked> <span>Banner管理</span></div><div class="perm-tree-header"><input type="checkbox" checked> <span>推荐位管理</span></div><div class="perm-tree-header"><input type="checkbox" checked> <span>公告管理</span></div></div></li>
+                  <li class="perm-tree-node"><div class="perm-tree-header"><input type="checkbox"> <span>系统管理</span></div></li>
+                </ul>
+              </div></div>
+            </div>
+            <div class="tab-content" id="sys-log">
+              <div class="card"><div class="card-body" style="padding:0;"><div class="table-wrapper"><table>
+                <thead><tr><th>操作人</th><th>操作类型</th><th>操作内容</th><th>IP</th><th>时间</th></tr></thead>
+                <tbody>
+                  <tr><td>admin</td><td><span class="tag tag-info">查询</span></td><td>查询用户列表，条件：状态=正常</td><td>192.168.1.100</td><td>2026-06-17 18:30</td></tr>
+                  <tr><td>operator01</td><td><span class="tag tag-warning">修改</span></td><td>修改商品「iPhone 16 Pro Max」价格：9999→9499</td><td>192.168.1.105</td><td>2026-06-17 17:15</td></tr>
+                  <tr><td>auditor01</td><td><span class="tag tag-success">审核</span></td><td>审核通过商家「优品数码旗舰店」</td><td>192.168.1.108</td><td>2026-06-17 16:40</td></tr>
+                  <tr><td>admin</td><td><span class="tag tag-danger">删除</span></td><td>删除过期Banner「双11活动」</td><td>192.168.1.100</td><td>2026-06-17 15:20</td></tr>
+                  <tr><td>operator01</td><td><span class="tag tag-warning">修改</span></td><td>新增分类「智能家居」</td><td>192.168.1.105</td><td>2026-06-17 14:55</td></tr>
+                </tbody>
+              </table></div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 页面12: 安全审计 ==================== -->
+<div class="proto-page" id="page-security">
+  <div class="admin-layout">
+    <aside class="admin-sidebar" id="sidebar-security">
+      <div class="sidebar-logo"><div class="sidebar-logo-icon">S</div><div class="sidebar-logo-text">ShopMall</div></div>
+      <ul class="sidebar-menu">
+        <li class="sidebar-menu-item" onclick="switchPage('dashboard')"><span class="menu-icon">&#9632;</span><span class="sidebar-text">仪表盘</span></li>
+        <li class="sidebar-menu-item" onclick="switchPage('users')"><span class="menu-icon">&#9823;</span><span class="sidebar-text">用户管理</span></li>
+        <li class="sidebar-menu-item" onclick="switchPage('merchants')"><span class="menu-icon">&#9733;</span><span class="sidebar-text">商家管理</span></li>
+        <li class="sidebar-menu-item" onclick="toggleSubmenu(this)"><span class="menu-icon">&#9830;</span><span class="sidebar-text">商品中心</span><span class="sidebar-arrow">&#9654;</span><ul class="sidebar-submenu"><li class="sidebar-submenu-item" onclick="switchPage('products')">商品管理</li><li class="sidebar-submenu-item" onclick="switchPage('categories')">分类管理</li><li class="sidebar-submenu-item" onclick="switchPage('brands')">品牌管理</li></ul></li>
+        <li class="sidebar-menu-item" onclick="toggleSubmenu(this)"><span class="menu-icon">&#9998;</span><span class="sidebar-text">订单中心</span><span class="sidebar-arrow">&#9654;</span><ul class="sidebar-submenu"><li class="sidebar-submenu-item" onclick="switchPage('orders')">订单管理</li><li class="sidebar-submenu-item" onclick="switchPage('refunds')">退款管理</li></ul></li>
+        <li class="sidebar-menu-item" onclick="switchPage('contents')"><span class="menu-icon">&#9993;</span><span class="sidebar-text">内容管理</span></li>
+        <li class="sidebar-menu-item active" onclick="toggleSubmenu(this)"><span class="menu-icon">&#9881;</span><span class="sidebar-text">系统管理</span><span class="sidebar-arrow open">&#9654;</span><ul class="sidebar-submenu open"><li class="sidebar-submenu-item" onclick="switchPage('system')">系统设置</li><li class="sidebar-submenu-item active">安全审计</li></ul></li>
+      </ul>
+      <div class="sidebar-collapse-btn" onclick="toggleSidebar('sidebar-security')">&#9664; <span class="sidebar-text"> 收起</span></div>
+    </aside>
+    <div class="admin-main">
+      <header class="admin-header"><div class="header-left"><button class="header-trigger" onclick="toggleSidebar('sidebar-security')">&#9776;</button><div class="header-breadcrumb"><span>首页</span> / <span class="current">安全审计</span></div></div><div class="header-right"><button class="header-icon-btn">&#9974;</button><button class="header-icon-btn"><span>&#128276;</span><span class="header-badge"></span></button><div class="header-user" onclick="toggleDropdown(this)"><div class="header-avatar">A</div><span class="header-username">Admin</span><div class="header-dropdown"><div class="header-dropdown-item">个人中心</div><div class="header-dropdown-item danger" onclick="switchPage('login')">退出登录</div></div></div></div></header>
+      <div class="admin-content">
+        <div class="page-header"><div><div class="page-title">安全审计</div><div class="page-desc">登录日志、操作审计与异常检测</div></div></div>
+        <div class="card">
+          <div class="tabs">
+            <div class="tab-item active" onclick="switchSecTab(this, 'sec-login')">登录日志</div>
+            <div class="tab-item" onclick="switchSecTab(this, 'sec-audit')">操作审计</div>
+            <div class="tab-item" onclick="switchSecTab(this, 'sec-sensitive')">敏感操作</div>
+            <div class="tab-item" onclick="switchSecTab(this, 'sec-anomaly')">异常检测</div>
+          </div>
+          <div class="tab-content active" id="sec-login">
+            <div class="card-body" style="padding:0;"><div class="table-wrapper"><table>
+              <thead><tr><th>用户</th><th>IP</th><th>地点</th><th>设备</th><th>时间</th><th>结果</th></tr></thead>
+              <tbody>
+                <tr><td>admin</td><td style="font-family:var(--font-mono);">192.168.1.100</td><td>北京市</td><td>Chrome 126 / Windows</td><td>2026-06-17 18:30</td><td><span class="tag tag-success">成功</span></td></tr>
+                <tr><td>operator01</td><td style="font-family:var(--font-mono);">192.168.1.105</td><td>北京市</td><td>Chrome 126 / macOS</td><td>2026-06-17 16:20</td><td><span class="tag tag-success">成功</span></td></tr>
+                <tr><td>unknown</td><td style="font-family:var(--font-mono);">45.33.32.156</td><td>未知</td><td>Firefox / Linux</td><td>2026-06-17 15:10</td><td><span class="tag tag-danger">失败</span></td></tr>
+                <tr><td>unknown</td><td style="font-family:var(--font-mono);">45.33.32.156</td><td>未知</td><td>Firefox / Linux</td><td>2026-06-17 15:08</td><td><span class="tag tag-danger">失败</span></td></tr>
+                <tr><td>auditor01</td><td style="font-family:var(--font-mono);">10.0.0.50</td><td>上海市</td><td>Safari / macOS</td><td>2026-06-17 14:10</td><td><span class="tag tag-success">成功</span></td></tr>
+              </tbody>
+            </table></div></div>
+          </div>
+          <div class="tab-content" id="sec-audit">
+            <div class="card-body" style="padding:0;"><div class="table-wrapper"><table>
+              <thead><tr><th>操作人</th><th>操作模块</th><th>操作类型</th><th>详情</th><th>时间</th></tr></thead>
+              <tbody>
+                <tr><td>admin</td><td>用户管理</td><td><span class="tag tag-warning">修改</span></td><td>禁用用户「王美丽」</td><td>2026-06-17 18:00</td></tr>
+                <tr><td>auditor01</td><td>商家管理</td><td><span class="tag tag-success">审核</span></td><td>审核通过商家「潮流服饰屋」</td><td>2026-06-17 16:40</td></tr>
+                <tr><td>operator01</td><td>商品管理</td><td><span class="tag tag-warning">修改</span></td><td>修改商品「智能保温杯」状态为下架</td><td>2026-06-17 15:30</td></tr>
+                <tr><td>admin</td><td>系统管理</td><td><span class="tag tag-info">配置</span></td><td>修改系统参数「订单超时时间」为30分钟</td><td>2026-06-17 14:20</td></tr>
+                <tr><td>operator01</td><td>内容管理</td><td><span class="tag tag-success">新增</span></td><td>新增Banner「618大促主会场」</td><td>2026-06-17 11:00</td></tr>
+              </tbody>
+            </table></div></div>
+          </div>
+          <div class="tab-content" id="sec-sensitive">
+            <div class="card-body" style="padding:0;"><div class="table-wrapper"><table>
+              <thead><tr><th>操作人</th><th>操作类型</th><th>详情</th><th>时间</th></tr></thead>
+              <tbody>
+                <tr><td>admin</td><td><span class="tag tag-danger">删除数据</span></td><td>删除过期Banner「双11活动」</td><td>2026-06-17 15:20</td></tr>
+                <tr><td>admin</td><td><span class="tag tag-warning">权限变更</span></td><td>修改角色「客服人员」权限，移除退款审核权限</td><td>2026-06-17 12:00</td></tr>
+                <tr><td>admin</td><td><span class="tag tag-info">系统配置</span></td><td>修改系统参数「订单超时时间」为30分钟</td><td>2026-06-17 14:20</td></tr>
+              </tbody>
+            </table></div></div>
+          </div>
+          <div class="tab-content" id="sec-anomaly">
+            <div class="card-body" style="padding:0;"><div class="table-wrapper"><table>
+              <thead><tr><th>异常类型</th><th>详情</th><th>时间</th><th>状态</th></tr></thead>
+              <tbody>
+                <tr><td><span class="tag tag-danger">频繁登录失败</span></td><td>IP 45.33.32.156 在5分钟内登录失败3次</td><td>2026-06-17 15:10</td><td><span class="tag tag-warning">未处理</span></td></tr>
+                <tr><td><span class="tag tag-danger">异常IP</span></td><td>IP 45.33.32.156 来自非常用地区，尝试登录admin账号</td><td>2026-06-17 15:08</td><td><span class="tag tag-warning">未处理</span></td></tr>
+                <tr><td><span class="tag tag-warning">权限越权</span></td><td>客服人员 cs01 尝试访问系统管理页面</td><td>2026-06-16 09:50</td><td><span class="tag tag-success">已处理</span></td></tr>
+              </tbody>
+            </table></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- end proto-display -->
+
+<!-- ========== JavaScript 交互逻辑 ========== -->
+<script>
+/**
+ * 切换原型页面 - 隐藏所有页面，显示目标页面，更新导航高亮
+ */
+function switchPage(pageName) {
+  document.querySelectorAll('.proto-page').forEach(function(p) { p.classList.remove('active'); });
+  var target = document.getElementById('page-' + pageName);
+  if (target) target.classList.add('active');
+  document.querySelectorAll('.proto-nav-item').forEach(function(item) { item.classList.remove('active'); });
+  var navItems = document.querySelectorAll('.proto-nav-item');
+  var pageMap = ['login','dashboard','users','merchants','products','categories','brands','orders','refunds','contents','system','security'];
+  var idx = pageMap.indexOf(pageName);
+  if (idx >= 0 && navItems[idx]) navItems[idx].classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+/** 切换侧边栏展开/收起 */
+function toggleSidebar(sidebarId) {
+  var sidebar = document.getElementById(sidebarId);
+  if (sidebar) sidebar.classList.toggle('collapsed');
+}
+
+/** 切换侧边栏子菜单 */
+function toggleSubmenu(menuItem) {
+  var submenu = menuItem.querySelector('.sidebar-submenu');
+  var arrow = menuItem.querySelector('.sidebar-arrow');
+  if (submenu) submenu.classList.toggle('open');
+  if (arrow) arrow.classList.toggle('open');
+}
+
+/** 通用Tab切换 */
+function switchTab(tabItem) {
+  var tabs = tabItem.parentElement;
+  tabs.querySelectorAll('.tab-item').forEach(function(t) { t.classList.remove('active'); });
+  tabItem.classList.add('active');
+}
+
+/** 内容管理Tab切换 */
+function switchContentTab(tabItem, contentId) {
+  switchTab(tabItem);
+  var card = tabItem.closest('.card');
+  card.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+  var content = document.getElementById(contentId);
+  if (content) content.classList.add('active');
+}
+
+/** 系统管理子Tab切换 */
+function switchSysTab(sidebarItem, contentId) {
+  sidebarItem.parentElement.querySelectorAll('.sys-sidebar-item').forEach(function(s) { s.classList.remove('active'); });
+  sidebarItem.classList.add('active');
+  var sysContent = sidebarItem.closest('.sys-layout').querySelector('.sys-content');
+  sysContent.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+  var content = document.getElementById(contentId);
+  if (content) content.classList.add('active');
+}
+
+/** 安全审计Tab切换 */
+function switchSecTab(tabItem, contentId) {
+  switchTab(tabItem);
+  var card = tabItem.closest('.card');
+  card.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+  var content = document.getElementById(contentId);
+  if (content) content.classList.add('active');
+}
+
+/** 显示弹窗 */
+function showModal(modalId) {
+  var modal = document.getElementById(modalId);
+  if (modal) modal.classList.add('show');
+}
+
+/** 隐藏弹窗 */
+function hideModal(modalId) {
+  var modal = document.getElementById(modalId);
+  if (modal) modal.classList.remove('show');
+}
+
+/** 切换树形节点 */
+function toggleTreeNode(header) {
+  var expand = header.querySelector('.tree-expand');
+  var children = header.nextElementSibling;
+  if (expand) expand.classList.toggle('open');
+  if (children && children.classList.contains('tree-children')) children.classList.toggle('open');
+}
+
+/** 切换用户下拉菜单 */
+function toggleDropdown(userEl) {
+  var dropdown = userEl.querySelector('.header-dropdown');
+  if (dropdown) dropdown.classList.toggle('show');
+}
+
+/** 绘制验证码 - Canvas随机4位字母数字 */
+function drawCaptcha() {
+  var canvas = document.getElementById('captchaCanvas');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  var code = '';
+  for (var i = 0; i < 4; i++) { code += chars.charAt(Math.floor(Math.random() * chars.length)); }
+  ctx.fillStyle = '#f0f2f5';
+  ctx.fillRect(0, 0, 120, 44);
+  for (var i = 0; i < 4; i++) {
+    ctx.strokeStyle = 'rgba(24,144,255,' + (Math.random() * 0.3 + 0.1) + ')';
+    ctx.beginPath();
+    ctx.moveTo(Math.random() * 120, Math.random() * 44);
+    ctx.lineTo(Math.random() * 120, Math.random() * 44);
+    ctx.stroke();
+  }
+  ctx.font = 'bold 24px "SFMono-Regular", Consolas, monospace';
+  ctx.textBaseline = 'middle';
+  for (var i = 0; i < 4; i++) {
+    ctx.fillStyle = 'rgba(' + Math.floor(Math.random()*100) + ',' + Math.floor(Math.random()*100) + ',' + Math.floor(Math.random()*200+55) + ',0.9)';
+    ctx.save();
+    ctx.translate(20 + i * 24, 22);
+    ctx.rotate((Math.random() - 0.5) * 0.4);
+    ctx.fillText(code[i], 0, 0);
+    ctx.restore();
+  }
+  for (var i = 0; i < 30; i++) {
+    ctx.fillStyle = 'rgba(0,0,0,' + (Math.random() * 0.3) + ')';
+    ctx.fillRect(Math.random() * 120, Math.random() * 44, 2, 2);
+  }
+}
+
+// 点击空白处关闭下拉菜单
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.header-user')) {
+    document.querySelectorAll('.header-dropdown.show').forEach(function(d) { d.classList.remove('show'); });
+  }
+});
+
+// 点击遮罩层关闭弹窗
+document.addEventListener('click', function(e) {
+  if (e.target.classList.contains('modal-overlay')) e.target.classList.remove('show');
+});
+
+// 页面加载后绘制验证码
+window.addEventListener('load', function() { drawCaptcha(); });
+</script>
+
+</body>
+</html>

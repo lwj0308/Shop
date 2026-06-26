@@ -1,0 +1,153 @@
+/**
+ * 全局样式 - 管理后台
+ * 支持明暗主题切换，通过CSS变量实现
+ * 暗黑模式：html标签加上dark类即可切换
+ */
+
+/* ========== 亮色主题变量 ========== */
+:root {
+  /* 主色系 */
+  --color-primary: #409EFF;
+  --color-primary-light: #66B1FF;
+  --color-primary-dark: #3A8EE6;
+
+  /* 侧边栏 */
+  --color-sidebar-bg: #304156;
+  --color-sidebar-dark: #263445;
+  --color-sidebar-text: #BFCBD9;
+  --color-sidebar-active: #409EFF;
+
+  /* 背景 */
+  --color-bg: #F0F2F5;
+  --color-card: #FFFFFF;
+
+  /* 文字 */
+  --color-text: #303133;
+  --color-text-secondary: #606266;
+  --color-text-muted: #909399;
+  --color-text-placeholder: #C0C4CC;
+
+  /* 功能色 */
+  --color-success: #67C23A;
+  --color-warning: #E6A23C;
+  --color-danger: #F56C6C;
+  --color-info: #909399;
+
+  /* 边框 */
+  --color-border: #EBEEF5;
+  --color-border-light: #DCDFE6;
+
+  /* 圆角 */
+  --radius-card: 8px;
+  --radius-button: 4px;
+  --radius-input: 4px;
+  --radius-tag: 4px;
+
+  /* 阴影 */
+  --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.06);
+  --shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.1);
+  --shadow-header: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+/* ========== 暗黑主题变量 ========== */
+html.dark {
+  --color-bg: #141414;
+  --color-card: #1D1E1F;
+  --color-text: #E5EAF3;
+  --color-text-secondary: #A3A6AD;
+  --color-text-muted: #8D9095;
+  --color-text-placeholder: #6C6E72;
+  --color-border: #4C4D4F;
+  --color-border-light: #414243;
+  --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.3);
+  --shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-header: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* ========== 重置默认样式 ========== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-variant-numeric: tabular-nums;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ========== 滚动条美化 ========== */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c0c4cc;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #909399;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ========== 金额输入框：隐藏数字输入框的上下箭头 ========== */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* ========== Element Plus 全局样式微调 ========== */
+.el-card {
+  border-radius: var(--radius-card) !important;
+  box-shadow: var(--shadow-card) !important;
+  border: none !important;
+}
+
+.el-card__header {
+  border-bottom: 1px solid var(--color-border) !important;
+}
+
+.el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell {
+  background: #FAFAFA;
+}
+
+html.dark .el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell {
+  background: #262727;
+}
+
+.el-table__body tr:hover > td.el-table__cell {
+  background: #F5F7FA !important;
+}
+
+html.dark .el-table__body tr:hover > td.el-table__cell {
+  background: #2C2E2F !important;
+}
+
+.el-pagination {
+  justify-content: flex-end;
+}

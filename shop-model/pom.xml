@@ -1,0 +1,64 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- 继承父POM -->
+    <parent>
+        <groupId>com.shop</groupId>
+        <artifactId>shop</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>shop-model</artifactId>
+    <name>shop-model</name>
+    <description>数据模型模块：实体类、DTO、VO</description>
+
+    <packaging>jar</packaging>
+
+    <dependencies>
+        <!-- 引入shop-common，可以使用Result、PageRequest、BaseEntity等公共类 -->
+        <dependency>
+            <groupId>com.shop</groupId>
+            <artifactId>shop-common</artifactId>
+        </dependency>
+
+        <!-- MyBatis-Plus注解：实体类上需要用@TableName等注解 -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot4-starter</artifactId>
+        </dependency>
+
+        <!-- MapStruct：对象映射工具，Entity和DTO之间转换用 -->
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct</artifactId>
+        </dependency>
+
+        <!-- Jakarta Validation：DTO上需要用@NotNull等校验注解 -->
+        <dependency>
+            <groupId>jakarta.validation</groupId>
+            <artifactId>jakarta.validation-api</artifactId>
+        </dependency>
+
+        <!-- Spring Boot Starter Validation：开启参数校验功能 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!-- Sa-Token：SecurityUtils中用来获取登录用户信息 -->
+        <dependency>
+            <groupId>cn.dev33</groupId>
+            <artifactId>sa-token-spring-boot3-starter</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Jackson：VO脱敏序列化器需要用到JsonSerializer等类 -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+    </dependencies>
+</project>

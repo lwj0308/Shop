@@ -1,0 +1,286 @@
+# ============================================
+# Shop 商城项目 - 本地开发环境 Docker Compose 配置
+# 使用方法：
+#   启动所有服务：docker-compose up -d
+#   查看服务状态：docker-compose ps
+#   停止所有服务：docker-compose down
+#   停止并清除数据：docker-compose down -v
+# 注意：
+#   - Windows 环境下路径使用正斜杠
+#   - 所有环境变量在 .env 文件中统一管理
+#   - 首次启动 MySQL 会自动执行 init 目录下的 SQL 脚本
+# ============================================
+
+services:
+
+  # ==============================
+  # MySQL 8.0 - 主数据库
+  # 说明：商城所有微服务的数据库都运行在这一个 MySQL 实例中
+  # 首次启动时会自动执行 docker/mysql/init/ 目录下的 SQL 脚本
+  # ==============================
+  mysql:
+    image: mysql:8.0
+    container_name: shop-mysql
+    restart: unless-stopped
+    ports:
+      - "${MYSQL_PORT}:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      # 设置默认字符集为 utf8mb4，支持 emoji 和中文
+      MYSQL_CHARSET: utf8mb4
+      MYSQL_COLLATION: utf8mb4_unicode_ci
+      # 设置时区
+      TZ: Asia/Shanghai
+    volumes:
+      # 挂载初始化 SQL 脚本，MySQL 首次启动时按文件名顺序执行
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d
+      # 数据持久化，防止容器重启后数据丢失
+      - ./docker/mysql/data:/var/lib/mysql
+      # 自定义 MySQL 配置文件
+      - ./docker/mysql/conf/my.cnf:/etc/mysql/conf.d/my.cnf
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-authentication-plugin=mysql_native_password
+    networks:
+      - shop-network
+    healthcheck:
+      # 健康检查：每隔 10 秒尝试连接 MySQL，确保服务已就绪
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==============================
+  # Redis 7.x - 缓存 + 分布式锁 + Session
+  # 说明：开发环境不设密码，生产环境务必设置密码
+  # ==============================
+  redis:
+    image: redis:7-alpine
+    container_name: shop-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+      # Redis 数据持久化（RDB 快照方式）
+      - ./docker/redis/data:/data
+      # 自定义 Redis 配置文件
+      - ./docker/redis/conf/redis.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      - shop-network
+    healthcheck:
+      # 健康检查：每隔 10 秒尝试 ping Redis
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==============================
+  # Nacos - 配置中心 + 服务注册发现
+  # 说明：开发环境使用 standalone 单机模式 + 内嵌数据库
+  # 控制台访问地址：http://localhost:${NACOS_PORT}/nacos  账号/密码：nacos/nacos
+  # ==============================
+  nacos:
+    image: nacos/nacos-server:v2.4.3
+    container_name: shop-nacos
+    restart: unless-stopped
+    ports:
+      - "${NACOS_PORT}:8848"
+      - "${NACOS_GRPC_PORT}:9848"
+    environment:
+      # 单机模式运行（开发环境推荐）
+      MODE: standalone
+      # JVM 内存设置，开发环境 256m 足够
+      JVM_XMS: 256m
+      JVM_XMX: 256m
+      TZ: Asia/Shanghai
+    volumes:
+      # Nacos 日志持久化
+      - ./docker/nacos/logs:/home/nacos/logs
+    networks:
+      - shop-network
+    healthcheck:
+      # 健康检查：检查 Nacos HTTP 端口是否可访问
+      test: ["CMD", "curl", "-f", "http://localhost:8848/nacos/"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  # ==============================
+  # RocketMQ NameServer - 消息队列注册中心
+  # 说明：NameServer 相当于注册中心，Broker 启动时需要向它注册
+  # ==============================
+  rocketmq-namesrv:
+    image: apache/rocketmq:5.3.1
+    container_name: shop-rocketmq-namesrv
+    restart: unless-stopped
+    ports:
+      - "${ROCKETMQ_NAMESRV_PORT}:9876"
+    environment:
+      TZ: Asia/Shanghai
+    command: ["sh", "mqnamesrv"]
+    volumes:
+      # NameServer 日志持久化
+      - ./docker/rocketmq/namesrv/logs:/home/rocketmq/logs
+    networks:
+      - shop-network
+    healthcheck:
+      # 健康检查：检查 9876 端口是否在监听
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/9876"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==============================
+  # RocketMQ Broker - 消息队列核心
+  # 说明：Broker 负责消息的存储和转发
+  # autoCreateTopicEnable=true 允许自动创建 Topic，开发环境方便
+  # ==============================
+  rocketmq-broker:
+    image: apache/rocketmq:5.3.1
+    container_name: shop-rocketmq-broker
+    restart: unless-stopped
+    ports:
+      - "${ROCKETMQ_BROKER_PORT}:10911"
+      - 10909:10909
+    environment:
+      # NameServer 地址，使用容器名通信
+      NAMESRV_ADDR: rocketmq-namesrv:9876
+      TZ: Asia/Shanghai
+    command: ["sh", "mqbroker", "-n", "rocketmq-namesrv:9876", "-c", "/home/rocketmq/conf/broker.conf"]
+    volumes:
+      # Broker 日志持久化
+      - ./docker/rocketmq/broker/logs:/home/rocketmq/logs
+      # Broker 存储持久化（消息数据）
+      - ./docker/rocketmq/broker/store:/home/rocketmq/store
+      # 自定义 Broker 配置文件
+      - ./docker/rocketmq/broker/conf/broker.conf:/home/rocketmq/conf/broker.conf
+    networks:
+      - shop-network
+    depends_on:
+      rocketmq-namesrv:
+        condition: service_healthy
+
+  # ==============================
+  # RocketMQ Dashboard - 消息队列可视化管理界面
+  # 说明：方便查看 Topic、消息、消费者组等信息
+  # 访问地址：http://localhost:8080
+  # ==============================
+  rocketmq-dashboard:
+    image: apacherocketmq/rocketmq-dashboard:latest
+    container_name: shop-rocketmq-dashboard
+    restart: unless-stopped
+    ports:
+      # Dashboard镜像内部监听8082端口，映射到主机8080
+      - "8080:8082"
+    environment:
+      # 指向 NameServer 地址
+      JAVA_OPTS: "-Drocketmq.namesrv.addr=rocketmq-namesrv:9876"
+      TZ: Asia/Shanghai
+    networks:
+      - shop-network
+    depends_on:
+      rocketmq-namesrv:
+        condition: service_healthy
+
+  # ==============================
+  # MinIO - 对象存储（图片、文件等）
+  # 说明：兼容 AWS S3 协议，本地开发替代 OSS
+  # API 端口：9000  控制台端口：9001
+  # 控制台访问：http://localhost:9001  账号/密码：minioadmin/minioadmin123
+  # ==============================
+  minio:
+    image: minio/minio:latest
+    container_name: shop-minio
+    restart: unless-stopped
+    ports:
+      - "${MINIO_API_PORT}:9000"
+      - "${MINIO_CONSOLE_PORT}:9001"
+    environment:
+      # 访问密钥（开发环境使用默认值，生产环境务必修改）
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+      TZ: Asia/Shanghai
+    command: server /data --console-address ":9001"
+    volumes:
+      # MinIO 数据持久化
+      - ./docker/minio/data:/data
+    networks:
+      - shop-network
+    healthcheck:
+      # 健康检查：检查 MinIO API 端口是否可访问
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==============================
+  # Elasticsearch 8.x - 商品搜索
+  # 说明：单节点模式，关闭安全认证（仅开发环境）
+  # 安装了 ik 中文分词器插件
+  # 访问地址：http://localhost:9200
+  # ==============================
+  elasticsearch:
+    image: elasticsearch:8.15.0
+    container_name: shop-elasticsearch
+    restart: unless-stopped
+    ports:
+      - "${ES_HTTP_PORT}:9200"
+      - "${ES_TRANSPORT_PORT}:9300"
+    environment:
+      # 单节点模式运行
+      discovery.type: single-node
+      # 关闭安全认证（开发环境简化配置）
+      xpack.security.enabled: "false"
+      xpack.security.http.ssl.enabled: "false"
+      xpack.security.transport.ssl.enabled: "false"
+      # JVM 内存设置，开发环境 512m 足够
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+      TZ: Asia/Shanghai
+    volumes:
+      # ES 数据持久化
+      - ./docker/elasticsearch/data:/usr/share/elasticsearch/data
+      # ES 插件持久化（ik 分词器等）
+      - ./docker/elasticsearch/plugins:/usr/share/elasticsearch/plugins
+      # ES 索引模板
+      - ./docker/es:/usr/share/elasticsearch/templates
+    networks:
+      - shop-network
+    healthcheck:
+      # 健康检查：检查 ES HTTP 端口是否可访问
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  # ==============================
+  # Kibana - Elasticsearch 可视化管理界面
+  # 说明：方便查看 ES 索引数据、调试搜索查询
+  # 访问地址：http://localhost:5601
+  # ==============================
+  kibana:
+    image: kibana:8.15.0
+    container_name: shop-kibana
+    restart: unless-stopped
+    ports:
+      - 5601:5601
+    environment:
+      # 指向 ES 地址，使用容器名通信
+      ELASTICSEARCH_HOSTS: "http://elasticsearch:9200"
+      TZ: Asia/Shanghai
+    networks:
+      - shop-network
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+# ==============================
+# 自定义网络
+# 说明：所有服务在同一个网络中，可以通过容器名互相访问
+# 例如：MySQL 的 host 可以写 shop-mysql，Redis 的 host 可以写 shop-redis
+# ==============================
+networks:
+  shop-network:
+    driver: bridge
+    name: shop-network

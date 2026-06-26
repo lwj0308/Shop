@@ -1,0 +1,21 @@
+{
+  "name": "shop-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev:user": "npm --workspace=packages/web-user run dev",
+    "dev:merchant": "npm --workspace=packages/web-merchant run dev",
+    "dev:admin": "npm --workspace=packages/web-admin run dev",
+    "build:user": "npm --workspace=packages/web-user run build",
+    "build:merchant": "npm --workspace=packages/web-merchant run build",
+    "build:admin": "npm --workspace=packages/web-admin run build",
+    "lint": "npm -ws run lint",
+    "format": "prettier --write \"packages/**/*.{ts,vue,json,css}\""
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

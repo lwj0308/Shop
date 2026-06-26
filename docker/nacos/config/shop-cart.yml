@@ -1,0 +1,9 @@
+# 购物车服务独立配置
+# 在Nacos中配置为：Data ID = shop-cart.yml, Group = DEFAULT_GROUP, Namespace = dev
+
+server:
+  port: 8848
+
+spring:
+  application:
+    name: shop-cart

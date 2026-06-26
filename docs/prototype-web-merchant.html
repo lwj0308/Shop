@@ -1,0 +1,1951 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ShopMall 商家后台 - 原型图</title>
+  <!-- Google Fonts: Noto Sans SC -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#409EFF',
+            'primary-light': '#66B1FF',
+            'primary-dark': '#3A8EE6',
+            sidebar: '#304156',
+            'sidebar-dark': '#263445',
+            'content-bg': '#F0F2F5',
+          },
+          fontFamily: {
+            sans: ['"Noto Sans SC"', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* ========== 全局基础样式 ========== */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Noto Sans SC', sans-serif; background: #f0f2f5; color: #303133; font-size: 14px; }
+
+    /* ========== 原型导航栏（左侧页面切换） ========== */
+    .proto-nav {
+      position: fixed; left: 0; top: 0; bottom: 0; width: 180px;
+      background: #1a1a2e; z-index: 9999; overflow-y: auto;
+      border-right: 1px solid #2d2d44;
+    }
+    .proto-nav-title {
+      padding: 16px; color: #e0e0e0; font-size: 13px; font-weight: 700;
+      background: #16162a; text-align: center; letter-spacing: 1px;
+      border-bottom: 1px solid #2d2d44;
+    }
+    .proto-nav-item {
+      display: block; width: 100%; padding: 10px 16px; text-align: left;
+      background: none; border: none; color: #a0a0b8; font-size: 13px;
+      cursor: pointer; transition: all .2s; font-family: inherit;
+      border-left: 3px solid transparent;
+    }
+    .proto-nav-item:hover { background: #22223a; color: #e0e0e0; }
+    .proto-nav-item.active {
+      background: #2a2a4a; color: #409EFF; border-left-color: #409EFF; font-weight: 500;
+    }
+    .proto-nav-group {
+      padding: 6px 16px 4px; color: #666; font-size: 11px;
+      text-transform: uppercase; letter-spacing: 1px; margin-top: 4px;
+    }
+
+    /* ========== 原型展示区 ========== */
+    .proto-display {
+      margin-left: 180px; min-height: 100vh; position: relative;
+    }
+    .proto-page { display: none; min-height: 100vh; }
+    .proto-page.active { display: block; }
+
+    /* ========== 后台布局（登录/入驻页除外） ========== */
+    .admin-layout { display: flex; min-height: 100vh; }
+    .admin-sidebar {
+      width: 220px; background: #304156; overflow-y: auto; flex-shrink: 0;
+    }
+    .sidebar-logo {
+      height: 60px; display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 18px; font-weight: bold; background: #263445;
+    }
+    .sidebar-menu { list-style: none; padding: 0; }
+    .sidebar-menu-item {
+      display: flex; align-items: center; padding: 14px 20px; color: #bfcbd9;
+      cursor: pointer; transition: all .2s; font-size: 14px; border-left: 3px solid transparent;
+    }
+    .sidebar-menu-item:hover { background: #263445; color: #fff; }
+    .sidebar-menu-item.active { background: #263445; color: #409EFF; border-left-color: #409EFF; }
+    .sidebar-menu-item .menu-icon { margin-right: 10px; font-size: 16px; width: 20px; text-align: center; }
+    .sidebar-submenu-title {
+      display: flex; align-items: center; padding: 14px 20px; color: #bfcbd9;
+      cursor: pointer; font-size: 14px; justify-content: space-between;
+    }
+    .sidebar-submenu-title:hover { background: #263445; color: #fff; }
+    .sidebar-submenu { list-style: none; padding: 0; background: #1f2d3d; }
+    .sidebar-submenu-item {
+      padding: 12px 20px 12px 50px; color: #bfcbd9; cursor: pointer;
+      font-size: 13px; transition: all .2s;
+    }
+    .sidebar-submenu-item:hover { color: #fff; }
+    .sidebar-submenu-item.active { color: #409EFF; }
+
+    .admin-main { flex: 1; display: flex; flex-direction: column; background: #f0f2f5; }
+    .admin-header {
+      height: 60px; background: #fff; display: flex; align-items: center;
+      justify-content: space-between; padding: 0 20px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    }
+    .admin-content { flex: 1; padding: 20px; overflow-y: auto; }
+
+    /* ========== 通用组件样式 ========== */
+    /* 卡片 */
+    .card {
+      background: #fff; border-radius: 8px; padding: 20px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06); margin-bottom: 20px;
+    }
+    .card-title {
+      font-size: 16px; font-weight: 600; color: #303133;
+      margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #ebeef5;
+    }
+
+    /* 按钮 */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 8px 16px; border-radius: 4px; font-size: 14px; cursor: pointer;
+      border: 1px solid #dcdfe6; background: #fff; color: #606266;
+      transition: all .2s; font-family: inherit; gap: 4px;
+    }
+    .btn:hover { color: #409EFF; border-color: #c6e2ff; background: #ecf5ff; }
+    .btn-primary { background: #409EFF; color: #fff; border-color: #409EFF; }
+    .btn-primary:hover { background: #66B1FF; border-color: #66B1FF; }
+    .btn-success { background: #67C23A; color: #fff; border-color: #67C23A; }
+    .btn-success:hover { background: #85CE61; border-color: #85CE61; }
+    .btn-danger { background: #F56C6C; color: #fff; border-color: #F56C6C; }
+    .btn-danger:hover { background: #F78989; border-color: #F78989; }
+    .btn-warning { background: #E6A23C; color: #fff; border-color: #E6A23C; }
+    .btn-warning:hover { background: #EBB563; border-color: #EBB563; }
+    .btn-text { border: none; background: none; color: #409EFF; padding: 4px 8px; }
+    .btn-text:hover { color: #66B1FF; }
+    .btn-sm { padding: 5px 12px; font-size: 12px; }
+
+    /* 表单 */
+    .form-group { margin-bottom: 18px; }
+    .form-label { display: block; font-size: 14px; color: #606266; margin-bottom: 6px; font-weight: 500; }
+    .form-label .required { color: #F56C6C; margin-right: 4px; }
+    .form-input {
+      width: 100%; padding: 8px 12px; border: 1px solid #dcdfe6; border-radius: 4px;
+      font-size: 14px; color: #303133; outline: none; transition: border-color .2s;
+      font-family: inherit;
+    }
+    .form-input:focus { border-color: #409EFF; }
+    .form-input::placeholder { color: #c0c4cc; }
+    .form-select {
+      width: 100%; padding: 8px 12px; border: 1px solid #dcdfe6; border-radius: 4px;
+      font-size: 14px; color: #303133; outline: none; background: #fff;
+      cursor: pointer; font-family: inherit;
+    }
+    .form-select:focus { border-color: #409EFF; }
+    .form-textarea {
+      width: 100%; padding: 8px 12px; border: 1px solid #dcdfe6; border-radius: 4px;
+      font-size: 14px; color: #303133; outline: none; resize: vertical;
+      min-height: 80px; font-family: inherit;
+    }
+    .form-textarea:focus { border-color: #409EFF; }
+
+    /* 表格 */
+    .data-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .data-table th {
+      background: #fafafa; color: #909399; font-weight: 500; text-align: left;
+      padding: 12px 16px; border-bottom: 1px solid #ebeef5;
+    }
+    .data-table td {
+      padding: 12px 16px; border-bottom: 1px solid #ebeef5; color: #606266;
+    }
+    .data-table tr:hover td { background: #f5f7fa; }
+
+    /* 标签 */
+    .tag {
+      display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 4px;
+      font-size: 12px; font-weight: 500;
+    }
+    .tag-success { background: #f0f9eb; color: #67C23A; border: 1px solid #e1f3d8; }
+    .tag-danger { background: #fef0f0; color: #F56C6C; border: 1px solid #fde2e2; }
+    .tag-warning { background: #fdf6ec; color: #E6A23C; border: 1px solid #faecd8; }
+    .tag-info { background: #f4f4f5; color: #909399; border: 1px solid #e9e9eb; }
+    .tag-primary { background: #ecf5ff; color: #409EFF; border: 1px solid #d9ecff; }
+
+    /* 分页 */
+    .pagination { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 16px; }
+    .pagination .page-btn {
+      min-width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+      border: 1px solid #dcdfe6; border-radius: 4px; cursor: pointer; font-size: 13px;
+      color: #606266; background: #fff; transition: all .2s;
+    }
+    .pagination .page-btn:hover { color: #409EFF; border-color: #409EFF; }
+    .pagination .page-btn.active { background: #409EFF; color: #fff; border-color: #409EFF; }
+
+    /* Tab 切换 */
+    .tabs { display: flex; border-bottom: 2px solid #e4e7ed; margin-bottom: 20px; }
+    .tab-item {
+      padding: 10px 20px; cursor: pointer; color: #909399; font-size: 14px;
+      border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all .2s;
+    }
+    .tab-item:hover { color: #409EFF; }
+    .tab-item.active { color: #409EFF; border-bottom-color: #409EFF; font-weight: 500; }
+
+    /* 步骤条 */
+    .steps { display: flex; align-items: center; justify-content: center; margin-bottom: 30px; }
+    .step { display: flex; align-items: center; }
+    .step-circle {
+      width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center;
+      justify-content: center; font-size: 14px; font-weight: 600; border: 2px solid #c0c4cc;
+      color: #c0c4cc; background: #fff; transition: all .3s;
+    }
+    .step-circle.active { border-color: #409EFF; color: #409EFF; }
+    .step-circle.done { border-color: #67C23A; color: #fff; background: #67C23A; }
+    .step-text { margin-left: 8px; font-size: 14px; color: #909399; }
+    .step-text.active { color: #409EFF; font-weight: 500; }
+    .step-text.done { color: #67C23A; }
+    .step-line { width: 80px; height: 2px; background: #c0c4cc; margin: 0 12px; }
+    .step-line.done { background: #67C23A; }
+
+    /* 弹窗 */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 10000;
+      display: none; align-items: center; justify-content: center;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal {
+      background: #fff; border-radius: 8px; width: 480px; max-width: 90vw;
+      box-shadow: 0 4px 20px rgba(0,0,0,.15);
+    }
+    .modal-header {
+      padding: 16px 20px; border-bottom: 1px solid #ebeef5;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .modal-header h3 { font-size: 16px; font-weight: 600; }
+    .modal-close { cursor: pointer; font-size: 20px; color: #909399; background: none; border: none; }
+    .modal-close:hover { color: #303133; }
+    .modal-body { padding: 20px; }
+    .modal-footer { padding: 12px 20px; border-top: 1px solid #ebeef5; text-align: right; display: flex; gap: 8px; justify-content: flex-end; }
+
+    /* 进度条 */
+    .progress-bar { display: flex; align-items: center; margin-bottom: 24px; }
+    .progress-step { display: flex; flex-direction: column; align-items: center; position: relative; flex: 1; }
+    .progress-dot {
+      width: 28px; height: 28px; border-radius: 50%; background: #e4e7ed; color: #909399;
+      display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600;
+      z-index: 1;
+    }
+    .progress-dot.done { background: #67C23A; color: #fff; }
+    .progress-dot.active { background: #409EFF; color: #fff; }
+    .progress-label { margin-top: 8px; font-size: 12px; color: #909399; }
+    .progress-label.active { color: #409EFF; font-weight: 500; }
+    .progress-label.done { color: #67C23A; }
+    .progress-line { position: absolute; top: 14px; left: 50%; width: 100%; height: 2px; background: #e4e7ed; z-index: 0; }
+    .progress-line.done { background: #67C23A; }
+
+    /* 时间线 */
+    .timeline { padding-left: 20px; border-left: 2px solid #e4e7ed; }
+    .timeline-item { position: relative; padding: 0 0 24px 20px; }
+    .timeline-item:last-child { padding-bottom: 0; }
+    .timeline-dot {
+      position: absolute; left: -27px; top: 4px; width: 12px; height: 12px;
+      border-radius: 50%; background: #e4e7ed;
+    }
+    .timeline-dot.active { background: #409EFF; }
+    .timeline-dot.done { background: #67C23A; }
+    .timeline-content { font-size: 13px; color: #606266; }
+    .timeline-time { font-size: 12px; color: #909399; margin-top: 4px; }
+
+    /* 图片上传区域 */
+    .upload-area {
+      width: 120px; height: 120px; border: 1px dashed #d9d9d9; border-radius: 6px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      cursor: pointer; transition: border-color .2s; color: #909399;
+    }
+    .upload-area:hover { border-color: #409EFF; color: #409EFF; }
+    .upload-area .upload-icon { font-size: 28px; margin-bottom: 4px; }
+    .upload-area .upload-text { font-size: 12px; }
+    .upload-preview {
+      width: 120px; height: 120px; border-radius: 6px; position: relative;
+      overflow: hidden; border: 1px solid #ebeef5;
+    }
+    .upload-preview img { width: 100%; height: 100%; object-fit: cover; }
+    .upload-preview .delete-btn {
+      position: absolute; top: 4px; right: 4px; width: 20px; height: 20px;
+      background: rgba(0,0,0,.5); color: #fff; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 12px; border: none;
+    }
+
+    /* SKU 规格标签 */
+    .spec-tag {
+      display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px;
+      background: #ecf5ff; color: #409EFF; border-radius: 4px; font-size: 13px;
+      margin: 4px 4px 4px 0;
+    }
+    .spec-tag .remove { cursor: pointer; font-size: 14px; }
+    .spec-tag .remove:hover { color: #F56C6C; }
+
+    /* 统计卡片 */
+    .stat-card {
+      background: #fff; border-radius: 8px; padding: 20px; position: relative;
+      overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+    .stat-card .stat-icon {
+      position: absolute; right: 16px; top: 16px; width: 48px; height: 48px;
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+      font-size: 24px; opacity: .8;
+    }
+    .stat-card .stat-value { font-size: 28px; font-weight: 700; color: #303133; }
+    .stat-card .stat-label { font-size: 14px; color: #909399; margin-bottom: 8px; }
+    .stat-card .stat-change { font-size: 12px; margin-top: 8px; }
+    .stat-card .stat-change.up { color: #67C23A; }
+    .stat-card .stat-change.down { color: #F56C6C; }
+
+    /* SVG 图表容器 */
+    .chart-container { width: 100%; height: 240px; }
+
+    /* 面包屑 */
+    .breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #909399; }
+    .breadcrumb a { color: #909399; text-decoration: none; }
+    .breadcrumb a:hover { color: #409EFF; }
+    .breadcrumb .separator { color: #c0c4cc; }
+    .breadcrumb .current { color: #303133; }
+
+    /* 级联选择器模拟 */
+    .cascader { display: flex; gap: 8px; }
+    .cascader .form-select { width: auto; min-width: 140px; }
+
+    /* 富文本编辑器模拟 */
+    .editor-toolbar {
+      display: flex; gap: 2px; padding: 8px; border: 1px solid #dcdfe6;
+      border-bottom: none; border-radius: 4px 4px 0 0; background: #fafafa;
+    }
+    .editor-toolbar button {
+      width: 32px; height: 32px; border: none; background: none; cursor: pointer;
+      border-radius: 4px; font-size: 14px; color: #606266;
+    }
+    .editor-toolbar button:hover { background: #e4e7ed; }
+    .editor-area {
+      min-height: 200px; border: 1px solid #dcdfe6; border-radius: 0 0 4px 4px;
+      padding: 12px; outline: none; font-size: 14px; color: #303133; line-height: 1.8;
+    }
+
+    /* 登录页 */
+    .login-page {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .login-card {
+      background: #fff; border-radius: 12px; padding: 40px; width: 420px;
+      box-shadow: 0 8px 40px rgba(0,0,0,.15);
+    }
+    .login-logo { text-align: center; margin-bottom: 32px; }
+    .login-logo h1 { font-size: 28px; color: #409EFF; font-weight: 700; }
+    .login-logo p { color: #909399; font-size: 14px; margin-top: 8px; }
+
+    /* 入驻页 */
+    .apply-page {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .apply-card {
+      background: #fff; border-radius: 12px; padding: 40px; width: 640px;
+      box-shadow: 0 8px 40px rgba(0,0,0,.15);
+    }
+
+    /* 数据图表 - 柱状图 */
+    .bar-chart { display: flex; align-items: flex-end; gap: 12px; height: 200px; padding: 0 20px; }
+    .bar-item { display: flex; flex-direction: column; align-items: center; flex: 1; }
+    .bar {
+      width: 100%; border-radius: 4px 4px 0 0; background: linear-gradient(180deg, #409EFF, #66B1FF);
+      transition: height .5s ease; min-height: 4px;
+    }
+    .bar-label { font-size: 11px; color: #909399; margin-top: 8px; }
+
+    /* 滚动条美化 */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #c0c4cc; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #909399; }
+  </style>
+</head>
+<body>
+
+<!-- ==================== 左侧原型导航 ==================== -->
+<nav class="proto-nav">
+  <div class="proto-nav-title">ShopMall 商家后台<br><span style="font-size:11px;font-weight:400;color:#666;">原型页面导航</span></div>
+  <div class="proto-nav-group">独立页面</div>
+  <button class="proto-nav-item active" onclick="switchPage('login')">1. 登录页</button>
+  <button class="proto-nav-item" onclick="switchPage('apply')">2. 入驻申请页</button>
+  <div class="proto-nav-group">后台页面</div>
+  <button class="proto-nav-item" onclick="switchPage('dashboard')">3. 首页概览</button>
+  <button class="proto-nav-item" onclick="switchPage('product-list')">4. 商品列表</button>
+  <button class="proto-nav-item" onclick="switchPage('product-edit')">5. 商品发布/编辑</button>
+  <button class="proto-nav-item" onclick="switchPage('order-list')">6. 订单列表</button>
+  <button class="proto-nav-item" onclick="switchPage('order-detail')">7. 订单详情</button>
+  <button class="proto-nav-item" onclick="switchPage('data-center')">8. 数据中心</button>
+  <button class="proto-nav-item" onclick="switchPage('shop-settings')">9. 店铺设置</button>
+</nav>
+
+<!-- ==================== 原型展示区 ==================== -->
+<div class="proto-display">
+
+<!-- ==================== 1. 登录页 ==================== -->
+<div id="page-login" class="proto-page active">
+  <div class="login-page">
+    <div class="login-card">
+      <div class="login-logo">
+        <div style="font-size:48px;margin-bottom:12px;">🏪</div>
+        <h1>ShopMall</h1>
+        <p>商家管理后台</p>
+      </div>
+      <div class="form-group">
+        <label class="form-label"><span class="required">*</span>联系电话</label>
+        <input type="text" class="form-input" placeholder="请输入联系电话" value="13800138000">
+      </div>
+      <div class="form-group">
+        <label class="form-label"><span class="required">*</span>密码</label>
+        <input type="password" class="form-input" placeholder="请输入密码" value="••••••••">
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+        <label style="display:flex;align-items:center;gap:4px;font-size:13px;color:#909399;cursor:pointer;">
+          <input type="checkbox" checked> 记住我
+        </label>
+        <a href="#" style="color:#409EFF;font-size:13px;text-decoration:none;">忘记密码？</a>
+      </div>
+      <button class="btn btn-primary" style="width:100%;padding:12px;font-size:16px;" onclick="switchPage('dashboard')">登 录</button>
+      <div style="text-align:center;margin-top:20px;">
+        <span style="color:#909399;font-size:13px;">还没有商家账号？</span>
+        <a href="#" style="color:#409EFF;font-size:13px;text-decoration:none;" onclick="switchPage('apply')">立即入驻</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 2. 入驻申请页 ==================== -->
+<div id="page-apply" class="proto-page">
+  <div class="apply-page">
+    <div class="apply-card">
+      <div style="text-align:center;margin-bottom:24px;">
+        <h2 style="font-size:24px;color:#303133;">商家入驻申请</h2>
+        <p style="color:#909399;font-size:14px;margin-top:8px;">填写信息并上传资质，审核通过后即可开店</p>
+      </div>
+
+      <!-- 步骤条 -->
+      <div class="steps">
+        <div class="step">
+          <div class="step-circle done">✓</div>
+          <span class="step-text done">填写商家信息</span>
+        </div>
+        <div class="step-line done"></div>
+        <div class="step">
+          <div class="step-circle active">2</div>
+          <span class="step-text active">上传资质</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step">
+          <div class="step-circle">3</div>
+          <span class="step-text">提交审核</span>
+        </div>
+      </div>
+
+      <!-- 步骤2：上传资质（当前展示） -->
+      <div id="apply-step-2">
+        <div class="card" style="box-shadow:none;border:1px solid #ebeef5;">
+          <div class="card-title">资质信息</div>
+          <div class="form-group">
+            <label class="form-label"><span class="required">*</span>营业执照号</label>
+            <input type="text" class="form-input" placeholder="请输入统一社会信用代码" value="91110108MA01XXXXX">
+          </div>
+          <div class="form-group">
+            <label class="form-label"><span class="required">*</span>营业执照图片</label>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;">
+              <div class="upload-preview">
+                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Crect fill='%23f5f7fa' width='120' height='120'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23909399' font-size='12'%3E营业执照%3C/text%3E%3C/svg%3E" alt="营业执照">
+                <button class="delete-btn">×</button>
+              </div>
+              <div class="upload-area">
+                <span class="upload-icon">+</span>
+                <span class="upload-text">上传图片</span>
+              </div>
+            </div>
+            <div style="font-size:12px;color:#909399;margin-top:8px;">支持 JPG、PNG 格式，大小不超过 5MB</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label"><span class="required">*</span>法人姓名</label>
+            <input type="text" class="form-input" placeholder="请输入法人姓名" value="张三">
+          </div>
+          <div class="form-group">
+            <label class="form-label"><span class="required">*</span>法人身份证号</label>
+            <input type="text" class="form-input" placeholder="请输入法人身份证号" value="110***********1234">
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;margin-top:24px;">
+        <button class="btn" onclick="switchPage('login')">返回登录</button>
+        <div style="display:flex;gap:8px;">
+          <button class="btn">上一步</button>
+          <button class="btn btn-primary" onclick="showModal('apply-success-modal')">提交审核</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 提交成功弹窗 -->
+  <div id="apply-success-modal" class="modal-overlay">
+    <div class="modal" style="width:400px;">
+      <div class="modal-header">
+        <h3>提交成功</h3>
+        <button class="modal-close" onclick="hideModal('apply-success-modal')">×</button>
+      </div>
+      <div class="modal-body" style="text-align:center;padding:30px;">
+        <div style="font-size:48px;margin-bottom:16px;">✅</div>
+        <h3 style="font-size:18px;color:#303133;margin-bottom:8px;">入驻申请已提交</h3>
+        <p style="color:#909399;font-size:14px;">我们将在1-3个工作日内完成审核，请耐心等待</p>
+        <div style="margin-top:20px;padding:16px;background:#f5f7fa;border-radius:8px;">
+          <div style="font-size:13px;color:#606266;">审核状态：<span class="tag tag-warning">审核中</span></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="hideModal('apply-success-modal');switchPage('login')">返回登录</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 3. 首页概览 Dashboard ==================== -->
+<div id="page-dashboard" class="proto-page">
+  <div class="admin-layout">
+    <!-- 侧边栏 -->
+    <aside class="admin-sidebar">
+      <div class="sidebar-logo">🏪 商家后台</div>
+      <ul class="sidebar-menu">
+        <li class="sidebar-menu-item active"><span class="menu-icon">📊</span>工作台</li>
+        <li>
+          <div class="sidebar-submenu-title"><span><span class="menu-icon">📦</span>商品管理</span><span>▾</span></div>
+          <ul class="sidebar-submenu">
+            <li class="sidebar-submenu-item" onclick="switchPage('product-list')">商品列表</li>
+            <li class="sidebar-submenu-item" onclick="switchPage('product-edit')">发布商品</li>
+          </ul>
+        </li>
+        <li>
+          <div class="sidebar-submenu-title"><span><span class="menu-icon">📋</span>订单管理</span><span>▾</span></div>
+          <ul class="sidebar-submenu">
+            <li class="sidebar-submenu-item" onclick="switchPage('order-list')">订单列表</li>
+          </ul>
+        </li>
+        <li class="sidebar-menu-item" onclick="switchPage('data-center')"><span class="menu-icon">📈</span>数据中心</li>
+        <li class="sidebar-menu-item" onclick="switchPage('shop-settings')"><span class="menu-icon">⚙️</span>店铺设置</li>
+      </ul>
+    </aside>
+
+    <div class="admin-main">
+      <header class="admin-header">
+        <div class="breadcrumb">
+          <a href="#">首页</a><span class="separator">/</span><span class="current">工作台</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;">
+          <span style="cursor:pointer;font-size:18px;">🔔</span>
+          <div style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <div style="width:32px;height:32px;border-radius:50%;background:#409EFF;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;">商</div>
+            <span style="font-size:14px;color:#303133;">商家管理员</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="admin-content">
+        <!-- 数据卡片行 -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin-bottom:20px;">
+          <div class="stat-card">
+            <div class="stat-label">今日销售额</div>
+            <div class="stat-value">¥12,680</div>
+            <div class="stat-change up">↑ 12.5% 较昨日</div>
+            <div class="stat-icon" style="background:#ecf5ff;color:#409EFF;">💰</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">今日订单数</div>
+            <div class="stat-value">86</div>
+            <div class="stat-change up">↑ 8.2% 较昨日</div>
+            <div class="stat-icon" style="background:#f0f9eb;color:#67C23A;">📋</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">待发货订单</div>
+            <div class="stat-value">12</div>
+            <div class="stat-change down">↓ 3.1% 较昨日</div>
+            <div class="stat-icon" style="background:#fdf6ec;color:#E6A23C;">🚚</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">商品总数</div>
+            <div class="stat-value">256</div>
+            <div class="stat-change up">↑ 2 新增</div>
+            <div class="stat-icon" style="background:#fef0f0;color:#F56C6C;">📦</div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:20px;">
+          <!-- 销售趋势图 -->
+          <div class="card">
+            <div class="card-title">近7日销售趋势</div>
+            <div class="chart-container">
+              <svg viewBox="0 0 600 200" style="width:100%;height:100%;">
+                <!-- 网格线 -->
+                <line x1="40" y1="10" x2="40" y2="170" stroke="#ebeef5" stroke-width="1"/>
+                <line x1="40" y1="170" x2="580" y2="170" stroke="#ebeef5" stroke-width="1"/>
+                <line x1="40" y1="130" x2="580" y2="130" stroke="#ebeef5" stroke-width="1" stroke-dasharray="4"/>
+                <line x1="40" y1="90" x2="580" y2="90" stroke="#ebeef5" stroke-width="1" stroke-dasharray="4"/>
+                <line x1="40" y1="50" x2="580" y2="50" stroke="#ebeef5" stroke-width="1" stroke-dasharray="4"/>
+                <!-- Y轴标签 -->
+                <text x="35" y="174" text-anchor="end" fill="#909399" font-size="11">0</text>
+                <text x="35" y="134" text-anchor="end" fill="#909399" font-size="11">5k</text>
+                <text x="35" y="94" text-anchor="end" fill="#909399" font-size="11">10k</text>
+                <text x="35" y="54" text-anchor="end" fill="#909399" font-size="11">15k</text>
+                <!-- 折线 -->
+                <polyline fill="none" stroke="#409EFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                  points="80,130 160,90 240,110 320,60 400,80 480,40 560,55"/>
+                <!-- 渐变填充 -->
+                <defs>
+                  <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#409EFF" stop-opacity="0.3"/>
+                    <stop offset="100%" stop-color="#409EFF" stop-opacity="0.02"/>
+                  </linearGradient>
+                </defs>
+                <polygon fill="url(#lineGrad)" points="80,130 160,90 240,110 320,60 400,80 480,40 560,55 560,170 80,170"/>
+                <!-- 数据点 -->
+                <circle cx="80" cy="130" r="4" fill="#409EFF" stroke="#fff" stroke-width="2"/>
+                <circle cx="160" cy="90" r="4" fill="#409EFF" stroke="#fff" stroke-width="2"/>
+                <circle cx="240" cy="110" r="4" fill="#409EFF" stroke="#fff" stroke-width="2"/>
+                <circle cx="320" cy="60" r="4" fill="#409EFF" stroke="#fff" stroke-width="2"/>
+                <circle cx="400" cy="80" r="4" fill="#409EFF" stroke="#fff" stroke-width="2"/>
+                <circle cx="480" cy="40" r="4" fill="#409EFF" stroke="#fff" stroke-width="2"/>
+                <circle cx="560" cy="55" r="4" fill="#409EFF" stroke="#fff" stroke-width="2"/>
+                <!-- X轴标签 -->
+                <text x="80" y="190" text-anchor="middle" fill="#909399" font-size="11">6/11</text>
+                <text x="160" y="190" text-anchor="middle" fill="#909399" font-size="11">6/12</text>
+                <text x="240" y="190" text-anchor="middle" fill="#909399" font-size="11">6/13</text>
+                <text x="320" y="190" text-anchor="middle" fill="#909399" font-size="11">6/14</text>
+                <text x="400" y="190" text-anchor="middle" fill="#909399" font-size="11">6/15</text>
+                <text x="480" y="190" text-anchor="middle" fill="#909399" font-size="11">6/16</text>
+                <text x="560" y="190" text-anchor="middle" fill="#909399" font-size="11">6/17</text>
+              </svg>
+            </div>
+          </div>
+
+          <!-- 待办事项 -->
+          <div class="card">
+            <div class="card-title">待办事项</div>
+            <div style="display:flex;flex-direction:column;gap:12px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:#fdf6ec;border-radius:6px;">
+                <span style="font-size:14px;color:#606266;">待发货订单</span>
+                <span style="font-size:20px;font-weight:700;color:#E6A23C;">12</span>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:#fef0f0;border-radius:6px;">
+                <span style="font-size:14px;color:#606266;">退款待处理</span>
+                <span style="font-size:20px;font-weight:700;color:#F56C6C;">3</span>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:#ecf5ff;border-radius:6px;">
+                <span style="font-size:14px;color:#606266;">库存预警</span>
+                <span style="font-size:20px;font-weight:700;color:#409EFF;">5</span>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:#f0f9eb;border-radius:6px;">
+                <span style="font-size:14px;color:#606266;">新评价待回复</span>
+                <span style="font-size:20px;font-weight:700;color:#67C23A;">8</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 最近订单 -->
+        <div class="card">
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+            <span>最近订单</span>
+            <button class="btn btn-text btn-sm" onclick="switchPage('order-list')">查看全部 →</button>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>订单号</th>
+                <th>商品信息</th>
+                <th>金额</th>
+                <th>状态</th>
+                <th>下单时间</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="color:#409EFF;cursor:pointer;">SN20240617001</td>
+                <td style="display:flex;align-items:center;gap:8px;">
+                  <div style="width:40px;height:40px;border-radius:4px;background:#f5f7fa;display:flex;align-items:center;justify-content:center;font-size:20px;">👟</div>
+                  <span>运动跑鞋 Pro x2</span>
+                </td>
+                <td style="font-weight:600;">¥598.00</td>
+                <td><span class="tag tag-warning">待发货</span></td>
+                <td>2024-06-17 14:30</td>
+              </tr>
+              <tr>
+                <td style="color:#409EFF;cursor:pointer;">SN20240617002</td>
+                <td style="display:flex;align-items:center;gap:8px;">
+                  <div style="width:40px;height:40px;border-radius:4px;background:#f5f7fa;display:flex;align-items:center;justify-content:center;font-size:20px;">👕</div>
+                  <span>纯棉T恤 x1</span>
+                </td>
+                <td style="font-weight:600;">¥129.00</td>
+                <td><span class="tag tag-primary">运输中</span></td>
+                <td>2024-06-17 12:15</td>
+              </tr>
+              <tr>
+                <td style="color:#409EFF;cursor:pointer;">SN20240616008</td>
+                <td style="display:flex;align-items:center;gap:8px;">
+                  <div style="width:40px;height:40px;border-radius:4px;background:#f5f7fa;display:flex;align-items:center;justify-content:center;font-size:20px;">🎒</div>
+                  <span>双肩背包 x1</span>
+                </td>
+                <td style="font-weight:600;">¥259.00</td>
+                <td><span class="tag tag-success">已收货</span></td>
+                <td>2024-06-16 18:45</td>
+              </tr>
+              <tr>
+                <td style="color:#409EFF;cursor:pointer;">SN20240616005</td>
+                <td style="display:flex;align-items:center;gap:8px;">
+                  <div style="width:40px;height:40px;border-radius:4px;background:#f5f7fa;display:flex;align-items:center;justify-content:center;font-size:20px;">⌚</div>
+                  <span>智能手表 x1</span>
+                </td>
+                <td style="font-weight:600;">¥1,299.00</td>
+                <td><span class="tag tag-danger">退款中</span></td>
+                <td>2024-06-16 10:20</td>
+              </tr>
+              <tr>
+                <td style="color:#409EFF;cursor:pointer;">SN20240615012</td>
+                <td style="display:flex;align-items:center;gap:8px;">
+                  <div style="width:40px;height:40px;border-radius:4px;background:#f5f7fa;display:flex;align-items:center;justify-content:center;font-size:20px;">🎧</div>
+                  <span>蓝牙耳机 x3</span>
+                </td>
+                <td style="font-weight:600;">¥897.00</td>
+                <td><span class="tag tag-success">已收货</span></td>
+                <td>2024-06-15 09:30</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 4. 商品列表 ==================== -->
+<div id="page-product-list" class="proto-page">
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <div class="sidebar-logo">🏪 商家后台</div>
+      <ul class="sidebar-menu">
+        <li class="sidebar-menu-item" onclick="switchPage('dashboard')"><span class="menu-icon">📊</span>工作台</li>
+        <li>
+          <div class="sidebar-submenu-title"><span><span class="menu-icon">📦</span>商品管理</span><span>▾</span></div>
+          <ul class="sidebar-submenu">
+            <li class="sidebar-submenu-item active">商品列表</li>
+            <li class="sidebar-submenu-item" onclick="switchPage('product-edit')">发布商品</li>
+          </ul>
+        </li>
+        <li>
+          <div class="sidebar-submenu-title"><span><span class="menu-icon">📋</span>订单管理</span><span>▾</span></div>
+          <ul class="sidebar-submenu">
+            <li class="sidebar-submenu-item" onclick="switchPage('order-list')">订单列表</li>
+          </ul>
+        </li>
+        <li class="sidebar-menu-item" onclick="switchPage('data-center')"><span class="menu-icon">📈</span>数据中心</li>
+        <li class="sidebar-menu-item" onclick="switchPage('shop-settings')"><span class="menu-icon">⚙️</span>店铺设置</li>
+      </ul>
+    </aside>
+
+    <div class="admin-main">
+      <header class="admin-header">
+        <div class="breadcrumb">
+          <a href="#" onclick="switchPage('dashboard')">首页</a><span class="separator">/</span>
+          <a href="#">商品管理</a><span class="separator">/</span><span class="current">商品列表</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;">
+          <span style="cursor:pointer;font-size:18px;">🔔</span>
+          <div style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <div style="width:32px;height:32px;border-radius:50%;background:#409EFF;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;">商</div>
+            <span style="font-size:14px;color:#303133;">商家管理员</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="admin-content">
+        <!-- 搜索栏 -->
+        <div class="card" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+          <div class="form-group" style="margin-bottom:0;flex:1;min-width:180px;">
+            <label class="form-label">商品名称</label>
+            <input type="text" class="form-input" placeholder="请输入商品名称">
+          </div>
+          <div class="form-group" style="margin-bottom:0;width:160px;">
+            <label class="form-label">商品分类</label>
+            <select class="form-select">
+              <option value="">全部分类</option>
+              <option>服装鞋帽</option>
+              <option>数码电子</option>
+              <option>家居生活</option>
+              <option>美妆个护</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:0;width:140px;">
+            <label class="form-label">商品状态</label>
+            <select class="form-select">
+              <option value="">全部状态</option>
+              <option>已上架</option>
+              <option>已下架</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" style="height:36px;">🔍 搜索</button>
+          <button class="btn" style="height:36px;">重置</button>
+        </div>
+
+        <!-- 操作栏 -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <div style="font-size:14px;color:#909399;">共 <b style="color:#303133;">256</b> 件商品</div>
+          <button class="btn btn-primary" onclick="switchPage('product-edit')">+ 发布商品</button>
+        </div>
+
+        <!-- 商品表格 -->
+        <div class="card" style="padding:0;overflow:hidden;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width:80px;">商品图片</th>
+                <th>商品名称</th>
+                <th>分类</th>
+                <th>价格</th>
+                <th>库存</th>
+                <th>状态</th>
+                <th style="width:200px;">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><div style="width:60px;height:60px;border-radius:4px;background:#f5f7fa;display:flex;align-items:center;justify-content:center;font-size:28px;">👟</div></td>
+                <td><div style="font-weight:500;color:#303133;">运动跑鞋 Pro</div><div style="font-size:12px;color:#909399;">透气网面 减震回弹</div></td>
+                <td>服装鞋帽</td>
+                <td style="font-weight:600;color:#F56C6C;">¥299.00</td>
+                <td>580</td>
+                <td><span class="tag tag-success">已上架</span></td>
+                <td>
+                  <button class="btn btn-text btn-sm" onclick="switchPage('product-edit')">编辑</button>
+                  <button class="btn btn-text btn-sm" style="color:#E6A23C;">下架</button>
+                  <button class="btn btn-text btn-sm" style="color:#F56C6C;">删除</button>
+                </td>
+              </tr>
+              <tr>
+                <td><div style="width:60px;height:60px;border-radius:4px;background:#f5f7fa;display:flex;align-items:center;justify-content:center;font-size:28px;">👕</div></td>
+                <td><div style="font-weight:500;color:#303133;">纯棉T恤</div><div style="font-size:12px;color:#909399;">舒适透气 多色可选</div></td>
+                <td>服装鞋帽</td>
+                <td style="font-weight:600;color:#F56C6C;">¥129.00</td>
+                <td>1,230</td>
+                <td><span class="tag tag-success">已上架</span></td>
+                <td>
+                  <button class="btn btn-text btn-sm" onclick="switchPage('product-edit')">编辑</button>
+                  <button class="btn btn-text btn-sm" style="color:#E6A23C;">下架</button>
+                  <button class="btn btn-text btn-sm" style="color:#F56C6C;">删除</button>
+                </td>
+              </tr>
+              <tr>
+                <td><div style="width:60px;height:60px;border-radius:4px;background:#f5f7fa;display:flex;align-items:center;justify-content:center;font-size:28px;">🎒</div></td>
+                <td><div style="font-weight:500;color:#303133;">双肩背包</div><div style="font-size:12px;color:#909399;">大容量 防水面料</div></td>
+                <td>箱包配饰</td>
+                <td style="font-weight:600;color:#F56C6C;">¥259.00</td>
+                <td>89</td>
+                <td><span class="tag tag-success">已上架</span></td>
+                <td>
+                  <button class="btn btn-text btn-sm" onclick="switchPage('product-edit')">编辑</button>
+                  <button class="btn btn-text btn-sm" style="color:#E6A23C;">下架</button>
+                  <button class="btn btn-text btn-sm" style="color:#F56C6C;">删除</button>
+                </td>
+              </tr>
+              <tr>
+                <td><div style="width:60px;height:60px;border-radius:4px;background:#f5f7fa;display:flex;align-items:center;justify-content:center;font-size:28px;">⌚</div></td>
+                <td><div style="font-weight:500;color:#303133;">智能手表</div><div style="font-size:12px;color:#909399;">健康监测 超长续航</div></td>
+                <td>数码电子</td>
+                <td style="font-weight:600;color:#F56C6C;">¥1,299.00</td>
+                <td>45</td>
+                <td><span class="tag tag-info">已下架</span></td>
+                <td>
+                  <button class="btn btn-text btn-sm" onclick="switchPage('product-edit')">编辑</button>
+                  <button class="btn btn-text btn-sm" style="color:#67C23A;">上架</button>
+                  <button class="btn btn-text btn-sm" style="color:#F56C6C;">删除</button>
+                </td>
+              </tr>
+              <tr>
+                <td><div style="width:60px;height:60px;border-radius:4px;background:#f5f7fa;display:flex;align-items:center;justify-content:center;font-size:28px;">🎧</div></td>
+                <td><div style="font-weight:500;color:#303133;">蓝牙耳机</div><div style="font-size:12px;color:#909399;">主动降噪 HiFi音质</div></td>
+                <td>数码电子</td>
+                <td style="font-weight:600;color:#F56C6C;">¥299.00</td>
+                <td>312</td>
+                <td><span class="tag tag-success">已上架</span></td>
+                <td>
+                  <button class="btn btn-text btn-sm" onclick="switchPage('product-edit')">编辑</button>
+                  <button class="btn btn-text btn-sm" style="color:#E6A23C;">下架</button>
+                  <button class="btn btn-text btn-sm" style="color:#F56C6C;">删除</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 分页 -->
+        <div class="pagination">
+          <span style="font-size:13px;color:#606266;margin-right:8px;">共 256 条</span>
+          <button class="page-btn">‹</button>
+          <button class="page-btn active">1</button>
+          <button class="page-btn">2</button>
+          <button class="page-btn">3</button>
+          <button class="page-btn">4</button>
+          <button class="page-btn">5</button>
+          <button class="page-btn">›</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 5. 商品发布/编辑页 ==================== -->
+<div id="page-product-edit" class="proto-page">
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <div class="sidebar-logo">🏪 商家后台</div>
+      <ul class="sidebar-menu">
+        <li class="sidebar-menu-item" onclick="switchPage('dashboard')"><span class="menu-icon">📊</span>工作台</li>
+        <li>
+          <div class="sidebar-submenu-title"><span><span class="menu-icon">📦</span>商品管理</span><span>▾</span></div>
+          <ul class="sidebar-submenu">
+            <li class="sidebar-submenu-item" onclick="switchPage('product-list')">商品列表</li>
+            <li class="sidebar-submenu-item active">发布商品</li>
+          </ul>
+        </li>
+        <li>
+          <div class="sidebar-submenu-title"><span><span class="menu-icon">📋</span>订单管理</span><span>▾</span></div>
+          <ul class="sidebar-submenu">
+            <li class="sidebar-submenu-item" onclick="switchPage('order-list')">订单列表</li>
+          </ul>
+        </li>
+        <li class="sidebar-menu-item" onclick="switchPage('data-center')"><span class="menu-icon">📈</span>数据中心</li>
+        <li class="sidebar-menu-item" onclick="switchPage('shop-settings')"><span class="menu-icon">⚙️</span>店铺设置</li>
+      </ul>
+    </aside>
+
+    <div class="admin-main">
+      <header class="admin-header">
+        <div class="breadcrumb">
+          <a href="#" onclick="switchPage('dashboard')">首页</a><span class="separator">/</span>
+          <a href="#" onclick="switchPage('product-list')">商品管理</a><span class="separator">/</span><span class="current">发布商品</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;">
+          <span style="cursor:pointer;font-size:18px;">🔔</span>
+          <div style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <div style="width:32px;height:32px;border-radius:50%;background:#409EFF;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;">商</div>
+            <span style="font-size:14px;color:#303133;">商家管理员</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="admin-content">
+        <!-- 基本信息 -->
+        <div class="card">
+          <div class="card-title">基本信息</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div class="form-group">
+              <label class="form-label"><span class="required">*</span>商品分类</label>
+              <div class="cascader">
+                <select class="form-select">
+                  <option>服装鞋帽</option>
+                  <option>数码电子</option>
+                  <option>家居生活</option>
+                </select>
+                <select class="form-select">
+                  <option>男装</option>
+                  <option>女装</option>
+                  <option>童装</option>
+                </select>
+                <select class="form-select">
+                  <option>T恤</option>
+                  <option>衬衫</option>
+                  <option>外套</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label"><span class="required">*</span>品牌</label>
+              <select class="form-select">
+                <option value="">请选择品牌</option>
+                <option>Nike</option>
+                <option>Adidas</option>
+                <option>优衣库</option>
+                <option>小米</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label"><span class="required">*</span>商品名称</label>
+            <input type="text" class="form-input" placeholder="请输入商品名称" value="运动跑鞋 Pro">
+          </div>
+          <div class="form-group">
+            <label class="form-label">副标题</label>
+            <input type="text" class="form-input" placeholder="请输入副标题" value="透气网面 减震回弹 轻量设计">
+          </div>
+        </div>
+
+        <!-- 规格SKU区 -->
+        <div class="card">
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+            <span>规格与库存（SKU）</span>
+            <button class="btn btn-primary btn-sm" onclick="showModal('spec-modal')">+ 添加规格</button>
+          </div>
+
+          <!-- 规格展示区 -->
+          <div style="margin-bottom:20px;">
+            <!-- 规格1：颜色 -->
+            <div style="margin-bottom:16px;padding:16px;background:#fafafa;border-radius:6px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                <span style="font-weight:500;color:#303133;">规格名：颜色</span>
+                <button class="btn btn-text btn-sm" style="color:#F56C6C;">删除规格</button>
+              </div>
+              <div style="display:flex;flex-wrap:wrap;gap:4px;">
+                <span class="spec-tag">红色 <span class="remove">×</span></span>
+                <span class="spec-tag">蓝色 <span class="remove">×</span></span>
+                <span class="spec-tag">黑色 <span class="remove">×</span></span>
+                <button class="btn btn-sm" style="height:28px;font-size:12px;">+ 添加规格值</button>
+              </div>
+            </div>
+            <!-- 规格2：尺码 -->
+            <div style="margin-bottom:16px;padding:16px;background:#fafafa;border-radius:6px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                <span style="font-weight:500;color:#303133;">规格名：尺码</span>
+                <button class="btn btn-text btn-sm" style="color:#F56C6C;">删除规格</button>
+              </div>
+              <div style="display:flex;flex-wrap:wrap;gap:4px;">
+                <span class="spec-tag">S <span class="remove">×</span></span>
+                <span class="spec-tag">M <span class="remove">×</span></span>
+                <span class="spec-tag">L <span class="remove">×</span></span>
+                <button class="btn btn-sm" style="height:28px;font-size:12px;">+ 添加规格值</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- SKU组合表格 -->
+          <div style="overflow-x:auto;">
+            <table class="data-table" style="min-width:700px;">
+              <thead>
+                <tr>
+                  <th>颜色</th>
+                  <th>尺码</th>
+                  <th style="width:120px;">价格（元）</th>
+                  <th style="width:120px;">原价（元）</th>
+                  <th style="width:100px;">库存</th>
+                  <th style="width:80px;">SKU图片</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>红色</td><td>S</td>
+                  <td><input type="text" class="form-input" value="299" style="width:100px;"></td>
+                  <td><input type="text" class="form-input" value="399" style="width:100px;"></td>
+                  <td><input type="text" class="form-input" value="50" style="width:80px;"></td>
+                  <td><div class="upload-area" style="width:48px;height:48px;"><span style="font-size:16px;">+</span></div></td>
+                </tr>
+                <tr>
+                  <td>红色</td><td>M</td>
+                  <td><input type="text" class="form-input" value="299" style="width:100px;"></td>
+                  <td><input type="text" class="form-input" value="399" style="width:100px;"></td>
+                  <td><input type="text" class="form-input" value="80" style="width:80px;"></td>
+                  <td><div class="upload-area" style="width:48px;height:48px;"><span style="font-size:16px;">+</span></div></td>
+                </tr>
+                <tr>
+                  <td>红色</td><td>L</td>
+                  <td><input type="text" class="form-input" value="319" style="width:100px;"></td>
+                  <td><input type="text" class="form-input" value="419" style="width:100px;"></td>
+                  <td><input type="text" class="form-input" value="60" style="width:80px;"></td>
+                  <td><div class="upload-area" style="width:48px;height:48px;"><span style="font-size:16px;">+</span></div></td>
+                </tr>
+                <tr>
+                  <td>蓝色</td><td>S</td>
+                  <td><input type="text" class="form-input" value="299" style="width:100px;"></td>
+                  <td><input type="text" class="form-input" value="399" style="width:100px;"></td>
+                  <td><input type="text" class="form-input" value="45" style="width:80px;"></td>
+                  <td><div class="upload-area" style="width:48px;height:48px;"><span style="font-size:16px;">+</span></div></td>
+                </tr>
+                <tr>
+                  <td>蓝色</td><td>M</td>
+                  <td><input type="text" class="form-input" value="299" style="width:100px;"></td>
+                  <td><input type="text" class="form-input" value="399" style="width:100px;"></td>
+                  <td><input type="text" class="form-input" value="70" style="width:80px;"></td>
+                  <td><div class="upload-area" style="width:48px;height:48px;"><span style="font-size:16px;">+</span></div></td>
+                </tr>
+                <tr>
+                  <td>蓝色</td><td>L</td>
+                  <td><input type="text" class="form-input" value="319" style="width:100px;"></td>
+                  <td><input type="text" class="form-input" value="419" style="width:100px;"></td>
+                  <td><input type="text" class="form-input" value="55" style="width:80px;"></td>
+                  <td><div class="upload-area" style="width:48px;height:48px;"><span style="font-size:16px;">+</span></div></td>
+                </tr>
+                <tr>
+                  <td>黑色</td><td>S</td>
+                  <td><input type="text" class="form-input" value="299" style="width:100px;"></td>
+                  <td><input type="text" class="form-input" value="399" style="width:100px;"></td>
+                  <td><input type="text" class="form-input" value="90" style="width:80px;"></td>
+                  <td><div class="upload-area" style="width:48px;height:48px;"><span style="font-size:16px;">+</span></div></td>
+                </tr>
+                <tr>
+                  <td>黑色</td><td>M</td>
+                  <td><input type="text" class="form-input" value="299" style="width:100px;"></td>
+                  <td><input type="text" class="form-input" value="399" style="width:100px;"></td>
+                  <td><input type="text" class="form-input" value="120" style="width:80px;"></td>
+                  <td><div class="upload-area" style="width:48px;height:48px;"><span style="font-size:16px;">+</span></div></td>
+                </tr>
+                <tr>
+                  <td>黑色</td><td>L</td>
+                  <td><input type="text" class="form-input" value="319" style="width:100px;"></td>
+                  <td><input type="text" class="form-input" value="419" style="width:100px;"></td>
+                  <td><input type="text" class="form-input" value="85" style="width:80px;"></td>
+                  <td><div class="upload-area" style="width:48px;height:48px;"><span style="font-size:16px;">+</span></div></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 商品图片区 -->
+        <div class="card">
+          <div class="card-title">商品图片（最多8张，第一张为主图）</div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;">
+            <div class="upload-preview" style="position:relative;">
+              <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Crect fill='%23e8f4fd' width='120' height='120'/%3E%3Ctext x='50%25' y='45%25' text-anchor='middle' dy='.3em' fill='%23409EFF' font-size='28'%3E👟%3C/text%3E%3Ctext x='50%25' y='70%25' text-anchor='middle' fill='%23409EFF' font-size='10'%3E主图%3C/text%3E%3C/svg%3E" alt="主图">
+              <button class="delete-btn">×</button>
+            </div>
+            <div class="upload-preview">
+              <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Crect fill='%23f5f7fa' width='120' height='120'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23909399' font-size='28'%3E👟%3C/text%3E%3C/svg%3E" alt="商品图2">
+              <button class="delete-btn">×</button>
+            </div>
+            <div class="upload-preview">
+              <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Crect fill='%23f5f7fa' width='120' height='120'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23909399' font-size='28'%3E👟%3C/text%3E%3C/svg%3E" alt="商品图3">
+              <button class="delete-btn">×</button>
+            </div>
+            <div class="upload-area">
+              <span class="upload-icon">+</span>
+              <span class="upload-text">上传图片</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 商品详情区 -->
+        <div class="card">
+          <div class="card-title">商品详情</div>
+          <div class="editor-toolbar">
+            <button title="加粗"><b>B</b></button>
+            <button title="斜体"><i>I</i></button>
+            <button title="下划线"><u>U</u></button>
+            <button title="标题">H</button>
+            <button title="有序列表">☰</button>
+            <button title="插入图片">🖼</button>
+            <button title="插入链接">🔗</button>
+            <button title="居中">≡</button>
+          </div>
+          <div class="editor-area" contenteditable="true">
+            <h3 style="color:#303133;margin-bottom:8px;">运动跑鞋 Pro - 产品详情</h3>
+            <p style="color:#606266;line-height:1.8;">👟 采用最新透气网面技术，让双脚自由呼吸</p>
+            <p style="color:#606266;line-height:1.8;">🏃 减震回弹中底，跑步更轻松</p>
+            <p style="color:#606266;line-height:1.8;">✨ 轻量化设计，单只仅重230g</p>
+            <p style="color:#606266;line-height:1.8;">💧 防滑橡胶大底，雨天也能安心出行</p>
+          </div>
+        </div>
+
+        <!-- 底部操作按钮 -->
+        <div style="display:flex;justify-content:flex-end;gap:12px;padding:20px 0;">
+          <button class="btn" style="min-width:120px;">保存草稿</button>
+          <button class="btn btn-primary" style="min-width:120px;">提交发布</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 添加规格弹窗 -->
+  <div id="spec-modal" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>添加规格</h3>
+        <button class="modal-close" onclick="hideModal('spec-modal')">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label"><span class="required">*</span>规格名称</label>
+          <input type="text" class="form-input" placeholder="如：颜色、尺码、版本等">
+        </div>
+        <div class="form-group">
+          <label class="form-label"><span class="required">*</span>规格值</label>
+          <div style="display:flex;gap:8px;margin-bottom:8px;">
+            <input type="text" class="form-input" placeholder="输入规格值后按回车添加" style="flex:1;">
+            <button class="btn btn-primary btn-sm">添加</button>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;">
+            <span class="spec-tag">红色 <span class="remove">×</span></span>
+            <span class="spec-tag">蓝色 <span class="remove">×</span></span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="hideModal('spec-modal')">取消</button>
+        <button class="btn btn-primary" onclick="hideModal('spec-modal')">确定</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 6. 订单列表 ==================== -->
+<div id="page-order-list" class="proto-page">
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <div class="sidebar-logo">🏪 商家后台</div>
+      <ul class="sidebar-menu">
+        <li class="sidebar-menu-item" onclick="switchPage('dashboard')"><span class="menu-icon">📊</span>工作台</li>
+        <li>
+          <div class="sidebar-submenu-title"><span><span class="menu-icon">📦</span>商品管理</span><span>▾</span></div>
+          <ul class="sidebar-submenu">
+            <li class="sidebar-submenu-item" onclick="switchPage('product-list')">商品列表</li>
+            <li class="sidebar-submenu-item" onclick="switchPage('product-edit')">发布商品</li>
+          </ul>
+        </li>
+        <li>
+          <div class="sidebar-submenu-title"><span><span class="menu-icon">📋</span>订单管理</span><span>▾</span></div>
+          <ul class="sidebar-submenu">
+            <li class="sidebar-submenu-item active">订单列表</li>
+          </ul>
+        </li>
+        <li class="sidebar-menu-item" onclick="switchPage('data-center')"><span class="menu-icon">📈</span>数据中心</li>
+        <li class="sidebar-menu-item" onclick="switchPage('shop-settings')"><span class="menu-icon">⚙️</span>店铺设置</li>
+      </ul>
+    </aside>
+
+    <div class="admin-main">
+      <header class="admin-header">
+        <div class="breadcrumb">
+          <a href="#" onclick="switchPage('dashboard')">首页</a><span class="separator">/</span>
+          <a href="#">订单管理</a><span class="separator">/</span><span class="current">订单列表</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;">
+          <span style="cursor:pointer;font-size:18px;">🔔</span>
+          <div style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <div style="width:32px;height:32px;border-radius:50%;background:#409EFF;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;">商</div>
+            <span style="font-size:14px;color:#303133;">商家管理员</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="admin-content">
+        <!-- Tab切换 -->
+        <div class="tabs">
+          <div class="tab-item active" onclick="switchOrderTab(this)">全部 <span style="font-size:12px;color:#909399;">(156)</span></div>
+          <div class="tab-item" onclick="switchOrderTab(this)">待发货 <span style="font-size:12px;color:#E6A23C;">(12)</span></div>
+          <div class="tab-item" onclick="switchOrderTab(this)">运输中 <span style="font-size:12px;color:#409EFF;">(28)</span></div>
+          <div class="tab-item" onclick="switchOrderTab(this)">已收货 <span style="font-size:12px;color:#67C23A;">(110)</span></div>
+          <div class="tab-item" onclick="switchOrderTab(this)">退款中 <span style="font-size:12px;color:#F56C6C;">(6)</span></div>
+        </div>
+
+        <!-- 订单表格 -->
+        <div class="card" style="padding:0;overflow:hidden;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>订单号</th>
+                <th>商品信息</th>
+                <th>金额</th>
+                <th>状态</th>
+                <th>下单时间</th>
+                <th style="width:160px;">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="color:#409EFF;cursor:pointer;" onclick="switchPage('order-detail')">SN20240617001</td>
+                <td style="display:flex;align-items:center;gap:8px;">
+                  <div style="width:40px;height:40px;border-radius:4px;background:#f5f7fa;display:flex;align-items:center;justify-content:center;font-size:20px;">👟</div>
+                  <div><div style="font-weight:500;">运动跑鞋 Pro ×2</div><div style="font-size:12px;color:#909399;">红色/M</div></div>
+                </td>
+                <td style="font-weight:600;">¥598.00</td>
+                <td><span class="tag tag-warning">待发货</span></td>
+                <td>2024-06-17 14:30</td>
+                <td>
+                  <button class="btn btn-primary btn-sm" onclick="showModal('ship-modal')">发货</button>
+                  <button class="btn btn-text btn-sm" onclick="switchPage('order-detail')">详情</button>
+                </td>
+              </tr>
+              <tr>
+                <td style="color:#409EFF;cursor:pointer;" onclick="switchPage('order-detail')">SN20240617002</td>
+                <td style="display:flex;align-items:center;gap:8px;">
+                  <div style="width:40px;height:40px;border-radius:4px;background:#f5f7fa;display:flex;align-items:center;justify-content:center;font-size:20px;">👕</div>
+                  <div><div style="font-weight:500;">纯棉T恤 ×1</div><div style="font-size:12px;color:#909399;">白色/L</div></div>
+                </td>
+                <td style="font-weight:600;">¥129.00</td>
+                <td><span class="tag tag-primary">运输中</span></td>
+                <td>2024-06-17 12:15</td>
+                <td>
+                  <button class="btn btn-text btn-sm" onclick="switchPage('order-detail')">详情</button>
+                </td>
+              </tr>
+              <tr>
+                <td style="color:#409EFF;cursor:pointer;" onclick="switchPage('order-detail')">SN20240616008</td>
+                <td style="display:flex;align-items:center;gap:8px;">
+                  <div style="width:40px;height:40px;border-radius:4px;background:#f5f7fa;display:flex;align-items:center;justify-content:center;font-size:20px;">🎒</div>
+                  <div><div style="font-weight:500;">双肩背包 ×1</div><div style="font-size:12px;color:#909399;">黑色/大号</div></div>
+                </td>
+                <td style="font-weight:600;">¥259.00</td>
+                <td><span class="tag tag-success">已收货</span></td>
+                <td>2024-06-16 18:45</td>
+                <td>
+                  <button class="btn btn-text btn-sm" onclick="switchPage('order-detail')">详情</button>
+                </td>
+              </tr>
+              <tr>
+                <td style="color:#409EFF;cursor:pointer;" onclick="switchPage('order-detail')">SN20240616005</td>
+                <td style="display:flex;align-items:center;gap:8px;">
+                  <div style="width:40px;height:40px;border-radius:4px;background:#f5f7fa;display:flex;align-items:center;justify-content:center;font-size:20px;">⌚</div>
+                  <div><div style="font-weight:500;">智能手表 ×1</div><div style="font-size:12px;color:#909399;">星空黑/标准版</div></div>
+                </td>
+                <td style="font-weight:600;">¥1,299.00</td>
+                <td><span class="tag tag-danger">退款中</span></td>
+                <td>2024-06-16 10:20</td>
+                <td>
+                  <button class="btn btn-warning btn-sm" onclick="showModal('refund-modal')">退款审核</button>
+                  <button class="btn btn-text btn-sm" onclick="switchPage('order-detail')">详情</button>
+                </td>
+              </tr>
+              <tr>
+                <td style="color:#409EFF;cursor:pointer;" onclick="switchPage('order-detail')">SN20240615012</td>
+                <td style="display:flex;align-items:center;gap:8px;">
+                  <div style="width:40px;height:40px;border-radius:4px;background:#f5f7fa;display:flex;align-items:center;justify-content:center;font-size:20px;">🎧</div>
+                  <div><div style="font-weight:500;">蓝牙耳机 ×3</div><div style="font-size:12px;color:#909399;">白色/标准版</div></div>
+                </td>
+                <td style="font-weight:600;">¥897.00</td>
+                <td><span class="tag tag-success">已收货</span></td>
+                <td>2024-06-15 09:30</td>
+                <td>
+                  <button class="btn btn-text btn-sm" onclick="switchPage('order-detail')">详情</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 分页 -->
+        <div class="pagination">
+          <span style="font-size:13px;color:#606266;margin-right:8px;">共 156 条</span>
+          <button class="page-btn">‹</button>
+          <button class="page-btn active">1</button>
+          <button class="page-btn">2</button>
+          <button class="page-btn">3</button>
+          <button class="page-btn">›</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 发货弹窗 -->
+  <div id="ship-modal" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>订单发货</h3>
+        <button class="modal-close" onclick="hideModal('ship-modal')">×</button>
+      </div>
+      <div class="modal-body">
+        <div style="margin-bottom:16px;padding:12px;background:#f5f7fa;border-radius:6px;">
+          <div style="font-size:13px;color:#909399;">订单号：SN20240617001</div>
+          <div style="font-size:14px;color:#303133;margin-top:4px;">运动跑鞋 Pro ×2</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label"><span class="required">*</span>物流公司</label>
+          <select class="form-select">
+            <option value="">请选择物流公司</option>
+            <option>顺丰速运</option>
+            <option>中通快递</option>
+            <option>圆通速递</option>
+            <option>韵达快递</option>
+            <option>申通快递</option>
+            <option>京东物流</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label"><span class="required">*</span>物流单号</label>
+          <input type="text" class="form-input" placeholder="请输入物流单号">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="hideModal('ship-modal')">取消</button>
+        <button class="btn btn-primary" onclick="hideModal('ship-modal')">确认发货</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 退款审核弹窗 -->
+  <div id="refund-modal" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>退款审核</h3>
+        <button class="modal-close" onclick="hideModal('refund-modal')">×</button>
+      </div>
+      <div class="modal-body">
+        <div style="margin-bottom:16px;padding:12px;background:#f5f7fa;border-radius:6px;">
+          <div style="font-size:13px;color:#909399;">订单号：SN20240616005</div>
+          <div style="font-size:14px;color:#303133;margin-top:4px;">智能手表 ×1 · 退款金额：¥1,299.00</div>
+          <div style="font-size:13px;color:#E6A23C;margin-top:4px;">退款原因：商品与描述不符</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label"><span class="required">*</span>审核结果</label>
+          <div style="display:flex;gap:12px;">
+            <label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
+              <input type="radio" name="refund-result" value="agree"> 同意退款
+            </label>
+            <label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
+              <input type="radio" name="refund-result" value="reject"> 拒绝退款
+            </label>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">备注</label>
+          <textarea class="form-textarea" placeholder="请输入审核备注"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="hideModal('refund-modal')">取消</button>
+        <button class="btn btn-primary" onclick="hideModal('refund-modal')">提交审核</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 7. 订单详情 ==================== -->
+<div id="page-order-detail" class="proto-page">
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <div class="sidebar-logo">🏪 商家后台</div>
+      <ul class="sidebar-menu">
+        <li class="sidebar-menu-item" onclick="switchPage('dashboard')"><span class="menu-icon">📊</span>工作台</li>
+        <li>
+          <div class="sidebar-submenu-title"><span><span class="menu-icon">📦</span>商品管理</span><span>▾</span></div>
+          <ul class="sidebar-submenu">
+            <li class="sidebar-submenu-item" onclick="switchPage('product-list')">商品列表</li>
+            <li class="sidebar-submenu-item" onclick="switchPage('product-edit')">发布商品</li>
+          </ul>
+        </li>
+        <li>
+          <div class="sidebar-submenu-title"><span><span class="menu-icon">📋</span>订单管理</span><span>▾</span></div>
+          <ul class="sidebar-submenu">
+            <li class="sidebar-submenu-item active">订单列表</li>
+          </ul>
+        </li>
+        <li class="sidebar-menu-item" onclick="switchPage('data-center')"><span class="menu-icon">📈</span>数据中心</li>
+        <li class="sidebar-menu-item" onclick="switchPage('shop-settings')"><span class="menu-icon">⚙️</span>店铺设置</li>
+      </ul>
+    </aside>
+
+    <div class="admin-main">
+      <header class="admin-header">
+        <div class="breadcrumb">
+          <a href="#" onclick="switchPage('dashboard')">首页</a><span class="separator">/</span>
+          <a href="#" onclick="switchPage('order-list')">订单管理</a><span class="separator">/</span><span class="current">订单详情</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;">
+          <span style="cursor:pointer;font-size:18px;">🔔</span>
+          <div style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <div style="width:32px;height:32px;border-radius:50%;background:#409EFF;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;">商</div>
+            <span style="font-size:14px;color:#303133;">商家管理员</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="admin-content">
+        <!-- 返回按钮 -->
+        <div style="margin-bottom:16px;">
+          <button class="btn btn-text" onclick="switchPage('order-list')">← 返回订单列表</button>
+        </div>
+
+        <!-- 订单状态进度条 -->
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <div>
+              <span style="font-size:16px;font-weight:600;color:#303133;">订单号：SN20240617001</span>
+              <span class="tag tag-primary" style="margin-left:12px;">运输中</span>
+            </div>
+            <div style="font-size:13px;color:#909399;">下单时间：2024-06-17 14:30:25</div>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-step">
+              <div class="progress-line done"></div>
+              <div class="progress-dot done">✓</div>
+              <div class="progress-label done">已下单</div>
+            </div>
+            <div class="progress-step">
+              <div class="progress-line done"></div>
+              <div class="progress-dot done">✓</div>
+              <div class="progress-label done">已付款</div>
+            </div>
+            <div class="progress-step">
+              <div class="progress-line done"></div>
+              <div class="progress-dot done">✓</div>
+              <div class="progress-label done">已发货</div>
+            </div>
+            <div class="progress-step">
+              <div class="progress-line"></div>
+              <div class="progress-dot active">4</div>
+              <div class="progress-label active">运输中</div>
+            </div>
+            <div class="progress-step">
+              <div class="progress-dot">5</div>
+              <div class="progress-label">已收货</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+          <!-- 买家收货信息 -->
+          <div class="card">
+            <div class="card-title">收货信息</div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <div style="display:flex;"><span style="color:#909399;width:80px;">收货人：</span><span style="color:#303133;">李明</span></div>
+              <div style="display:flex;"><span style="color:#909399;width:80px;">联系电话：</span><span style="color:#303133;">139****5678</span></div>
+              <div style="display:flex;"><span style="color:#909399;width:80px;">收货地址：</span><span style="color:#303133;">北京市海淀区中关村大街1号科技大厦A座1205室</span></div>
+              <div style="display:flex;"><span style="color:#909399;width:80px;">备注：</span><span style="color:#303133;">请尽快发货，谢谢</span></div>
+            </div>
+          </div>
+
+          <!-- 物流信息 -->
+          <div class="card">
+            <div class="card-title">物流信息</div>
+            <div style="margin-bottom:12px;font-size:13px;color:#909399;">
+              顺丰速运 · SF1234567890
+            </div>
+            <div class="timeline">
+              <div class="timeline-item">
+                <div class="timeline-dot active"></div>
+                <div class="timeline-content">【北京市】快件已到达 北京转运中心</div>
+                <div class="timeline-time">2024-06-18 08:30</div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-dot done"></div>
+                <div class="timeline-content">【上海市】快件已从 上海转运中心 发出</div>
+                <div class="timeline-time">2024-06-17 22:15</div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-dot done"></div>
+                <div class="timeline-content">【上海市】快件已到达 上海转运中心</div>
+                <div class="timeline-time">2024-06-17 18:40</div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-dot done"></div>
+                <div class="timeline-content">商家已发货，等待揽收</div>
+                <div class="timeline-time">2024-06-17 15:00</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 商品清单 -->
+        <div class="card">
+          <div class="card-title">商品清单</div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>商品信息</th>
+                <th>规格</th>
+                <th>单价</th>
+                <th>数量</th>
+                <th>小计</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="display:flex;align-items:center;gap:8px;">
+                  <div style="width:60px;height:60px;border-radius:4px;background:#f5f7fa;display:flex;align-items:center;justify-content:center;font-size:28px;">👟</div>
+                  <span style="font-weight:500;">运动跑鞋 Pro</span>
+                </td>
+                <td>红色 / M</td>
+                <td>¥299.00</td>
+                <td>2</td>
+                <td style="font-weight:600;color:#F56C6C;">¥598.00</td>
+              </tr>
+            </tbody>
+          </table>
+          <div style="display:flex;justify-content:flex-end;margin-top:16px;padding-top:16px;border-top:1px solid #ebeef5;">
+            <div style="text-align:right;">
+              <div style="font-size:13px;color:#909399;margin-bottom:4px;">商品总额：<span style="color:#303133;">¥598.00</span></div>
+              <div style="font-size:13px;color:#909399;margin-bottom:4px;">运费：<span style="color:#303133;">¥0.00</span></div>
+              <div style="font-size:16px;font-weight:600;color:#F56C6C;">实付金额：¥598.00</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div style="display:flex;justify-content:flex-end;gap:12px;">
+          <button class="btn" onclick="switchPage('order-list')">返回列表</button>
+          <button class="btn btn-primary" onclick="showModal('ship-modal')">发货</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 8. 数据中心 ==================== -->
+<div id="page-data-center" class="proto-page">
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <div class="sidebar-logo">🏪 商家后台</div>
+      <ul class="sidebar-menu">
+        <li class="sidebar-menu-item" onclick="switchPage('dashboard')"><span class="menu-icon">📊</span>工作台</li>
+        <li>
+          <div class="sidebar-submenu-title"><span><span class="menu-icon">📦</span>商品管理</span><span>▾</span></div>
+          <ul class="sidebar-submenu">
+            <li class="sidebar-submenu-item" onclick="switchPage('product-list')">商品列表</li>
+            <li class="sidebar-submenu-item" onclick="switchPage('product-edit')">发布商品</li>
+          </ul>
+        </li>
+        <li>
+          <div class="sidebar-submenu-title"><span><span class="menu-icon">📋</span>订单管理</span><span>▾</span></div>
+          <ul class="sidebar-submenu">
+            <li class="sidebar-submenu-item" onclick="switchPage('order-list')">订单列表</li>
+          </ul>
+        </li>
+        <li class="sidebar-menu-item active"><span class="menu-icon">📈</span>数据中心</li>
+        <li class="sidebar-menu-item" onclick="switchPage('shop-settings')"><span class="menu-icon">⚙️</span>店铺设置</li>
+      </ul>
+    </aside>
+
+    <div class="admin-main">
+      <header class="admin-header">
+        <div class="breadcrumb">
+          <a href="#" onclick="switchPage('dashboard')">首页</a><span class="separator">/</span><span class="current">数据中心</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;">
+          <span style="cursor:pointer;font-size:18px;">🔔</span>
+          <div style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <div style="width:32px;height:32px;border-radius:50%;background:#409EFF;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;">商</div>
+            <span style="font-size:14px;color:#303133;">商家管理员</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="admin-content">
+        <!-- 日期范围选择器 -->
+        <div class="card" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+          <span style="font-weight:500;color:#303133;">统计周期：</span>
+          <input type="date" class="form-input" style="width:160px;" value="2024-06-01">
+          <span style="color:#909399;">至</span>
+          <input type="date" class="form-input" style="width:160px;" value="2024-06-17">
+          <button class="btn btn-primary btn-sm">查询</button>
+          <div style="display:flex;gap:8px;margin-left:auto;">
+            <button class="btn btn-sm" style="font-size:12px;">近7天</button>
+            <button class="btn btn-sm" style="font-size:12px;background:#ecf5ff;color:#409EFF;border-color:#409EFF;">近30天</button>
+            <button class="btn btn-sm" style="font-size:12px;">近90天</button>
+          </div>
+        </div>
+
+        <!-- 统计卡片 -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin-bottom:20px;">
+          <div class="stat-card">
+            <div class="stat-label">销售额</div>
+            <div class="stat-value">¥86,420</div>
+            <div class="stat-change up">↑ 15.3% 较上期</div>
+            <div class="stat-icon" style="background:#ecf5ff;color:#409EFF;">💰</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">订单数</div>
+            <div class="stat-value">523</div>
+            <div class="stat-change up">↑ 9.8% 较上期</div>
+            <div class="stat-icon" style="background:#f0f9eb;color:#67C23A;">📋</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">客单价</div>
+            <div class="stat-value">¥165.3</div>
+            <div class="stat-change up">↑ 5.1% 较上期</div>
+            <div class="stat-icon" style="background:#fdf6ec;color:#E6A23C;">💎</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">退款率</div>
+            <div class="stat-value">3.2%</div>
+            <div class="stat-change down">↓ 1.5% 较上期</div>
+            <div class="stat-icon" style="background:#fef0f0;color:#F56C6C;">↩️</div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:3fr 2fr;gap:20px;">
+          <!-- 销售趋势柱状图 -->
+          <div class="card">
+            <div class="card-title">销售趋势</div>
+            <div class="bar-chart">
+              <div class="bar-item"><div class="bar" style="height:45%;"></div><div class="bar-label">6/1</div></div>
+              <div class="bar-item"><div class="bar" style="height:60%;"></div><div class="bar-label">6/3</div></div>
+              <div class="bar-item"><div class="bar" style="height:35%;"></div><div class="bar-label">6/5</div></div>
+              <div class="bar-item"><div class="bar" style="height:75%;"></div><div class="bar-label">6/7</div></div>
+              <div class="bar-item"><div class="bar" style="height:55%;"></div><div class="bar-label">6/9</div></div>
+              <div class="bar-item"><div class="bar" style="height:90%;"></div><div class="bar-label">6/11</div></div>
+              <div class="bar-item"><div class="bar" style="height:70%;"></div><div class="bar-label">6/13</div></div>
+              <div class="bar-item"><div class="bar" style="height:85%;"></div><div class="bar-label">6/15</div></div>
+              <div class="bar-item"><div class="bar" style="height:65%;"></div><div class="bar-label">6/17</div></div>
+            </div>
+          </div>
+
+          <!-- 商品排行 -->
+          <div class="card">
+            <div class="card-title">商品销量排行</div>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width:40px;">排名</th>
+                  <th>商品名称</th>
+                  <th>销量</th>
+                  <th>销售额</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span style="display:inline-flex;width:22px;height:22px;border-radius:50%;background:#F56C6C;color:#fff;align-items:center;justify-content:center;font-size:12px;font-weight:600;">1</span></td>
+                  <td style="font-weight:500;">运动跑鞋 Pro</td>
+                  <td>328</td>
+                  <td style="color:#F56C6C;">¥98,072</td>
+                </tr>
+                <tr>
+                  <td><span style="display:inline-flex;width:22px;height:22px;border-radius:50%;background:#E6A23C;color:#fff;align-items:center;justify-content:center;font-size:12px;font-weight:600;">2</span></td>
+                  <td style="font-weight:500;">纯棉T恤</td>
+                  <td>256</td>
+                  <td style="color:#F56C6C;">¥33,024</td>
+                </tr>
+                <tr>
+                  <td><span style="display:inline-flex;width:22px;height:22px;border-radius:50%;background:#409EFF;color:#fff;align-items:center;justify-content:center;font-size:12px;font-weight:600;">3</span></td>
+                  <td style="font-weight:500;">蓝牙耳机</td>
+                  <td>189</td>
+                  <td style="color:#F56C6C;">¥56,511</td>
+                </tr>
+                <tr>
+                  <td><span style="display:inline-flex;width:22px;height:22px;border-radius:50%;background:#c0c4cc;color:#fff;align-items:center;justify-content:center;font-size:12px;">4</span></td>
+                  <td>双肩背包</td>
+                  <td>145</td>
+                  <td style="color:#F56C6C;">¥37,555</td>
+                </tr>
+                <tr>
+                  <td><span style="display:inline-flex;width:22px;height:22px;border-radius:50%;background:#c0c4cc;color:#fff;align-items:center;justify-content:center;font-size:12px;">5</span></td>
+                  <td>智能手表</td>
+                  <td>98</td>
+                  <td style="color:#F56C6C;">¥127,302</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 9. 店铺设置 ==================== -->
+<div id="page-shop-settings" class="proto-page">
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <div class="sidebar-logo">🏪 商家后台</div>
+      <ul class="sidebar-menu">
+        <li class="sidebar-menu-item" onclick="switchPage('dashboard')"><span class="menu-icon">📊</span>工作台</li>
+        <li>
+          <div class="sidebar-submenu-title"><span><span class="menu-icon">📦</span>商品管理</span><span>▾</span></div>
+          <ul class="sidebar-submenu">
+            <li class="sidebar-submenu-item" onclick="switchPage('product-list')">商品列表</li>
+            <li class="sidebar-submenu-item" onclick="switchPage('product-edit')">发布商品</li>
+          </ul>
+        </li>
+        <li>
+          <div class="sidebar-submenu-title"><span><span class="menu-icon">📋</span>订单管理</span><span>▾</span></div>
+          <ul class="sidebar-submenu">
+            <li class="sidebar-submenu-item" onclick="switchPage('order-list')">订单列表</li>
+          </ul>
+        </li>
+        <li class="sidebar-menu-item" onclick="switchPage('data-center')"><span class="menu-icon">📈</span>数据中心</li>
+        <li class="sidebar-menu-item active"><span class="menu-icon">⚙️</span>店铺设置</li>
+      </ul>
+    </aside>
+
+    <div class="admin-main">
+      <header class="admin-header">
+        <div class="breadcrumb">
+          <a href="#" onclick="switchPage('dashboard')">首页</a><span class="separator">/</span><span class="current">店铺设置</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;">
+          <span style="cursor:pointer;font-size:18px;">🔔</span>
+          <div style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <div style="width:32px;height:32px;border-radius:50%;background:#409EFF;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;">商</div>
+            <span style="font-size:14px;color:#303133;">商家管理员</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="admin-content">
+        <div class="card" style="max-width:720px;">
+          <div class="card-title">店铺信息</div>
+
+          <div class="form-group">
+            <label class="form-label"><span class="required">*</span>店铺名称</label>
+            <input type="text" class="form-input" value="潮流运动旗舰店">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">店铺Logo</label>
+            <div style="display:flex;gap:12px;align-items:flex-start;">
+              <div class="upload-preview" style="width:80px;height:80px;">
+                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Crect fill='%23409EFF' width='80' height='80' rx='8'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='white' font-size='24'%3E🏪%3C/text%3E%3C/svg%3E" alt="Logo">
+                <button class="delete-btn">×</button>
+              </div>
+              <div class="upload-area" style="width:80px;height:80px;">
+                <span class="upload-icon" style="font-size:20px;">+</span>
+                <span class="upload-text" style="font-size:10px;">更换Logo</span>
+              </div>
+            </div>
+            <div style="font-size:12px;color:#909399;margin-top:8px;">建议尺寸 200×200，支持 JPG、PNG 格式</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">店铺Banner</label>
+            <div style="display:flex;flex-direction:column;gap:12px;">
+              <div class="upload-preview" style="width:100%;height:120px;">
+                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='120'%3E%3Cdefs%3E%3ClinearGradient id='bg' x1='0%25' y1='0%25' x2='100%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%23409EFF'/%3E%3Cstop offset='100%25' stop-color='%23667eea'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect fill='url(%23bg)' width='600' height='120'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='white' font-size='18' font-weight='bold'%3E潮流运动旗舰店 - Banner%3C/text%3E%3C/svg%3E" alt="Banner" style="object-fit:cover;">
+                <button class="delete-btn">×</button>
+              </div>
+              <div class="upload-area" style="width:100%;height:80px;">
+                <span class="upload-icon">+</span>
+                <span class="upload-text">上传Banner图片（建议尺寸 1200×300）</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">店铺描述</label>
+            <textarea class="form-textarea" style="min-height:120px;" placeholder="请输入店铺描述">专注运动装备15年，为每一位运动爱好者提供专业、舒适、时尚的运动装备。正品保障，售后无忧！</textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">联系电话</label>
+            <input type="text" class="form-input" value="400-888-9999">
+          </div>
+
+          <div style="padding-top:20px;border-top:1px solid #ebeef5;display:flex;justify-content:flex-end;gap:12px;">
+            <button class="btn">取消</button>
+            <button class="btn btn-primary">保存设置</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- proto-display end -->
+
+<script>
+/**
+ * 页面切换功能
+ * 点击左侧导航按钮，显示对应的页面内容，隐藏其他页面
+ * @param {string} pageId - 要切换到的页面ID（不含 'page-' 前缀）
+ */
+function switchPage(pageId) {
+  // 隐藏所有页面
+  document.querySelectorAll('.proto-page').forEach(function(page) {
+    page.classList.remove('active');
+  });
+  // 显示目标页面
+  var targetPage = document.getElementById('page-' + pageId);
+  if (targetPage) {
+    targetPage.classList.add('active');
+  }
+  // 更新导航栏高亮状态
+  document.querySelectorAll('.proto-nav-item').forEach(function(item) {
+    item.classList.remove('active');
+  });
+  // 找到对应的导航按钮并高亮
+  document.querySelectorAll('.proto-nav-item').forEach(function(item) {
+    if (item.getAttribute('onclick') && item.getAttribute('onclick').indexOf(pageId) > -1) {
+      item.classList.add('active');
+    }
+  });
+}
+
+/**
+ * 显示弹窗
+ * 给弹窗的遮罩层添加 'show' 类名，使其可见
+ * @param {string} modalId - 弹窗元素的ID
+ */
+function showModal(modalId) {
+  var modal = document.getElementById(modalId);
+  if (modal) {
+    modal.classList.add('show');
+  }
+}
+
+/**
+ * 隐藏弹窗
+ * 移除弹窗遮罩层的 'show' 类名，使其隐藏
+ * @param {string} modalId - 弹窗元素的ID
+ */
+function hideModal(modalId) {
+  var modal = document.getElementById(modalId);
+  if (modal) {
+    modal.classList.remove('show');
+  }
+}
+
+/**
+ * 订单列表Tab切换
+ * 切换Tab的高亮状态（实际数据筛选需对接后端）
+ * @param {HTMLElement} el - 被点击的Tab元素
+ */
+function switchOrderTab(el) {
+  // 移除所有Tab的active状态
+  el.parentElement.querySelectorAll('.tab-item').forEach(function(tab) {
+    tab.classList.remove('active');
+  });
+  // 给当前点击的Tab添加active状态
+  el.classList.add('active');
+}
+
+/**
+ * 点击弹窗遮罩层关闭弹窗
+ * 点击弹窗外部（遮罩层）时自动关闭弹窗
+ */
+document.querySelectorAll('.modal-overlay').forEach(function(overlay) {
+  overlay.addEventListener('click', function(e) {
+    // 只有点击遮罩层本身（不是弹窗内容）才关闭
+    if (e.target === overlay) {
+      overlay.classList.remove('show');
+    }
+  });
+});
+
+/**
+ * 侧边栏子菜单展开/收起
+ * 点击子菜单标题时，切换子菜单列表的显示状态
+ */
+document.querySelectorAll('.sidebar-submenu-title').forEach(function(title) {
+  title.addEventListener('click', function() {
+    var submenu = this.nextElementSibling;
+    if (submenu && submenu.classList.contains('sidebar-submenu')) {
+      // 切换子菜单的显示/隐藏
+      if (submenu.style.display === 'none') {
+        submenu.style.display = 'block';
+      } else {
+        submenu.style.display = 'none';
+      }
+    }
+  });
+});
+</script>
+
+</body>
+</html>

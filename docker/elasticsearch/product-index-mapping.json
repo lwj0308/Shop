@@ -1,0 +1,24 @@
+{
+  "mappings": {
+    "properties": {
+      "id": { "type": "long" },
+      "name": {
+        "type": "text",
+        "fields": {
+          "suggest": { "type": "completion" }
+        }
+      },
+      "subtitle": { "type": "text" },
+      "mainImage": { "type": "keyword" },
+      "categoryId": { "type": "long" },
+      "brandId": { "type": "long" },
+      "shopId": { "type": "long" },
+      "status": { "type": "integer" },
+      "createTime": { "type": "date" },
+      "categoryName": { "type": "keyword" },
+      "brandName": { "type": "keyword" },
+      "minPrice": { "type": "double" },
+      "totalStock": { "type": "integer" }
+    }
+  }
+}

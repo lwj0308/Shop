@@ -1,0 +1,41 @@
+# 订单服务独立配置
+# 在Nacos中配置为：Data ID = shop-order.yml, Group = DEFAULT_GROUP, Namespace = dev
+
+server:
+  port: 8849
+
+spring:
+  application:
+    name: shop-order
+
+# Seata分布式事务配置（跨服务的事务一致性保证）
+# 比如下单时要同时操作订单服务和库存服务，要么都成功，要么都失败
+# 暂时禁用：Docker Compose 中未启动 Seata Server，需要时再开启
+seata:
+  enabled: false
+  # 应用标识，在Seata中注册的名字
+  application-id: shop-order
+  # 事务分组，同一分组的事务由同一个TC（事务协调者）管理
+  tx-service-group: shop-tx-group
+  service:
+    # 事务分组映射：shop-tx-group分组使用default集群
+    vgroup-mapping:
+      shop-tx-group: default
+  registry:
+    # 注册中心类型：通过Nacos发现Seata Server
+    type: nacos
+    nacos:
+      server-addr: ${NACOS_SERVER:localhost:8976}
+      namespace: ${NACOS_NAMESPACE:dev}
+      group: DEFAULT_GROUP
+
+# RocketMQ配置（消息队列，用于异步处理）
+# 比如下单成功后发消息通知库存服务扣减库存
+rocketmq:
+  # NameServer地址（RocketMQ的路由注册中心）
+  name-server: ${ROCKETMQ_NAMESRV:localhost:9977}
+  producer:
+    # 生产者组名（同一个组的生产者发送同类消息）
+    group: order-producer-group
+    # 发送消息超时时间（3秒内没发成功就报错）
+    send-message-timeout: 3000

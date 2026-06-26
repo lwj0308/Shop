@@ -1,0 +1,30 @@
+# 网关服务独立配置
+# 在Nacos中配置为：Data ID = shop-gateway.yml, Group = DEFAULT_GROUP, Namespace = dev
+
+server:
+  port: 8844
+
+spring:
+  application:
+    name: shop-gateway
+
+# Sa-Token 网关配置（响应式版本，适配Spring Cloud Gateway）
+sa-token:
+  # token名称（前端请求头里传这个名字）
+  token-name: Authorization
+  # token有效期2小时（单位：秒）
+  timeout: 7200
+  # 是否允许同一账号多地同时登录
+  is-concurrent: true
+  # 多人登录同一账号时，是否共用同一个token
+  is-share: true
+  # token风格：uuid是一串随机字符串
+  token-style: uuid
+  # 网关鉴权白名单（这些路径不需要登录就能访问，相当于"免票入场"）
+  whitelist:
+    - /api/user/auth/login        # 用户登录
+    - /api/user/auth/register     # 用户注册
+    - /api/user/auth/wx-login     # 微信登录
+    - /api/user/auth/refresh      # 刷新Token（AccessToken过期后用RefreshToken换新的）
+    - /api/product/**             # 商品浏览（公开，不需要登录就能看商品）
+    - /api/merchant/auth/login    # 商家登录

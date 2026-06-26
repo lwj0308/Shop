@@ -1,0 +1,9 @@
+# 商家服务独立配置
+# 在Nacos中配置为：Data ID = shop-merchant.yml, Group = DEFAULT_GROUP, Namespace = dev
+
+server:
+  port: 8846
+
+spring:
+  application:
+    name: shop-merchant

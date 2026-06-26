@@ -1,0 +1,73 @@
+﻿server:
+  port: 8845
+
+spring:
+  application:
+    name: shop-user
+  # 激活dev环境（logback和Nacos配置都依赖这个profile）
+  profiles:
+    active: dev
+  # 使用spring.config.import方式加载Nacos配置
+  config:
+    import: nacos:shop-user.yml?refreshEnabled=true
+  cloud:
+    nacos:
+      server-addr: ${NACOS_SERVER:localhost:8976}
+      config:
+        namespace: ${NACOS_NAMESPACE:dev}
+        group: DEFAULT_GROUP
+      discovery:
+        namespace: ${NACOS_NAMESPACE:dev}
+  # 数据源配置（HikariCP连接池，Spring Boot默认自带）
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3307}/shop_user?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:root}
+    hikari:
+      # 连接池最大连接数
+      maximum-pool-size: 20
+      # 最小空闲连接数
+      minimum-idle: 5
+      # 连接超时时间（毫秒）
+      connection-timeout: 30000
+      # 空闲连接存活最大时间（毫秒）
+      idle-timeout: 600000
+      # 连接最大存活时间（毫秒）
+      max-lifetime: 1800000
+
+# MyBatis-Plus 配置
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  configuration:
+    # 开启驼峰命名转换：数据库的user_name会自动映射到Java的userName
+    map-underscore-to-camel-case: true
+    # 日志输出：开发时可以看到执行的SQL语句
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      # 主键生成策略：使用雪花算法生成分布式唯一ID
+      id-type: assign_id
+      # 逻辑删除字段名
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+# Sa-Token 配置
+sa-token:
+  # Token名称（同时也是Cookie名称和Header提交时的key）
+  token-name: Authorization
+  # AccessToken有效期：2小时（单位：秒），日常接口请求用这个Token
+  timeout: 7200
+  # Token活动有效期：30分钟无操作就过期（单位：秒），防止用户离开电脑后Token被盗用
+  active-timeout: 1800
+  # 是否允许同一账号并发登录（比如手机和电脑同时登录）
+  is-concurrent: true
+  # 在多人登录同一账号时，是否共用一个Token
+  is-share: false
+  # Token风格：uuid
+  token-style: uuid
+  # 是否输出操作日志
+  is-log: false
+  # Token前缀（前端提交Token时要带上这个前缀，比如"Bearer xxx"）
+  token-prefix: Bearer

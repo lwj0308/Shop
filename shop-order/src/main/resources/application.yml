@@ -1,0 +1,71 @@
+﻿server:
+  port: 8849
+
+spring:
+  application:
+    name: shop-order
+  config:
+    import: nacos:shop-order.yml?refreshEnabled=true
+  cloud:
+    nacos:
+      server-addr: ${NACOS_SERVER:localhost:8976}
+      config:
+        namespace: ${NACOS_NAMESPACE:dev}
+        group: DEFAULT_GROUP
+      discovery:
+        namespace: ${NACOS_NAMESPACE:dev}
+    # Seata分布式事务配置
+    # 暂时禁用：Docker Compose 中未启动 Seata Server，需要时再开启
+    seata:
+      enabled: false
+      application-id: shop-order
+      tx-service-group: shop-tx-group
+      service:
+        vgroup-mapping:
+          shop-tx-group: default
+      registry:
+        type: nacos
+        nacos:
+          server-addr: ${NACOS_SERVER:localhost:8976}
+          namespace: ${NACOS_NAMESPACE:dev}
+          group: DEFAULT_GROUP
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3307}/shop_order?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:root}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+# RocketMQ配置
+rocketmq:
+  name-server: ${ROCKETMQ_NAMESRV:localhost:9977}
+  producer:
+    group: order-producer-group
+    send-message-timeout: 3000
+    retry-times-when-send-failed: 2
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: assign_id
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+sa-token:
+  token-name: Authorization
+  timeout: 2592000
+  active-timeout: 86400
+  is-concurrent: true
+  is-share: true
+  token-style: uuid
+  is-log: false
