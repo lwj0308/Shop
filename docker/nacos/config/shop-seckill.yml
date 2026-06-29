@@ -1,0 +1,9 @@
+# 秒杀服务独立配置
+# 在Nacos中配置为：Data ID = shop-seckill.yml, Group = DEFAULT_GROUP, Namespace = dev
+
+server:
+  port: 8853
+
+spring:
+  application:
+    name: shop-seckill

@@ -107,16 +107,10 @@ public class SaTokenConfig implements WebMvcConfigurer {
                 .excludePathPatterns(
                         "/merchant/auth/login",     // 商家登录接口，肯定不需要登录
                         "/merchant/apply",          // 商家入驻申请（通过网关传递X-User-Id识别用户）
-                        "/merchant/inner/**",       // 内部接口（供其他微服务通过Feign调用，如订单结算）
-                        "/merchant/promotion/inner/**", // 满减活动内部接口（供shop-order通过Feign调用计算满减优惠）
-                        "/merchant/seckill/inner/**",   // 秒杀活动内部接口（供shop-order通过Feign调用查询秒杀活动信息）
-                        "/merchant/seckill/public/**",  // 秒杀活动公开接口（用户端查询秒杀列表/详情，不需要登录）
+                        "/merchant/inner/**",       // 内部接口（供其他微服务通过Feign调用，如通过userId反查merchantId）
                         // ===== 管理端接口仅供shop-admin通过Feign内部调用（由InnerApiInterceptor校验X-Inner-Key） =====
                         "/merchant/admin/**",              // 管理端商家接口
                         "/merchant/settlement/admin/**",   // 管理端结算/提现审核接口
-                        "/merchant/coupon/admin/**",       // 管理端优惠券接口
-                        "/merchant/seckill/admin/**",      // 管理端秒杀活动接口
-                        "/merchant/promotion/admin/**",   // 管理端满减活动接口
                         "/shop/{shopId}",           // 公开查看店铺信息
                         "/doc.html",                // Swagger文档页面
                         "/webjars/**",              // Swagger静态资源

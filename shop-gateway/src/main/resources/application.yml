@@ -88,6 +88,22 @@ spring:
               filters:
                 - StripPrefix=1
 
+            # 营销服务路由：优惠券、满减活动
+            - id: shop-marketing
+              uri: lb://shop-marketing
+              predicates:
+                - Path=/api/marketing/**
+              filters:
+                - StripPrefix=1
+
+            # 秒杀服务路由：秒杀活动
+            - id: shop-seckill
+              uri: lb://shop-seckill
+              predicates:
+                - Path=/api/seckill/**
+              filters:
+                - StripPrefix=1
+
 # ==================== 网关自定义配置 ====================
 gateway:
   # 完全公开的白名单路径（不需要登录就能访问）
@@ -107,6 +123,12 @@ gateway:
     - /api/product/category/**
     - /api/product/brand/**
     - /api/product/comment/**
+    # 营销相关公开接口：优惠券列表、满减活动展示
+    - /api/marketing/coupon/public/**
+    # 秒杀活动公开接口：秒杀列表、活动详情（抢购需要登录）
+    - /api/seckill/public/**
+    - /api/seckill/list
+    - /api/seckill/*
   # 仅限登录用户的白名单路径（需要登录，但不需要特定角色）
   auth-whitelist: []
   # 跨域配置

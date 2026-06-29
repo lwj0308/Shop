@@ -11,15 +11,15 @@ import org.springframework.web.bind.annotation.*;
 /**
  * 秒杀活动服务Feign客户端
  * <p>
- * shop-admin（管理后台）通过此客户端调用 shop-merchant 的秒杀活动管理端接口。
+ * shop-admin（管理后台）通过此客户端调用 shop-seckill 的秒杀活动管理端接口。
  * 管理员可以创建平台秒杀活动、查看全平台秒杀活动、下架违规秒杀活动。
  * </p>
  * <p>
- * 鉴权说明：FeignAuthConfig 会自动把管理员的 Sa-Token 透传给 shop-merchant，
- * shop-merchant 校验登录态后放行（管理端接口不需要商家身份，只要登录即可）。
+ * 鉴权说明：FeignAuthConfig 会自动把管理员的 Sa-Token 透传给 shop-seckill，
+ * shop-seckill 校验登录态后放行（管理端接口不需要商家身份，只要登录即可）。
  * </p>
  */
-@FeignClient(name = "shop-merchant", path = "/merchant/seckill", fallbackFactory = SeckillFeignClientFallbackFactory.class)
+@FeignClient(name = "shop-seckill", path = "/seckill", fallbackFactory = SeckillFeignClientFallbackFactory.class)
 public interface SeckillFeignClient {
 
     /**

@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -12,7 +12,7 @@
 
     <artifactId>shop-merchant</artifactId>
     <name>shop-merchant</name>
-    <description>商家服务：商家入驻、审核、店铺管理</description>
+    <description>商家服务：商家入驻、审核、店铺管理、结算、提现、统计</description>
 
     <dependencies>
         <!-- 项目内部模块 -->

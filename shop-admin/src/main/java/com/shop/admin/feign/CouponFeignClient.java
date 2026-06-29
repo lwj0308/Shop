@@ -11,15 +11,15 @@ import org.springframework.web.bind.annotation.*;
 /**
  * 优惠券服务Feign客户端
  * <p>
- * shop-admin（管理后台）通过此客户端调用 shop-merchant 的优惠券管理端接口。
+ * shop-admin（管理后台）通过此客户端调用 shop-marketing 的优惠券管理端接口。
  * 管理员可以创建平台券、查看全平台优惠券、下架违规优惠券。
  * </p>
  * <p>
- * 鉴权说明：FeignAuthConfig 会自动把管理员的 Sa-Token 透传给 shop-merchant，
- * shop-merchant 校验登录态后放行（管理端接口不需要商家身份，只要登录即可）。
+ * 鉴权说明：FeignAuthConfig 会自动把管理员的 Sa-Token 透传给 shop-marketing，
+ * shop-marketing 校验登录态后放行（管理端接口不需要商家身份，只要登录即可）。
  * </p>
  */
-@FeignClient(name = "shop-merchant", path = "/merchant/coupon", fallbackFactory = CouponFeignClientFallbackFactory.class)
+@FeignClient(name = "shop-marketing", path = "/marketing/coupon", fallbackFactory = CouponFeignClientFallbackFactory.class)
 public interface CouponFeignClient {
 
     /**

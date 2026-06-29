@@ -3,8 +3,8 @@
  * 包含商家端和管理端两端的满减活动接口
  *
  * 两端接口路径不同：
- * - 商家端：/merchant/promotion/*（直接调用 shop-merchant 服务）
- * - 管理端：/admin/manage/promotion/*（通过 shop-admin 转发到 shop-merchant）
+ * - 商家端：/marketing/promotion/*（直接调用 shop-marketing 服务）
+ * - 管理端：/admin/manage/promotion/*（通过 shop-admin 转发到 shop-marketing）
  *
  * 注意：满减是自动计算的，用户端没有主动操作的接口（下单时后端自动计算优惠）
  */
@@ -24,7 +24,7 @@ import type { PageResult } from '../../types/api'
  * @param data 满减活动参数
  */
 export function createMerchantPromotion(data: PromotionCreateParams) {
-  return post<number>('/merchant/promotion', data)
+  return post<number>('/marketing/promotion', data)
 }
 
 /**
@@ -33,7 +33,7 @@ export function createMerchantPromotion(data: PromotionCreateParams) {
  * @param data 满减活动参数
  */
 export function updateMerchantPromotion(promotionId: number, data: PromotionCreateParams) {
-  return put<null>(`/merchant/promotion/${promotionId}`, data)
+  return put<null>(`/marketing/promotion/${promotionId}`, data)
 }
 
 /**
@@ -41,7 +41,7 @@ export function updateMerchantPromotion(promotionId: number, data: PromotionCrea
  * @param promotionId 满减活动ID
  */
 export function offlineMerchantPromotion(promotionId: number) {
-  return put<null>(`/merchant/promotion/${promotionId}/offline`)
+  return put<null>(`/marketing/promotion/${promotionId}/offline`)
 }
 
 /**
@@ -49,7 +49,7 @@ export function offlineMerchantPromotion(promotionId: number) {
  * @param params 查询参数（含分页、状态筛选）
  */
 export function getMerchantPromotionList(params: PromotionQueryParams) {
-  return get<PageResult<PromotionInfo>>('/merchant/promotion/list', params)
+  return get<PageResult<PromotionInfo>>('/marketing/promotion/list', params)
 }
 
 /**
@@ -57,7 +57,7 @@ export function getMerchantPromotionList(params: PromotionQueryParams) {
  * @param promotionId 满减活动ID
  */
 export function getMerchantPromotionDetail(promotionId: number) {
-  return get<PromotionInfo>(`/merchant/promotion/${promotionId}`)
+  return get<PromotionInfo>(`/marketing/promotion/${promotionId}`)
 }
 
 // ==================== 管理端满减活动接口 ====================

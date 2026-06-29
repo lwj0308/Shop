@@ -4,8 +4,8 @@
  *
  * 三端接口路径不同：
  * - 用户端：/user/coupon/*（直接调用 shop-user 服务）
- * - 商家端：/merchant/coupon/*（直接调用 shop-merchant 服务）
- * - 管理端：/admin/manage/coupon/*（通过 shop-admin 转发到 shop-merchant）
+ * - 商家端：/marketing/coupon/*（直接调用 shop-marketing 服务）
+ * - 管理端：/admin/manage/coupon/*（通过 shop-admin 转发到 shop-marketing）
  */
 
 import { get, post, put } from '../request'
@@ -58,7 +58,7 @@ export function getUsableCoupons(orderAmount: number) {
  * @param data 优惠券参数
  */
 export function createMerchantCoupon(data: CouponCreateParams) {
-  return post<number>('/merchant/coupon', data)
+  return post<number>('/marketing/coupon', data)
 }
 
 /**
@@ -67,7 +67,7 @@ export function createMerchantCoupon(data: CouponCreateParams) {
  * @param data 优惠券参数
  */
 export function updateMerchantCoupon(couponId: number, data: CouponCreateParams) {
-  return put<null>(`/merchant/coupon/${couponId}`, data)
+  return put<null>(`/marketing/coupon/${couponId}`, data)
 }
 
 /**
@@ -75,7 +75,7 @@ export function updateMerchantCoupon(couponId: number, data: CouponCreateParams)
  * @param couponId 优惠券ID
  */
 export function offlineMerchantCoupon(couponId: number) {
-  return put<null>(`/merchant/coupon/${couponId}/offline`)
+  return put<null>(`/marketing/coupon/${couponId}/offline`)
 }
 
 /**
@@ -83,7 +83,7 @@ export function offlineMerchantCoupon(couponId: number) {
  * @param params 查询参数（含分页、状态、类型筛选）
  */
 export function getMerchantCouponList(params: CouponQueryParams) {
-  return get<PageResult<CouponInfo>>('/merchant/coupon/list', params)
+  return get<PageResult<CouponInfo>>('/marketing/coupon/list', params)
 }
 
 /**
@@ -91,7 +91,7 @@ export function getMerchantCouponList(params: CouponQueryParams) {
  * @param couponId 优惠券ID
  */
 export function getMerchantCouponDetail(couponId: number) {
-  return get<CouponInfo>(`/merchant/coupon/${couponId}`)
+  return get<CouponInfo>(`/marketing/coupon/${couponId}`)
 }
 
 // ==================== 管理端优惠券接口 ====================

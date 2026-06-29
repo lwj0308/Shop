@@ -23,6 +23,8 @@
         <module>shop-gateway</module>
         <module>shop-user</module>
         <module>shop-merchant</module>
+        <module>shop-marketing</module>
+        <module>shop-seckill</module>
         <module>shop-product</module>
         <module>shop-cart</module>
         <module>shop-order</module>
@@ -316,6 +318,17 @@
                             <version>${mapstruct.version}</version>
                         </path>
                     </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+
+            <!-- Maven Surefire插件：执行单元测试 -->
+            <!-- 必须用3.x版本才支持JUnit 5（Spring Boot默认不带surefire配置，需手动声明） -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+                <configuration>
+                    <argLine>-Xshare:off -XX:+EnableDynamicAgentLoading -Xmx512m -Dfile.encoding=UTF-8</argLine>
                 </configuration>
             </plugin>
         </plugins>

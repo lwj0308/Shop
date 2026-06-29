@@ -1,0 +1,9 @@
+# 营销服务独立配置
+# 在Nacos中配置为：Data ID = shop-marketing.yml, Group = DEFAULT_GROUP, Namespace = dev
+
+server:
+  port: 8852
+
+spring:
+  application:
+    name: shop-marketing

@@ -128,6 +128,31 @@ public class MerchantController {
         return Result.success(auditStatus);
     }
 
+    // ========== 内部接口（供 shop-marketing、shop-seckill 等兄弟服务通过 Feign 调用） ==========
+
+    /**
+     * 内部接口：通过 userId 获取 merchantId
+     * <p>
+     * 供 shop-marketing、shop-seckill 等兄弟服务通过 Feign 调用。
+     * 不需要登录态，但需要 X-Inner-Key 校验（由 InnerApiInterceptor 拦截 /merchant/inner/** 路径）。
+     * </p>
+     *
+     * @param userId 用户ID（从请求头 X-User-Id 获取，由网关写入）
+     * @return Result<Long> 商家ID，如果用户不是商家则返回 null
+     */
+    @GetMapping("/inner/merchant-id")
+    public Result<Long> getMerchantIdByUserId(@RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        // 小白讲解：这个接口是给其他微服务用的，通过用户ID反查商家ID
+        // 比如商家在营销服务里创建优惠券时，营销服务需要知道这个用户是哪个商家
+        if (userId == null) {
+            // 小白讲解：这里用 UNAUTHORIZED 的错误码(401) + 自定义提示信息
+            // 因为 Result 类没有 fail(ErrorCode, String) 这个重载，所以用 getCode() 取出数字错误码
+            return Result.fail(ErrorCode.UNAUTHORIZED.getCode(), "用户未登录");
+        }
+        MerchantVO merchant = merchantService.getMerchantByUserId(userId);
+        return Result.success(merchant != null ? merchant.getId() : null);
+    }
+
     // ========== 管理后台专用接口（供 shop-admin 通过 Feign 调用） ==========
 
     /**

@@ -85,6 +85,14 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
+
+        <!-- reactor-test：响应式测试工具，用 StepVerifier 验证 Mono/Flux -->
+        <!-- gateway 是 WebFlux 响应式模块，测试 Mono<Void> 必须依赖它 -->
+        <dependency>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-test</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

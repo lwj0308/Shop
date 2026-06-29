@@ -12,18 +12,18 @@ import org.springframework.web.bind.annotation.PostMapping;
 import java.util.List;
 
 /**
- * 商家优惠券服务Feign客户端
+ * 优惠券服务Feign客户端
  * <p>
- * shop-user 通过此客户端调用 shop-merchant 的内部接口，获取优惠券模板信息、增加领取数等。
- * 仅调用 /merchant/coupon/inner/** 路径的内部接口（不鉴权）。
+ * shop-user 通过此客户端调用 shop-marketing 的内部接口，获取优惠券模板信息、增加领取数等。
+ * 仅调用 /marketing/coupon/inner/** 路径的内部接口（不鉴权）。
  * </p>
  * <p>
  * 使用场景：
  * 1. 用户领取优惠券时，先查询优惠券模板信息（校验状态、时间窗口、余量）
- * 2. 领取成功后，通知 shop-merchant 增加已领取数量
+ * 2. 领取成功后，通知 shop-marketing 增加已领取数量
  * </p>
  */
-@FeignClient(name = "shop-merchant", path = "/merchant/coupon", fallbackFactory = MerchantCouponFeignClientFallbackFactory.class)
+@FeignClient(name = "shop-marketing", path = "/marketing/coupon", fallbackFactory = MerchantCouponFeignClientFallbackFactory.class)
 public interface MerchantCouponFeignClient {
 
     /**

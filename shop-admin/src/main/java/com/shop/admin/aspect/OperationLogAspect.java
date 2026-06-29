@@ -163,7 +163,8 @@ public class OperationLogAspect {
                 json = json.replaceAll("(\"(" + field + ")\"\\s*:\\s*)\"[^\"]*\"", "$1\"******\"");
                 // 匹配非字符串值："password":123 或 "password":null 或 "password":true
                 // 上面字符串值的正则已经处理了字符串情况，这里处理数字、布尔、null等
-                json = json.replaceAll("(\"(" + field + ")\"\\s*:\\s*)(?!\"******\")\\S+", "$1\"******\"");
+                // 注意：lookahead里的******要转义成\\*{6}，否则*会被当成正则量词导致PatternSyntaxException
+                json = json.replaceAll("(\"(" + field + ")\"\\s*:\\s*)(?!\"\\*{6}\")\\S+", "$1\"******\"");
             }
             return json;
         } catch (Exception e) {

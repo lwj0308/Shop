@@ -2,7 +2,7 @@
  * 秒杀活动相关API
  * 包含商家端、管理端和用户端接口
  *
- * 商家端：/merchant/seckill/*（直接调用 shop-merchant）
+ * 商家端：/seckill/*（直接调用 shop-seckill）
  * 管理端：/admin/manage/seckill/*（通过 shop-admin 转发）
  * 用户端：/order/seckill/*（调用 shop-order 秒杀接口）
  */
@@ -22,7 +22,7 @@ import type { PageResult } from '../../types/api'
  * @param data 秒杀活动参数
  */
 export function createMerchantSeckill(data: SeckillCreateParams) {
-  return post<number>('/merchant/seckill', data)
+  return post<number>('/seckill', data)
 }
 
 /**
@@ -30,21 +30,21 @@ export function createMerchantSeckill(data: SeckillCreateParams) {
  * @param seckillId 秒杀活动ID
  */
 export function offlineMerchantSeckill(seckillId: number) {
-  return put<null>(`/merchant/seckill/${seckillId}/offline`)
+  return put<null>(`/seckill/${seckillId}/offline`)
 }
 
 /**
  * 查询商家自己的秒杀活动列表
  */
 export function getMerchantSeckillList(params: SeckillQueryParams) {
-  return get<PageResult<SeckillInfo>>('/merchant/seckill/list', params)
+  return get<PageResult<SeckillInfo>>('/seckill/list', params)
 }
 
 /**
  * 查询秒杀活动详情
  */
 export function getMerchantSeckillDetail(seckillId: number) {
-  return get<SeckillInfo>(`/merchant/seckill/${seckillId}`)
+  return get<SeckillInfo>(`/seckill/${seckillId}`)
 }
 
 // ==================== 管理端秒杀活动接口 ====================
@@ -77,7 +77,7 @@ export function offlineAdminSeckill(seckillId: number) {
  * 返回所有进行中的秒杀活动
  */
 export function getPublicSeckillList() {
-  return get<SeckillInfo[]>('/merchant/seckill/public/list')
+  return get<SeckillInfo[]>('/seckill/public/list')
 }
 
 /**
@@ -85,7 +85,7 @@ export function getPublicSeckillList() {
  * @param seckillId 秒杀活动ID
  */
 export function getPublicSeckillDetail(seckillId: number) {
-  return get<SeckillInfo>(`/merchant/seckill/public/${seckillId}`)
+  return get<SeckillInfo>(`/seckill/public/${seckillId}`)
 }
 
 /**
