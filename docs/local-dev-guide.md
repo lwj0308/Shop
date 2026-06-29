@@ -140,12 +140,17 @@ docker exec -it shop-mysql mysql -uroot -proot -e "USE shop_user; SELECT id, nic
 
 #### 方式一：API 脚本导入（最推荐，最可靠）
 
-项目提供了 PowerShell 脚本，通过 Nacos API 直接导入，不依赖 ZIP 格式：
+项目提供了跨平台脚本，通过 Nacos API 直接导入，不依赖 ZIP 格式：
 
-`powershell
-cd d:\workspace\business\Shop
+**Windows (PowerShell):**
+```powershell
 .\docker\nacos\import-configs.ps1
-` 
+```
+
+**Linux / macOS (Bash):**
+```bash
+bash docker/nacos/import-configs.sh
+```
 
 脚本会自动读取所有 .yml 配置文件并导入到 `dev` 命名空间。
 
@@ -159,7 +164,7 @@ cd d:\workspace\business\Shop
 
 3. 点击 **导入配置**，选择 `docker/nacos/config/nacos-config-import.zip`
 
-4. 点击 **确定**，一键导入全部 9 个配置文件
+4. 点击 **确定**，一键导入全部 11 个配置文件
 
 > **注意**：Nacos 要求 ZIP 内必须有 `DEFAULT_GROUP` 文件夹，直接打包 .yml 文件会报错。项目已提供正确格式的 ZIP 文件。
 
@@ -188,10 +193,12 @@ cd d:\workspace\business\Shop
 | shop-order.yml | docker/nacos/config/shop-order.yml |
 | shop-payment.yml | docker/nacos/config/shop-payment.yml |
 | shop-admin.yml | docker/nacos/config/shop-admin.yml |
+| shop-marketing.yml | docker/nacos/config/shop-marketing.yml |
+| shop-seckill.yml | docker/nacos/config/shop-seckill.yml |
 
 ### 3.3 验证配置
 
-在Nacos配置列表中，切换到 `dev` 命名空间，应该看到 9 个配置文件。
+在Nacos配置列表中，切换到 `dev` 命名空间，应该看到 11 个配置文件。
 
 ---
 

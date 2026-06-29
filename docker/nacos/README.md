@@ -20,12 +20,17 @@ docker-compose up -d nacos
 
 ### 方式一：API 脚本导入（最推荐，最可靠）
 
-项目提供了 PowerShell 脚本，通过 Nacos API 直接导入，不依赖 ZIP 格式：
+项目提供了跨平台脚本，通过 Nacos API 直接导入，不依赖 ZIP 格式：
 
-`powershell
-cd d:\workspace\business\Shop
+**Windows (PowerShell):**
+```powershell
 .\docker\nacos\import-configs.ps1
-` 
+```
+
+**Linux / macOS (Bash):**
+```bash
+bash docker/nacos/import-configs.sh
+```
 
 脚本会自动读取 `config/` 目录下所有 .yml 文件并导入到 `dev` 命名空间。
 
@@ -36,7 +41,7 @@ cd d:\workspace\business\Shop
 1. 在"配置管理"页面，选择 `dev` 命名空间
 2. 点击 **导入配置**
 3. 选择 `nacos-config-import.zip` 文件
-4. 点击 **确定**，一键导入全部 9 个配置文件
+4. 点击 **确定**，一键导入全部 11 个配置文件
 
 > **ZIP 格式说明**：Nacos 要求 ZIP 内必须有一个以分组名命名的文件夹（`DEFAULT_GROUP`），配置文件放在该文件夹内。直接打包 `.yml` 文件会报"未读取到合法数据"。
 >
