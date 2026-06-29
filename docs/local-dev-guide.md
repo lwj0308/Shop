@@ -49,7 +49,7 @@ docker -v           # 应显示 Docker version 2x.x.x
 项目根目录的 `.env` 文件集中管理所有 Docker 容器的端口和密码配置，避免端口冲突：
 
 `env
-MYSQL_PORT=3307           # MySQL端口（避开本机3306）
+MYSQL_PORT=4306           # MySQL端口（避开本机3306）
 MYSQL_ROOT_PASSWORD=root  # MySQL root密码
 NACOS_PORT=8976           # Nacos HTTP端口（避开Hyper-V保留范围）
 NACOS_GRPC_PORT=9976      # Nacos gRPC端口（= HTTP + 1000）
@@ -85,7 +85,7 @@ docker-compose ps
 
 | 容器名 | 端口 | 说明 |
 |--------|------|------|
-| shop-mysql | 3307 | MySQL数据库（3307避免和本地MySQL冲突） |
+| shop-mysql | 4306 | MySQL数据库（4306避免和本地MySQL冲突） |
 | shop-redis | 6379 | Redis缓存 |
 | shop-nacos | 8976 | Nacos配置中心（8976避开Hyper-V保留端口） |
 | shop-rocketmq-namesrv | 9977 | RocketMQ注册中心（9977避开Hyper-V保留端口） |
@@ -429,11 +429,11 @@ exit
 
 **原因**：3306端口被本机已安装的MySQL占用。
 
-**解决**：项目已将Docker MySQL端口改为3307，在 `.env` 文件中：
+**解决**：项目已将Docker MySQL端口改为4306，在 `.env` 文件中：
 ```
-MYSQL_PORT=3307
+MYSQL_PORT=4306
 ```
-Nacos中的 `common.yml` 默认端口也已改为3307。如果还有冲突，可以改成其他端口（如3308）。
+Nacos中的 `common.yml` 默认端口也已改为4306。如果还有冲突，可以改成其他端口（如4308）。
 
 ### Q2: 微服务启动报错 "Unable to connect to Nacos"
 
@@ -529,7 +529,7 @@ npm run dev:merchant  # 商家端 http://localhost:3001
 |------|------|------|
 | 3000 | web-user | 用户Web端 |
 | 3001 | web-merchant | 商家后台 |
-| 3307 | MySQL | 数据库（3307避开本地MySQL冲突） |
+| 4306 | MySQL | 数据库（4306避开本地MySQL冲突） |
 | 5601 | Kibana | ES可视化 |
 | 6379 | Redis | 缓存 |
 | 8080 | RocketMQ Dashboard | MQ控制台 |

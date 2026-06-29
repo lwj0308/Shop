@@ -16,7 +16,7 @@ spring:
         namespace: ${NACOS_NAMESPACE:dev}
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3307}/shop_seckill?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:4306}/shop_seckill?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: ${MYSQL_USER:root}
     password: ${MYSQL_PASSWORD:root}
     hikari:
