@@ -1,51 +1,89 @@
 /**
- * 全局样式 - 商家后台
- * 基于V1原型设计规范，统一管理颜色、圆角、阴影等设计变量
+ * 全局样式 - 商家后台（现代玻璃拟态风）
+ * 设计理念：玻璃侧边栏 + 翡翠青绿渐变 + 柔和阴影 + 微动效
+ * 参考：Stripe / Linear 的现代后台质感
+ *
+ * 重要：保留所有旧变量名（避免已有代码报错），只改变量值
  */
+
+/* ==================== Google Fonts ==================== */
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Manrope:wght@300;400;500;600;700;800&display=swap');
 
 /* ========== 设计变量（CSS自定义属性） ========== */
 :root {
-  /* 主色系 */
-  --color-primary: #409EFF;
-  --color-primary-light: #66B1FF;
-  --color-primary-dark: #3A8EE6;
+  /* 主色系 - 翡翠青绿（替换原蓝色#409EFF） */
+  --color-primary: #10B981;
+  --color-primary-light: #34D399;
+  --color-primary-dark: #059669;
 
-  /* 侧边栏 */
-  --color-sidebar-bg: #304156;
-  --color-sidebar-dark: #263445;
-  --color-sidebar-text: #BFCBD9;
-  --color-sidebar-active: #409EFF;
+  /* 品牌渐变 */
+  --gradient-brand: linear-gradient(135deg, #10B981 0%, #06B6D4 100%);
+  --gradient-brand-hover: linear-gradient(135deg, #059669 0%, #0891B2 100%);
+  --gradient-brand-soft: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(6, 182, 212, 0.1) 100%);
+
+  /* 氛围渐变光晕 */
+  --gradient-mesh:
+    radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.1) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(6, 182, 212, 0.1) 0px, transparent 50%);
+
+  /* 玻璃拟态 */
+  --color-glass: rgba(255, 255, 255, 0.7);
+  --color-glass-strong: rgba(255, 255, 255, 0.88);
+  --color-glass-border: rgba(255, 255, 255, 0.6);
+
+  /* 侧边栏 - 改为玻璃风格（原深蓝灰#304156） */
+  --color-sidebar-bg: rgba(15, 23, 42, 0.85);
+  --color-sidebar-dark: rgba(15, 23, 42, 0.95);
+  --color-sidebar-text: rgba(255, 255, 255, 0.7);
+  --color-sidebar-active: #34D399;
 
   /* 背景 */
-  --color-bg: #F0F2F5;
+  --color-bg: #F8FAFC;
   --color-card: #FFFFFF;
 
-  /* 文字 */
-  --color-text: #303133;
-  --color-text-secondary: #606266;
-  --color-text-muted: #909399;
-  --color-text-placeholder: #C0C4CC;
+  /* 文字 - slate 系 */
+  --color-text: #0F172A;
+  --color-text-secondary: #475569;
+  --color-text-muted: #94A3B8;
+  --color-text-placeholder: #CBD5E1;
 
   /* 功能色 */
-  --color-success: #67C23A;
-  --color-warning: #E6A23C;
-  --color-danger: #F56C6C;
-  --color-info: #909399;
+  --color-success: #22C55E;
+  --color-warning: #F59E0B;
+  --color-danger: #EF4444;
+  --color-info: #3B82F6;
 
   /* 边框 */
-  --color-border: #EBEEF5;
-  --color-border-light: #DCDFE6;
+  --color-border: #E2E8F0;
+  --color-border-light: #F1F5F9;
 
-  /* 圆角 */
-  --radius-card: 8px;
-  --radius-button: 4px;
-  --radius-input: 4px;
-  --radius-tag: 4px;
+  /* 圆角（比原来大，更现代） */
+  --radius-card: 16px;     /* 原8px */
+  --radius-button: 12px;  /* 原4px */
+  --radius-input: 12px;   /* 原4px */
+  --radius-tag: 999px;    /* 原4px，改为胶囊形 */
 
-  /* 阴影 */
-  --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.06);
-  --shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.1);
-  --shadow-header: 0 1px 4px rgba(0, 0, 0, 0.08);
+  /* 阴影 - 柔和 slate 系 */
+  --shadow-card: 0 2px 8px rgba(15, 23, 42, 0.05);
+  --shadow-hover: 0 12px 32px rgba(15, 23, 42, 0.1);
+  --shadow-header: 0 1px 4px rgba(15, 23, 42, 0.06);
+  --shadow-glow: 0 0 24px rgba(16, 185, 129, 0.35);
+
+  /* 缓动 */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* 字体 */
+  --font-display: 'Sora', 'PingFang SC', 'Noto Sans SC', sans-serif;
+  --font-body: 'Manrope', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+
+  /* Element Plus 主题色覆盖为翡翠绿 */
+  --el-color-primary: #10B981;
+  --el-color-primary-light-3: #34D399;
+  --el-color-primary-light-5: #6EE7B7;
+  --el-color-primary-light-7: #A7F3D0;
+  --el-color-primary-light-9: #ECFDF5;
+  --el-color-primary-dark-2: #059669;
 }
 
 /* ========== 重置默认样式 ========== */
@@ -56,13 +94,19 @@
 }
 
 body {
-  font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-family: var(--font-body);
   color: var(--color-text);
   background-color: var(--color-bg);
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-variant-numeric: tabular-nums;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 a {
@@ -75,19 +119,24 @@ img {
   height: auto;
 }
 
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
 /* ========== 滚动条美化 ========== */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c0c4cc;
-  border-radius: 3px;
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #909399;
+  background: rgba(148, 163, 184, 0.5);
 }
 
 ::-webkit-scrollbar-track {
@@ -105,12 +154,83 @@ input[type="number"] {
   -moz-appearance: textfield;
 }
 
+/* ========== 玻璃拟态工具类 ========== */
+.glass {
+  background: var(--color-glass);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--color-glass-border);
+  box-shadow: var(--shadow-card);
+}
+
+.glass-strong {
+  background: var(--color-glass-strong);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid var(--color-glass-border);
+  box-shadow: var(--shadow-hover);
+}
+
+/* ========== 渐变文字 ========== */
+.gradient-text {
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ========== 状态徽章 ========== */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: var(--radius-tag);
+  font-size: 12px;
+  font-weight: 600;
+}
+.badge-success { background: rgba(34, 197, 94, 0.12); color: var(--color-success); }
+.badge-warning { background: rgba(245, 158, 11, 0.12); color: var(--color-warning); }
+.badge-error { background: rgba(239, 68, 68, 0.12); color: var(--color-danger); }
+.badge-info { background: rgba(59, 130, 246, 0.12); color: var(--color-info); }
+.badge-brand { background: var(--gradient-brand-soft); color: var(--color-primary); }
+
+/* ========== 点击波纹 ========== */
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  transform: scale(0);
+  animation: ripple 0.6s var(--ease-out);
+  pointer-events: none;
+}
+@keyframes ripple {
+  to { transform: scale(4); opacity: 0; }
+}
+
+/* ========== 骨架屏流光 ========== */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, rgba(241, 245, 249, 0.6) 25%, rgba(226, 232, 240, 0.9) 50%, rgba(241, 245, 249, 0.6) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* ========== 页面切换动画 ========== */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* ========== Element Plus 全局样式微调 ========== */
-/* 卡片统一圆角和阴影 */
+/* 卡片用玻璃风格 + 更大圆角 */
 .el-card {
   border-radius: var(--radius-card) !important;
   box-shadow: var(--shadow-card) !important;
-  border: none !important;
+  border: 1px solid var(--color-border) !important;
 }
 
 .el-card__header {
@@ -119,15 +239,38 @@ input[type="number"] {
 
 /* 表格斑马纹 */
 .el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell {
-  background: #FAFAFA;
+  background: rgba(248, 250, 252, 0.5);
 }
 
-/* 表格hover效果 */
+/* 表格 hover 效果 - 翡翠色淡背景 */
 .el-table__body tr:hover > td.el-table__cell {
-  background: #F5F7FA !important;
+  background: rgba(16, 185, 129, 0.04) !important;
 }
 
 /* 分页器对齐右侧 */
 .el-pagination {
   justify-content: flex-end;
+}
+
+/* 按钮主色改为翡翠渐变 */
+.el-button--primary {
+  background: var(--gradient-brand) !important;
+  border: none !important;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3) !important;
+}
+
+.el-button--primary:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+/* 输入框 focus 翡翠色 */
+.el-input__wrapper:focus-within {
+  box-shadow: 0 0 0 1px var(--color-primary) inset, 0 0 0 3px rgba(16, 185, 129, 0.12) !important;
+}
+
+/* 菜单选中项用渐变 */
+.el-menu-item.is-active {
+  color: var(--color-sidebar-active) !important;
+  background: var(--gradient-brand-soft) !important;
 }

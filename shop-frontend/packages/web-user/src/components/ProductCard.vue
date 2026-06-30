@@ -1,7 +1,7 @@
 <template>
-  <!-- 商品卡片组件 - 杂志奢华风（Editorial Luxury） -->
+  <!-- 商品卡片组件 - 玻璃拟态风（Glassmorphism） -->
   <article class="product-card" @click="goToDetail">
-    <!-- 图片区：4:5竖版比例，hover时放大+滤镜变化 -->
+    <!-- 图片区：1:1正方形比例，hover时放大 -->
     <div class="card-media">
       <img
         :src="product.mainImage"
@@ -10,24 +10,18 @@
         loading="lazy"
       />
 
-      <!-- 品牌标签：左上角，极简大写字母 -->
+      <!-- 品牌标签：左上角玻璃胶囊 -->
       <span v-if="product.brandName" class="card-brand">{{ product.brandName }}</span>
 
-      <!-- 底部滑入的加购条：hover时从底部滑入 -->
-      <div class="card-overlay">
-        <button class="add-btn" @click.stop="handleQuickAdd">
-          <span>加入购物车</span>
-          <el-icon :size="14"><ArrowRight /></el-icon>
-        </button>
-      </div>
-
-      <!-- 底部金色细线：hover时展开 -->
-      <div class="card-line"></div>
+      <!-- 浮动加购按钮：hover时淡入上浮 -->
+      <button class="add-btn" @click.stop="handleQuickAdd" aria-label="加入购物车">
+        <el-icon :size="18"><ShoppingBag /></el-icon>
+      </button>
     </div>
 
-    <!-- 信息区：大量留白 -->
+    <!-- 信息区：固定高度结构保证卡片等高 -->
     <div class="card-body">
-      <!-- 商品名称：衬线字体，2行省略（外层包裹保证固定高度） -->
+      <!-- 商品名称：2行省略（外层包裹保证固定高度） -->
       <div class="card-title-wrapper">
         <h3 class="card-title" v-html="product.name"></h3>
       </div>
@@ -37,7 +31,7 @@
 
       <!-- 价格 + 评分行 -->
       <div class="card-footer">
-        <!-- 香槟金价格 -->
+        <!-- 翡翠青绿渐变价格 -->
         <div class="card-price">
           <span class="price-symbol">¥</span>
           <span class="price-value">{{ formatPriceValue(product.minPrice) }}</span>
@@ -62,21 +56,21 @@
 
 <script setup lang="ts">
 /**
- * 商品卡片组件（杂志奢华风 - Editorial Luxury）
+ * 商品卡片组件（玻璃拟态风 - Glassmorphism）
  *
  * 设计特点：
- * 1. 4:5竖版图片比例（比1:1更高级，像时尚杂志）
- * 2. 品牌名以极简大写字母标注在图片左上角
- * 3. hover时图片放大+底部滑入加购条
- * 4. 衬线字体商品名 + 香槟金价格
+ * 1. 1:1 正方形图片比例，hover 时缓慢放大
+ * 2. 品牌名以玻璃胶囊标注在图片左上角
+ * 3. hover 时右下角浮现玻璃加购按钮
+ * 4. 翡翠青绿渐变价格文字
  * 5. 星级评分 + 评论数
- * 6. 底部金色细线hover时展开
+ * 6. 卡片整体 hover 上浮 + 阴影加深
  *
  * 点击后跳转到商品详情页
  */
 
 import { useRouter } from 'vue-router'
-import { ArrowRight } from '@element-plus/icons-vue'
+import { ShoppingBag } from '@element-plus/icons-vue'
 import type { ProductInfo } from '@shop/shared'
 
 /** 组件属性：接收一个商品信息对象 */
@@ -123,117 +117,109 @@ const formatReviewCount = (count: number | undefined) => {
 </script>
 
 <style scoped>
-/* ==================== 卡片容器 ==================== */
+/* ==================== 卡片容器：玻璃卡片 ==================== */
 .product-card {
   cursor: pointer;
   position: relative;
-  background: transparent;
-  /* min-width:0 允许卡片缩小到网格列宽，不被内容撑宽 */
+  background: var(--color-glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  /* min-width:0 允许卡片缩小到网格列宽，不被内容撑宽（关键：Grid 布局下防溢出） */
   min-width: 0;
+  transition: transform 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out),
+              border-color 0.3s var(--ease-out);
 }
 
-/* ==================== 图片区：正方形比例 ==================== */
+/* hover：整体上浮 + 阴影加深 + 翡翠描边 */
+.product-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--color-primary-light);
+}
+
+/* ==================== 图片区：1:1 正方形 ==================== */
 .card-media {
   position: relative;
   width: 100%;
-  /* 正方形比例：宽度=高度 */
   aspect-ratio: 1 / 1;
   overflow: hidden;
-  background: var(--color-bg-secondary);
+  /* 浅渐变底色，图片未加载时也不突兀 */
+  background: linear-gradient(135deg, #F8FAFC, #ECFDF5);
 }
 
-/* 商品图片：绝对定位填满容器，hover时放大 */
+/* 商品图片：填满容器，hover 时缓慢放大 */
 .card-image {
   position: absolute;
-  top: 0;
-  left: 0;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-              filter 0.6s ease;
-  filter: brightness(0.98);
   display: block;
+  transition: transform 0.5s var(--ease-out);
 }
 
 .product-card:hover .card-image {
-  transform: scale(1.06);
-  filter: brightness(1.05);
+  transform: scale(1.05);
 }
 
-/* ==================== 品牌标签：左上角极简大写字母 ==================== */
+/* ==================== 品牌标签：玻璃胶囊 ==================== */
 .card-brand {
   position: absolute;
-  top: 16px;
-  left: 16px;
-  padding: 4px 10px;
-  background: rgba(255, 255, 255, 0.92);
+  top: 12px;
+  left: 12px;
+  padding: 4px 12px;
+  background: var(--color-glass-strong);
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-pill);
   color: var(--color-text);
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
   z-index: 2;
 }
 
-/* ==================== 底部滑入加购条 ==================== */
-.card-overlay {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  transform: translateY(100%);
-  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 2;
-}
-
-.product-card:hover .card-overlay {
-  transform: translateY(0);
-}
-
-/* 加购按钮：全宽黑底白字 */
+/* ==================== 浮动加购按钮：hover 淡入上浮 ==================== */
 .add-btn {
-  width: 100%;
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 50%;
+  background: var(--gradient-brand);
+  color: #fff;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 14px;
-  background: var(--color-primary);
-  color: #fff;
-  border: none;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 400;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  transition: background 0.3s ease;
+  box-shadow: var(--shadow-md);
+  z-index: 2;
+  /* 默认隐藏：透明 + 下移 */
+  opacity: 0;
+  transform: translateY(8px);
+  transition: all 0.3s var(--ease-out);
+}
+
+.product-card:hover .add-btn {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .add-btn:hover {
-  background: #000;
+  background: var(--gradient-brand-hover);
+  transform: scale(1.08);
 }
 
-/* ==================== 底部金色细线：hover时展开 ==================== */
-.card-line {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  height: 2px;
-  width: 0;
-  background: var(--color-accent);
-  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 3;
-}
-
-.product-card:hover .card-line {
-  width: 100%;
-}
-
-/* ==================== 信息区：所有元素固定高度，保证卡片等高 ==================== */
+/* ==================== 信息区：固定高度结构，保证卡片等高 ==================== */
 .card-body {
-  padding: 16px 0 0;
+  padding: 16px 18px 18px;
   /* 兜底：防止内部内容溢出撑高卡片 */
   overflow: hidden;
 }
@@ -245,11 +231,11 @@ const formatReviewCount = (count: number | undefined) => {
   overflow: hidden;
 }
 
-/* 商品名称：衬线字体，2行省略 */
+/* 商品名称：现代无衬线，2行省略 */
 .card-title {
   font-family: var(--font-heading);
   font-size: 15px;
-  font-weight: 400;
+  font-weight: 600;
   color: var(--color-text);
   line-height: 1.4;
   margin: 0;
@@ -257,21 +243,21 @@ const formatReviewCount = (count: number | undefined) => {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  transition: color 0.3s ease;
+  transition: color 0.3s var(--ease-out);
   /* 长单词（如英文品牌名）强制换行，不撑宽卡片 */
   overflow-wrap: break-word;
   word-break: break-word;
 }
 
 .product-card:hover .card-title {
-  color: var(--color-accent);
+  color: var(--color-primary);
 }
 
 /* 搜索高亮关键词 */
 .card-title :deep(em) {
-  color: var(--color-accent);
+  color: var(--color-primary);
   font-style: normal;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* 副标题：灰色小字，固定高度保证卡片等高 */
@@ -283,7 +269,6 @@ const formatReviewCount = (count: number | undefined) => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  letter-spacing: 0.02em;
   /* 固定高度，没有副标题时也占位 */
   height: 17px;
 }
@@ -295,32 +280,35 @@ const formatReviewCount = (count: number | undefined) => {
   justify-content: space-between;
   gap: 8px;
   /* 固定高度，有评分和无评分都一样高 */
-  height: 24px;
-  /* 防止价格文字（20px字号）行高溢出撑高footer */
+  height: 26px;
   overflow: hidden;
-  /* 行高设为1，让20px字号占20px高度，在24px内 */
   line-height: 1;
 }
 
-/* 香槟金价格 */
+/* 翡翠青绿渐变价格 */
 .card-price {
   display: flex;
   align-items: baseline;
-  color: var(--color-accent);
+  font-family: var(--font-heading);
   font-variant-numeric: tabular-nums;
-  /* min-width:0 允许价格区域缩小，不被长价格撑宽 */
+  /* 渐变文字 */
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
   min-width: 0;
   overflow: hidden;
 }
 
 .price-symbol {
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 600;
   margin-right: 1px;
 }
 
 .price-value {
-  font-size: 20px;
-  font-weight: 300;
+  font-size: 22px;
+  font-weight: 700;
   letter-spacing: -0.02em;
 }
 
@@ -330,7 +318,6 @@ const formatReviewCount = (count: number | undefined) => {
   align-items: center;
   gap: 4px;
   padding-bottom: 2px;
-  /* min-width:0 允许评分区域缩小 */
   min-width: 0;
   overflow: hidden;
 }
@@ -347,12 +334,11 @@ const formatReviewCount = (count: number | undefined) => {
 }
 
 .star.filled {
-  color: var(--color-accent);
+  color: var(--color-primary);
 }
 
 .rating-count {
   font-size: 11px;
   color: var(--color-text-muted);
-  letter-spacing: 0.02em;
 }
 </style>

@@ -279,11 +279,15 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* ==================== 根容器 ==================== */
 .home-page {
   padding: 0;
+  /* 进入动画：与全局 fadeInUp 一致，营造页面切入感 */
+  animation: fadeInUp 0.4s var(--ease-out);
 }
 
 /* ==================== Hero 区 ==================== */
+/* 保留深色背景图 + 遮罩（导航栏首页透明逻辑依赖它），CTA 按钮改为渐变玻璃风 */
 .hero-section {
   position: relative;
   height: 100vh;
@@ -306,14 +310,17 @@ onMounted(() => {
   background-repeat: no-repeat;
 }
 
-/* Hero 遮罩层：深色渐变，让文字清晰 */
+/* Hero 遮罩层：深色渐变 + 翡翠氛围光，让文字清晰 */
 .hero-overlay {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0.3) 100%);
+  background:
+    radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.25) 0, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(6, 182, 212, 0.22) 0, transparent 50%),
+    linear-gradient(135deg, rgba(15, 23, 42, 0.6) 0%, rgba(15, 23, 42, 0.35) 100%);
 }
 
 /* Hero 内容 */
@@ -322,35 +329,51 @@ onMounted(() => {
   z-index: 1;
   text-align: center;
   color: #fff;
-  max-width: 800px;
+  max-width: 820px;
   padding: 0 var(--space-lg);
-  animation: fadeInUp 1s ease;
+  animation: fadeInUp 1s var(--ease-out);
 }
 
+/* 玻璃胶囊眉标 */
 .hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
   font-size: var(--font-size-small);
-  letter-spacing: 0.3em;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  opacity: 0.85;
+  opacity: 1;
   margin-bottom: var(--space-md);
-  font-weight: 500;
+  font-weight: 600;
+  color: #fff;
 }
 
 .hero-title {
   font-family: var(--font-heading);
   font-size: var(--font-size-hero);
-  font-weight: 700;
-  line-height: 1.2;
+  font-weight: 800;
+  line-height: 1.1;
   margin: 0 0 var(--space-md);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
+  /* 渐变文字：白色到淡青绿，让标题更具视觉冲击 */
+  background: linear-gradient(135deg, #ffffff 0%, #ECFDF5 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .hero-subtitle {
   font-size: var(--font-size-h3);
-  opacity: 0.9;
+  opacity: 0.92;
   margin: 0 0 var(--space-xl);
-  font-weight: 300;
-  line-height: 1.6;
+  font-weight: 400;
+  line-height: 1.7;
 }
 
 .hero-actions {
@@ -360,48 +383,71 @@ onMounted(() => {
   flex-wrap: wrap;
 }
 
-/* Hero 主按钮：白底黑字 */
+/* Hero 主按钮：翡翠青绿渐变 + 光泽掠过 + hover 上浮 */
 .btn-hero-primary {
   display: inline-flex;
   align-items: center;
   gap: var(--space-sm);
   padding: 16px 36px;
-  background: #fff;
-  color: var(--color-primary);
-  border: 1px solid #fff;
-  border-radius: var(--radius-sm);
+  background: var(--gradient-brand);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
   font-size: var(--font-size-body);
-  font-weight: 500;
-  letter-spacing: 0.05em;
+  font-weight: 600;
+  letter-spacing: 0.03em;
   text-decoration: none;
-  transition: var(--transition-base);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.45);
+  transition: transform 0.2s var(--ease-out), box-shadow 0.3s var(--ease-out);
 }
 
 .btn-hero-primary:hover {
-  background: transparent;
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(16, 185, 129, 0.55), 0 0 32px rgba(6, 182, 212, 0.35);
   color: #fff;
 }
 
-/* Hero 次按钮：透明边框 */
+/* 光泽掠过：从左滑到右 */
+.btn-hero-primary::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);
+  transform: translateX(-100%);
+  transition: transform 0.6s var(--ease-out);
+  pointer-events: none;
+}
+
+.btn-hero-primary:hover::after {
+  transform: translateX(100%);
+}
+
+/* Hero 次按钮：玻璃白边框 + hover 加深 */
 .btn-hero-outline {
   display: inline-flex;
   align-items: center;
   padding: 16px 36px;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  border-radius: var(--radius-sm);
+  border: 1.5px solid rgba(255, 255, 255, 0.5);
+  border-radius: var(--radius-md);
   font-size: var(--font-size-body);
-  font-weight: 500;
-  letter-spacing: 0.05em;
+  font-weight: 600;
+  letter-spacing: 0.03em;
   text-decoration: none;
-  transition: var(--transition-base);
   cursor: pointer;
+  transition: var(--transition-base);
 }
 
 .btn-hero-outline:hover {
   border-color: #fff;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.22);
+  transform: translateY(-3px);
 }
 
 /* 滚动提示 */
@@ -417,6 +463,7 @@ onMounted(() => {
   color: #fff;
   opacity: 0.7;
   animation: bounce 2s infinite;
+  z-index: 2;
 }
 
 .scroll-line {
@@ -431,24 +478,13 @@ onMounted(() => {
   text-transform: uppercase;
 }
 
-/* Hero 动画 */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
+/* Hero 动画：fadeInUp 在全局已有，这里只补 bounce */
 @keyframes bounce {
   0%, 100% { transform: translateX(-50%) translateY(0); }
   50% { transform: translateX(-50%) translateY(-10px); }
 }
 
-/* ==================== 分类入口 ==================== */
+/* ==================== 分类入口：玻璃卡片网格 ==================== */
 .category-section {
   padding: var(--space-3xl) 0;
   background: var(--color-bg);
@@ -460,48 +496,63 @@ onMounted(() => {
   gap: var(--space-lg);
 }
 
+/* 玻璃卡片化分类入口 */
 .category-item {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--space-md);
+  padding: 28px 12px;
   cursor: pointer;
-  transition: var(--transition-base);
+  background: var(--color-glass);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out),
+              border-color 0.3s var(--ease-out);
 }
 
+/* hover：上浮 + 翡翠描边 */
 .category-item:hover {
-  transform: translateY(-4px);
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--color-primary-light);
 }
 
+/* 圆形图标：柔和渐变底，hover 时变实色渐变并旋转 */
 .category-icon {
-  width: 80px;
-  height: 80px;
-  border: 1px solid var(--color-border);
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-text);
-  transition: var(--transition-base);
-  background: var(--color-bg);
+  color: var(--color-primary);
+  background: var(--gradient-brand-soft);
+  transition: transform 0.3s var(--ease-out), background 0.3s var(--ease-out),
+              color 0.3s var(--ease-out);
 }
 
 .category-item:hover .category-icon {
-  border-color: var(--color-primary);
-  background: var(--color-primary);
+  transform: scale(1.1) rotate(-6deg);
+  background: var(--gradient-brand);
   color: #fff;
 }
 
 .category-name {
   font-size: var(--font-size-small);
   color: var(--color-text);
-  letter-spacing: 0.05em;
+  font-weight: 600;
+  letter-spacing: 0.03em;
 }
 
 /* ==================== 精选商品 ==================== */
 .products-section {
   padding: var(--space-3xl) 0;
-  background: var(--color-bg-secondary);
+  /* 浅翡翠渐变底，营造层次 */
+  background: linear-gradient(180deg, var(--color-bg) 0%, #ECFDF5 100%);
 }
 
 /* 区块标题 */
@@ -513,16 +564,16 @@ onMounted(() => {
 .section-eyebrow {
   font-size: var(--font-size-caption);
   letter-spacing: 0.3em;
-  color: var(--color-text-muted);
+  color: var(--color-primary);
   text-transform: uppercase;
   margin-bottom: var(--space-sm);
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .section-title {
   font-family: var(--font-heading);
   font-size: var(--font-size-h1);
-  font-weight: 600;
+  font-weight: 700;
   color: var(--color-text);
   margin: 0 0 var(--space-sm);
   letter-spacing: -0.02em;
@@ -541,7 +592,7 @@ onMounted(() => {
   gap: var(--space-lg);
 }
 
-/* 加载骨架屏 */
+/* 加载骨架屏：玻璃卡片化 */
 .products-loading {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -549,18 +600,21 @@ onMounted(() => {
 }
 
 .product-skeleton {
-  background: #fff;
+  background: var(--color-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-lg);
   padding: var(--space-lg);
-  border-radius: var(--radius-md);
 }
 
-/* 区块底部按钮 */
+/* 区块底部按钮：复用全局 .btn-outline 玻璃风格 */
 .section-footer {
   text-align: center;
   margin-top: var(--space-2xl);
 }
 
-/* ==================== 品牌承诺 ==================== */
+/* ==================== 品牌承诺：玻璃卡片网格 ==================== */
 .promise-section {
   padding: var(--space-3xl) 0;
   background: var(--color-bg);
@@ -572,27 +626,53 @@ onMounted(() => {
   gap: var(--space-xl);
 }
 
+/* 玻璃卡片化承诺项 */
 .promise-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
   padding: var(--space-lg);
+  background: var(--color-glass);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out),
+              border-color 0.3s var(--ease-out);
 }
 
+.promise-item:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--color-primary-light);
+}
+
+/* 圆形图标：柔和渐变底 + 翡翠色 */
 .promise-icon {
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
   margin: 0 auto var(--space-md);
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--color-primary);
-  border: 1px solid var(--color-border);
-  border-radius: 50%;
+  background: var(--gradient-brand-soft);
+  border-radius: var(--radius-md);
+  transition: var(--transition-base);
+}
+
+.promise-item:hover .promise-icon {
+  background: var(--gradient-brand);
+  color: #fff;
+  transform: scale(1.08);
 }
 
 .promise-title {
   font-family: var(--font-heading);
   font-size: var(--font-size-h3);
-  font-weight: 600;
+  font-weight: 700;
   color: var(--color-text);
   margin: 0 0 var(--space-sm);
 }
@@ -607,7 +687,7 @@ onMounted(() => {
 /* ==================== 新品上架 ==================== */
 .new-arrivals-section {
   padding: var(--space-3xl) 0;
-  background: var(--color-bg-secondary);
+  background: linear-gradient(180deg, var(--color-bg) 0%, #F0FDFA 100%);
 }
 
 .new-arrivals-list {
@@ -616,20 +696,30 @@ onMounted(() => {
   gap: var(--space-md);
 }
 
+/* 新品卡片：玻璃卡片化 */
 .new-arrival-item {
   cursor: pointer;
-  transition: var(--transition-base);
+  background: var(--color-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-sm);
+  transition: transform 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out),
+              border-color 0.3s var(--ease-out);
 }
 
 .new-arrival-item:hover {
   transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--color-primary-light);
 }
 
 .new-arrival-image {
   width: 100%;
   aspect-ratio: 1;
   overflow: hidden;
-  background: var(--color-bg);
+  background: linear-gradient(135deg, #F8FAFC, #ECFDF5);
   border-radius: var(--radius-md);
   margin-bottom: var(--space-sm);
 }
@@ -638,7 +728,7 @@ onMounted(() => {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.5s ease;
+  transition: transform 0.5s var(--ease-out);
 }
 
 .new-arrival-item:hover .new-arrival-image img {
@@ -661,10 +751,15 @@ onMounted(() => {
   height: 38px;
 }
 
+/* 新品价格：渐变文字 */
 .new-arrival-price {
+  font-family: var(--font-heading);
   font-size: var(--font-size-body);
-  color: var(--color-accent);
-  font-weight: 600;
+  font-weight: 700;
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
   margin: 0;
 }
 

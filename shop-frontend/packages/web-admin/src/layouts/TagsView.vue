@@ -1,5 +1,5 @@
 <template>
-  <!-- 标签页导航栏 -->
+  <!-- 标签页导航栏：玻璃胶囊化标签 -->
   <div class="tags-view">
     <el-scrollbar>
       <div class="tags-list">
@@ -100,54 +100,76 @@ watch(() => route.path, () => {
 </script>
 
 <style scoped>
+/* 标签页容器：玻璃白背景 + 底部分隔线 */
 .tags-view {
-  height: 34px;
-  background: var(--color-card);
+  height: 38px;
+  background: var(--color-glass-strong);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-bottom: 1px solid var(--color-border);
-  padding: 0 8px;
+  padding: 0 12px;
   display: flex;
   align-items: center;
 }
 
 .tags-list {
   display: flex;
-  gap: 4px;
+  gap: 6px;
   white-space: nowrap;
 }
 
+/* 标签项：胶囊形 + 玻璃边框 + 平滑过渡 */
 .tag-item {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
+  gap: 6px;
+  padding: 5px 12px;
   font-size: 12px;
+  font-weight: 500;
   border: 1px solid var(--color-border);
-  border-radius: 3px;
+  border-radius: var(--radius-tag);
   cursor: pointer;
   color: var(--color-text-secondary);
-  background: var(--color-card);
+  background: var(--color-glass);
+  transition: all 0.25s var(--ease-out);
 }
 
 .tag-item:hover {
   color: var(--color-primary);
-}
-
-.tag-item.active {
-  background-color: var(--color-primary);
-  color: #fff;
   border-color: var(--color-primary);
+  background: var(--gradient-brand-soft);
+  transform: translateY(-1px);
 }
 
+/* 激活态：翡翠青绿渐变背景 + 白字 + 发光阴影 */
+.tag-item.active {
+  background: var(--gradient-brand);
+  color: #fff;
+  border-color: transparent;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+}
+
+/* 关闭按钮：圆形 */
 .tag-close {
   font-size: 12px;
   border-radius: 50%;
+  padding: 2px;
+  transition: all 0.2s var(--ease-out);
 }
 
 .tag-close:hover {
-  background: rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.12);
+  transform: rotate(90deg);
 }
 
+/* 激活态下关闭按钮 hover：白底深色 */
 .tag-item.active .tag-close:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.35);
+}
+
+/* 暗色模式：玻璃背景更深 */
+html.dark .tags-view {
+  background: rgba(30, 41, 59, 0.85);
 }
 </style>

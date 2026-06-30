@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ShopMall 管理端 - 现代玻璃拟态原型</title>
+<style>
+/* ============ 设计系统 CSS（修正 --color-emerald-dark 多余的 # 号） ============ */
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Manrope:wght@300;400;500;600;700;800&display=swap');
+
+:root{
+  --gradient-brand:linear-gradient(135deg,#10B981 0%,#06B6D4 100%);
+  --gradient-brand-hover:linear-gradient(135deg,#059669 0%,#0891B2 100%);
+  --gradient-brand-soft:linear-gradient(135deg,rgba(16,185,129,.1) 0%,rgba(6,182,212,.1) 100%);
+  --gradient-mesh:radial-gradient(at 0% 0%,rgba(16,185,129,.12) 0,transparent 50%),radial-gradient(at 98% 2%,rgba(6,182,212,.12) 0,transparent 50%),radial-gradient(at 50% 98%,rgba(16,185,129,.08) 0,transparent 50%);
+  --color-bg:#F8FAFC;--color-surface:#FFFFFF;
+  --color-glass:rgba(255,255,255,.65);--color-glass-strong:rgba(255,255,255,.85);--color-glass-border:rgba(255,255,255,.6);
+  --color-text:#0F172A;--color-text-secondary:#475569;--color-text-muted:#94A3B8;
+  --color-border:rgba(226,232,240,.7);--color-divider:rgba(241,245,249,.8);
+  --color-emerald:#10B981;--color-emerald-light:#34D399;--color-emerald-dark:#059669;
+  --color-cyan:#06B6D4;--color-cyan-light:#22D3EE;--color-cyan-dark:#0891B2;
+  --color-success:#22C55E;--color-warning:#F59E0B;--color-error:#EF4444;--color-info:#3B82F6;
+  --shadow-xs:0 1px 2px rgba(15,23,42,.04);--shadow-sm:0 2px 8px rgba(15,23,42,.05);
+  --shadow-md:0 4px 16px rgba(15,23,42,.07);--shadow-lg:0 12px 32px rgba(15,23,42,.1);
+  --shadow-xl:0 20px 48px rgba(15,23,42,.14);--shadow-glow:0 0 24px rgba(16,185,129,.35);
+  --radius-sm:8px;--radius-md:12px;--radius-lg:16px;--radius-xl:24px;--radius-2xl:32px;--radius-pill:999px;
+  --font-display:'Sora','PingFang SC','Noto Sans SC',sans-serif;
+  --font-body:'Manrope','PingFang SC','Microsoft YaHei',sans-serif;
+  --ease-out:cubic-bezier(.16,1,.3,1);--ease-spring:cubic-bezier(.34,1.56,.64,1);--transition:.3s var(--ease-out);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--font-body);background:var(--color-bg);color:var(--color-text);-webkit-font-smoothing:antialiased;line-height:1.6;min-height:100vh;overflow-x:hidden}
+h1,h2,h3,h4,h5{font-family:var(--font-display);font-weight:700;letter-spacing:-.02em;line-height:1.2}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+img{display:block;max-width:100%}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(148,163,184,.3);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:rgba(148,163,184,.5)}
+
+/* 玻璃质感组件 */
+.glass{background:var(--color-glass);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border:1px solid var(--color-glass-border);box-shadow:var(--shadow-md)}
+.glass-strong{background:var(--color-glass-strong);backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);border:1px solid var(--color-glass-border);box-shadow:var(--shadow-lg)}
+
+/* 按钮系列 */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 20px;border-radius:var(--radius-md);font-family:var(--font-body);font-weight:600;font-size:14px;cursor:pointer;position:relative;overflow:hidden;transition:transform .2s var(--ease-out),box-shadow .3s var(--ease-out),background .3s var(--ease-out);white-space:nowrap}
+.btn-primary{background:var(--gradient-brand);color:#fff;box-shadow:0 4px 14px rgba(16,185,129,.3)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(16,185,129,.4),0 0 32px rgba(6,182,212,.3)}
+.btn-primary:active{transform:translateY(0)}
+.btn-primary::after{content:'';position:absolute;inset:0;background:linear-gradient(120deg,transparent 30%,rgba(255,255,255,.35) 50%,transparent 70%);transform:translateX(-100%);transition:transform .6s var(--ease-out);pointer-events:none}
+.btn-primary:hover::after{transform:translateX(100%)}
+.btn-secondary{background:var(--color-glass);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);color:var(--color-text);border:1.5px solid var(--color-border)}
+.btn-secondary:hover{transform:translateY(-2px);border-color:var(--color-emerald);box-shadow:0 4px 16px rgba(16,185,129,.15)}
+.btn-ghost{background:transparent;color:var(--color-text-secondary);padding:6px 12px}
+.btn-ghost:hover{color:var(--color-emerald);background:var(--gradient-brand-soft)}
+.btn-icon{width:36px;height:36px;padding:0;border-radius:var(--radius-pill);background:var(--color-glass);border:1px solid var(--color-border);display:inline-flex;align-items:center;justify-content:center;color:var(--color-text-secondary);transition:all .3s var(--ease-out)}
+.btn-icon:hover{color:var(--color-emerald);border-color:var(--color-emerald);transform:translateY(-2px);box-shadow:var(--shadow-glow)}
+.btn-danger{background:rgba(239,68,68,.1);color:var(--color-error);border:1px solid rgba(239,68,68,.2)}
+.btn-danger:hover{background:var(--color-error);color:#fff;transform:translateY(-2px)}
+.btn-sm{padding:6px 14px;font-size:13px}
+
+/* 波纹效果 */
+.ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,.5);transform:scale(0);animation:ripple .6s var(--ease-out);pointer-events:none}
+@keyframes ripple{to{transform:scale(4);opacity:0}}
+
+/* 卡片 */
+.card{background:var(--color-surface);border-radius:var(--radius-lg);border:1px solid var(--color-border);box-shadow:var(--shadow-sm);transition:transform .3s var(--ease-out),box-shadow .3s var(--ease-out)}
+.card-hover:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
+
+/* 徽章 */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:var(--radius-pill);font-size:12px;font-weight:600}
+.badge-success{background:rgba(34,197,94,.12);color:var(--color-success)}
+.badge-warning{background:rgba(245,158,11,.12);color:var(--color-warning)}
+.badge-error{background:rgba(239,68,68,.12);color:var(--color-error)}
+.badge-info{background:rgba(59,130,246,.12);color:var(--color-info)}
+.badge-brand{background:var(--gradient-brand-soft);color:var(--color-emerald-dark)}
+
+/* 输入框 */
+.input{width:100%;padding:10px 14px;border:1.5px solid var(--color-border);border-radius:var(--radius-md);font-family:var(--font-body);font-size:14px;background:rgba(255,255,255,.6);color:var(--color-text);transition:all .3s var(--ease-out);outline:none}
+.input:focus{border-color:var(--color-emerald);box-shadow:0 0 0 4px rgba(16,185,129,.12);background:#fff}
+
+/* 页面切换动画 */
+.page{display:none;animation:fadeInUp .4s var(--ease-out)}
+.page.active{display:block}
+@keyframes fadeInUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+.skeleton{background:linear-gradient(90deg,rgba(241,245,249,.6) 25%,rgba(226,232,240,.9) 50%,rgba(241,245,249,.6) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite}
+
+.gradient-text{background:var(--gradient-brand);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+
+/* ============ 整体布局 ============ */
+.app-layout{display:flex;min-height:100vh;background:var(--gradient-mesh),var(--color-bg)}
+
+/* ===== 侧边栏 ===== */
+.sidebar{width:240px;flex-shrink:0;position:sticky;top:0;height:100vh;padding:24px 16px;display:flex;flex-direction:column;z-index:50}
+.sidebar-logo{display:flex;align-items:center;gap:10px;padding:0 8px 24px;border-bottom:1px solid var(--color-divider)}
+.logo-icon{width:40px;height:40px;border-radius:var(--radius-md);background:var(--gradient-brand);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:18px;box-shadow:0 4px 14px rgba(16,185,129,.35)}
+.logo-text{font-family:var(--font-display);font-weight:800;font-size:16px;line-height:1.2}
+.logo-text .sub{display:block;font-size:11px;font-weight:500;color:var(--color-text-muted);margin-top:2px;letter-spacing:.02em}
+
+.menu-group{margin-top:20px}
+.menu-title{font-size:11px;font-weight:700;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.08em;padding:0 12px 8px}
+.menu-list{list-style:none;position:relative}
+.menu-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-md);color:var(--color-text-secondary);font-size:14px;font-weight:500;cursor:pointer;transition:all .25s var(--ease-out);position:relative;margin-bottom:2px}
+.menu-item:hover{background:var(--gradient-brand-soft);color:var(--color-emerald-dark)}
+.menu-item.active{color:var(--color-emerald-dark);font-weight:600}
+.menu-item.active::before{content:'';position:absolute;left:-16px;top:8px;bottom:8px;width:3px;border-radius:3px;background:var(--gradient-brand)}
+.menu-item.active{background:var(--gradient-brand-soft)}
+.menu-item svg{width:18px;height:18px;flex-shrink:0}
+.menu-item.disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
+.menu-item.disabled:hover{background:transparent;color:var(--color-text-secondary)}
+
+.admin-profile{margin-top:auto;padding-top:16px;border-top:1px solid var(--color-divider);display:flex;align-items:center;gap:10px}
+.admin-avatar{width:36px;height:36px;border-radius:var(--radius-pill);background:var(--gradient-brand);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;flex-shrink:0;overflow:hidden}
+.admin-avatar img{width:100%;height:100%;object-fit:cover}
+.admin-info{flex:1;min-width:0}
+.admin-name{font-size:13px;font-weight:600;color:var(--color-text)}
+.admin-role{font-size:11px;color:var(--color-text-muted)}
+.logout-btn{width:28px;height:28px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;color:var(--color-text-muted);transition:all .25s var(--ease-out)}
+.logout-btn:hover{background:rgba(239,68,68,.1);color:var(--color-error)}
+
+/* ===== 主内容区 ===== */
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:16px;padding:16px 32px;background:var(--color-glass-strong);backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);border-bottom:1px solid var(--color-border)}
+.topbar-search{flex:1;max-width:480px;position:relative}
+.topbar-search input{width:100%;padding:10px 14px 10px 40px;border:1.5px solid var(--color-border);border-radius:var(--radius-pill);background:rgba(255,255,255,.6);font-size:14px;outline:none;transition:all .3s var(--ease-out)}
+.topbar-search input:focus{border-color:var(--color-emerald);box-shadow:0 0 0 4px rgba(16,185,129,.12);background:#fff}
+.topbar-search svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--color-text-muted)}
+.topbar-actions{display:flex;align-items:center;gap:8px;margin-left:auto}
+.icon-btn{position:relative;width:40px;height:40px;border-radius:var(--radius-pill);display:flex;align-items:center;justify-content:center;color:var(--color-text-secondary);background:rgba(255,255,255,.5);border:1px solid var(--color-border);transition:all .25s var(--ease-out);cursor:pointer}
+.icon-btn:hover{color:var(--color-emerald);border-color:var(--color-emerald);transform:translateY(-2px)}
+.icon-btn .dot{position:absolute;top:8px;right:9px;width:8px;height:8px;border-radius:50%;background:var(--color-error);border:2px solid #fff}
+.icon-btn svg{width:18px;height:18px}
+.topbar-avatar{width:40px;height:40px;border-radius:var(--radius-pill);overflow:hidden;border:2px solid var(--color-glass-border);cursor:pointer;transition:all .25s var(--ease-out)}
+.topbar-avatar:hover{border-color:var(--color-emerald);box-shadow:var(--shadow-glow)}
+.topbar-avatar img{width:100%;height:100%;object-fit:cover}
+
+.content{flex:1;padding:32px;min-width:0}
+
+/* ===== 通用标题区 ===== */
+.page-header{margin-bottom:24px}
+.page-title{font-size:24px;font-weight:800;color:var(--color-text)}
+.page-subtitle{font-size:14px;color:var(--color-text-secondary);margin-top:4px}
+
+/* ===== 概览区（带渐变背景） ===== */
+.overview-banner{background:var(--gradient-mesh),linear-gradient(135deg,rgba(16,185,129,.08) 0%,rgba(6,182,212,.08) 100%);border:1px solid var(--color-glass-border);border-radius:var(--radius-xl);padding:28px;margin-bottom:24px;position:relative;overflow:hidden}
+.overview-banner::before{content:'';position:absolute;top:-50%;right:-10%;width:400px;height:400px;background:radial-gradient(circle,rgba(16,185,129,.15) 0,transparent 70%);pointer-events:none}
+.overview-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;position:relative}
+.overview-title{font-size:22px;font-weight:800}
+.overview-title .emoji{display:inline-block;margin-right:8px}
+.overview-meta{font-size:13px;color:var(--color-text-secondary);margin-top:6px}
+.range-picker{display:flex;gap:4px;padding:4px;background:var(--color-glass);border-radius:var(--radius-pill);border:1px solid var(--color-glass-border)}
+.range-picker button{padding:6px 14px;border-radius:var(--radius-pill);font-size:12px;font-weight:600;color:var(--color-text-secondary);transition:all .25s var(--ease-out)}
+.range-picker button.active{background:var(--gradient-brand);color:#fff;box-shadow:0 2px 8px rgba(16,185,129,.3)}
+
+/* ===== 数据卡片网格 ===== */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.stat-card{background:var(--color-surface);border-radius:var(--radius-lg);padding:20px;border:1px solid var(--color-border);box-shadow:var(--shadow-sm);position:relative;overflow:hidden;transition:transform .3s var(--ease-out),box-shadow .3s var(--ease-out);cursor:pointer}
+.stat-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--gradient-brand);opacity:0;transition:opacity .3s var(--ease-out)}
+.stat-card:hover::before{opacity:1}
+.stat-icon{width:44px;height:44px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;color:#fff;margin-bottom:14px;background:var(--gradient-brand)}
+.stat-icon svg{width:22px;height:22px}
+.stat-label{font-size:13px;color:var(--color-text-secondary);font-weight:500}
+.stat-value{font-family:var(--font-display);font-size:28px;font-weight:800;color:var(--color-text);margin:4px 0 6px;letter-spacing:-.02em}
+.stat-trend{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600}
+.stat-trend.up{color:var(--color-success)}
+.stat-trend.down{color:var(--color-error)}
+.stat-trend svg{width:12px;height:12px}
+
+/* ===== 销售趋势图 ===== */
+.dashboard-row{display:grid;grid-template-columns:2fr 1fr;gap:24px;margin-bottom:24px}
+.chart-card{padding:24px}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.section-title{font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px}
+.section-title .dot-mark{width:8px;height:8px;border-radius:50%;background:var(--gradient-brand)}
+.tab-group{display:flex;gap:4px;padding:4px;background:var(--color-glass);border-radius:var(--radius-pill);border:1px solid var(--color-glass-border);position:relative}
+.tab-group button{padding:6px 14px;border-radius:var(--radius-pill);font-size:12px;font-weight:600;color:var(--color-text-secondary);transition:all .25s var(--ease-out);position:relative;z-index:2}
+.tab-group button.active{color:#fff}
+.tab-indicator{position:absolute;top:4px;bottom:4px;background:var(--gradient-brand);border-radius:var(--radius-pill);transition:all .3s var(--ease-out);z-index:1;box-shadow:0 2px 8px rgba(16,185,129,.3)}
+
+/* 柱状图 */
+.chart-container{position:relative;height:240px;display:flex;align-items:flex-end;gap:4px;padding:16px 0 0}
+.bar{flex:1;background:var(--gradient-brand);border-radius:6px 6px 0 0;position:relative;cursor:pointer;transition:all .3s var(--ease-out);min-height:4px}
+.bar:hover{transform:scaleY(1.04);filter:brightness(1.1)}
+.bar:hover .bar-tooltip{opacity:1;transform:translateX(-50%) translateY(-8px)}
+.bar-tooltip{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:var(--color-text);color:#fff;padding:6px 10px;border-radius:var(--radius-sm);font-size:11px;font-weight:600;white-space:nowrap;opacity:0;pointer-events:none;transition:all .25s var(--ease-out);margin-bottom:6px}
+.bar-tooltip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:4px solid transparent;border-top-color:var(--color-text)}
+.chart-xaxis{display:flex;justify-content:space-between;margin-top:8px;font-size:11px;color:var(--color-text-muted);padding:0 4px}
+
+/* ===== 商家排行榜 ===== */
+.rank-list{list-style:none;display:flex;flex-direction:column;gap:12px}
+.rank-item{display:flex;align-items:center;gap:12px;padding:12px;border-radius:var(--radius-md);transition:background .25s var(--ease-out);cursor:pointer}
+.rank-item:hover{background:var(--gradient-brand-soft)}
+.rank-num{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;background:rgba(148,163,184,.15);color:var(--color-text-secondary)}
+.rank-num.top1{background:var(--gradient-brand);color:#fff;box-shadow:0 4px 12px rgba(16,185,129,.4)}
+.rank-num.top2{background:linear-gradient(135deg,#94A3B8,#64748B);color:#fff}
+.rank-num.top3{background:linear-gradient(135deg,#F59E0B,#D97706);color:#fff}
+.rank-info{flex:1;min-width:0}
+.rank-name{font-size:14px;font-weight:600;color:var(--color-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rank-amount{font-size:12px;color:var(--color-text-muted);margin-top:2px}
+.rank-trend{font-size:12px;font-weight:600;color:var(--color-success);display:flex;align-items:center;gap:2px}
+.rank-trend svg{width:12px;height:12px}
+
+/* ===== 活动动态 ===== */
+.activity-card{padding:24px}
+.timeline{position:relative;padding-left:8px}
+.timeline::before{content:'';position:absolute;left:14px;top:8px;bottom:8px;width:2px;background:linear-gradient(to bottom,var(--color-emerald),var(--color-cyan),transparent)}
+.timeline-item{display:flex;gap:14px;padding:10px 0;position:relative}
+.timeline-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;z-index:2;background:var(--color-surface);border:2px solid var(--color-emerald)}
+.timeline-icon svg{width:14px;height:14px}
+.timeline-icon.warn{border-color:var(--color-warning)}
+.timeline-icon.warn svg{color:var(--color-warning)}
+.timeline-icon.error{border-color:var(--color-error)}
+.timeline-icon.error svg{color:var(--color-error)}
+.timeline-icon.info{border-color:var(--color-info)}
+.timeline-icon.info svg{color:var(--color-info)}
+.timeline-content{flex:1}
+.timeline-desc{font-size:13px;color:var(--color-text);line-height:1.5}
+.timeline-desc strong{color:var(--color-emerald-dark)}
+.timeline-time{font-size:11px;color:var(--color-text-muted);margin-top:2px}
+
+/* ===== 表格通用样式 ===== */
+.toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px;padding:16px;border-radius:var(--radius-lg)}
+.toolbar-left{display:flex;gap:12px;flex-wrap:wrap;align-items:center;flex:1}
+.toolbar-right{display:flex;gap:8px}
+.search-box{position:relative;width:280px}
+.search-box input{width:100%;padding:9px 14px 9px 36px;border-radius:var(--radius-md);border:1.5px solid var(--color-border);background:rgba(255,255,255,.6);font-size:13px;outline:none;transition:all .3s var(--ease-out)}
+.search-box input:focus{border-color:var(--color-emerald);box-shadow:0 0 0 4px rgba(16,185,129,.12);background:#fff}
+.search-box svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--color-text-muted)}
+
+.table-card{overflow:hidden}
+.table-wrap{overflow-x:auto}
+table.data-table{width:100%;border-collapse:collapse;font-size:13px}
+.data-table th{padding:14px 16px;text-align:left;font-weight:600;color:var(--color-text-secondary);background:rgba(248,250,252,.6);border-bottom:1px solid var(--color-border);white-space:nowrap}
+.data-table th:first-child{padding-left:24px}
+.data-table th:last-child{padding-right:24px;text-align:right}
+.data-table td{padding:14px 16px;border-bottom:1px solid var(--color-divider);color:var(--color-text)}
+.data-table td:first-child{padding-left:24px}
+.data-table td:last-child{padding-right:24px;text-align:right}
+.data-table tbody tr{position:relative;transition:background .25s var(--ease-out)}
+.data-table tbody tr:hover{background:var(--gradient-brand-soft)}
+.data-table tbody tr:hover td:first-child{box-shadow:inset 3px 0 0 0 var(--color-emerald)}
+.data-table tbody tr:last-child td{border-bottom:none}
+.cell-strong{font-weight:600}
+.cell-muted{color:var(--color-text-muted);font-size:12px}
+.cell-actions{display:flex;gap:6px;justify-content:flex-end}
+.avatar-cell{display:flex;align-items:center;gap:10px}
+.avatar-cell .av{width:32px;height:32px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--gradient-brand)}
+.avatar-cell .av img{width:100%;height:100%;object-fit:cover}
+.avatar-cell .info .name{font-weight:600;font-size:13px}
+.avatar-cell .info .sub{font-size:11px;color:var(--color-text-muted)}
+
+/* ===== 抽屉组件 ===== */
+.drawer-mask{position:fixed;inset:0;background:rgba(15,23,42,.4);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);opacity:0;visibility:hidden;transition:opacity .4s var(--ease-out),visibility .4s var(--ease-out);z-index:100}
+.drawer-mask.open{opacity:1;visibility:visible}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:420px;max-width:90vw;background:var(--color-glass-strong);backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);border-left:1px solid var(--color-glass-border);box-shadow:var(--shadow-xl);transform:translateX(100%);transition:transform .4s var(--ease-out);z-index:101;display:flex;flex-direction:column}
+.drawer.open{transform:translateX(0)}
+.drawer-header{padding:20px 24px;border-bottom:1px solid var(--color-divider);display:flex;align-items:center;justify-content:space-between}
+.drawer-title{font-size:17px;font-weight:700;display:flex;align-items:center;gap:8px}
+.drawer-close{width:32px;height:32px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;color:var(--color-text-muted);transition:all .25s var(--ease-out);cursor:pointer}
+.drawer-close:hover{background:rgba(239,68,68,.1);color:var(--color-error)}
+.drawer-body{flex:1;overflow-y:auto;padding:24px}
+.drawer-section{margin-bottom:24px}
+.drawer-section-title{font-size:12px;font-weight:700;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px}
+.info-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--color-divider);font-size:13px}
+.info-row:last-child{border-bottom:none}
+.info-row .label{color:var(--color-text-secondary)}
+.info-row .value{font-weight:600;color:var(--color-text)}
+.license-img{width:100%;border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--color-border);background:var(--color-bg)}
+.license-img img{width:100%;height:auto;display:block}
+.drawer-footer{padding:20px 24px;border-top:1px solid var(--color-divider);background:rgba(255,255,255,.5)}
+.reject-reason{margin-bottom:12px}
+.reject-reason textarea{width:100%;padding:10px 14px;border-radius:var(--radius-md);border:1.5px solid var(--color-border);background:rgba(255,255,255,.6);font-family:var(--font-body);font-size:13px;resize:vertical;min-height:60px;outline:none;transition:all .3s var(--ease-out)}
+.reject-reason textarea:focus{border-color:var(--color-error);box-shadow:0 0 0 4px rgba(239,68,68,.1);background:#fff}
+.drawer-actions{display:flex;gap:10px}
+.drawer-actions .btn{flex:1}
+
+/* ===== 二级 Tab ===== */
+.subtabs{display:flex;gap:4px;border-bottom:1px solid var(--color-border);margin-bottom:24px;position:relative}
+.subtab{padding:10px 16px;font-size:14px;font-weight:600;color:var(--color-text-secondary);cursor:pointer;transition:color .25s var(--ease-out);position:relative}
+.subtab:hover{color:var(--color-emerald)}
+.subtab.active{color:var(--color-emerald-dark)}
+.subtab-indicator{position:absolute;bottom:-1px;height:2px;background:var(--gradient-brand);transition:all .3s var(--ease-out);border-radius:2px}
+
+/* ===== 权限树 ===== */
+.permission-layout{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.tree-card{padding:20px}
+.tree{list-style:none}
+.tree-node{margin-bottom:4px}
+.tree-toggle{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--radius-sm);cursor:pointer;transition:background .2s var(--ease-out)}
+.tree-toggle:hover{background:rgba(16,185,129,.06)}
+.tree-toggle .arrow{width:14px;height:14px;transition:transform .25s var(--ease-out);color:var(--color-text-muted)}
+.tree-node.open > .tree-toggle .arrow{transform:rotate(90deg)}
+.tree-children{list-style:none;padding-left:24px;max-height:0;overflow:hidden;transition:max-height .3s var(--ease-out)}
+.tree-node.open > .tree-children{max-height:500px}
+.checkbox{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--color-border);background:#fff;cursor:pointer;position:relative;transition:all .25s var(--ease-out);flex-shrink:0}
+.checkbox.checked{background:var(--gradient-brand);border-color:transparent}
+.checkbox.checked::after{content:'';position:absolute;left:4px;top:1px;width:5px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.tree-label{font-size:13px;font-weight:500}
+.tree-desc{font-size:11px;color:var(--color-text-muted);margin-left:4px}
+
+.permission-detail{padding:20px}
+.permission-detail h4{font-size:15px;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.permission-list{list-style:none;display:flex;flex-direction:column;gap:8px}
+.permission-item{padding:10px 12px;border-radius:var(--radius-sm);background:var(--gradient-brand-soft);font-size:13px;display:flex;align-items:center;justify-content:space-between}
+.permission-item .code{font-family:'Sora',monospace;font-size:11px;color:var(--color-emerald-dark);font-weight:600}
+
+/* 响应式 */
+@media (max-width:1100px){
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .dashboard-row{grid-template-columns:1fr}
+  .permission-layout{grid-template-columns:1fr}
+}
+@media (max-width:768px){
+  .sidebar{display:none}
+  .content{padding:16px}
+  .topbar{padding:12px 16px}
+}
+
+/* 进度环装饰 */
+.glow-orb{position:absolute;border-radius:50%;filter:blur(60px);opacity:.5;pointer-events:none;z-index:0}
+</style>
+</head>
+<body>
+
+<!-- ============ 整体布局 ============ -->
+<div class="app-layout">
+  
+  <!-- ============ 玻璃侧边栏 ============ -->
+  <aside class="sidebar glass">
+    <!-- Logo 区 -->
+    <div class="sidebar-logo">
+      <div class="logo-icon">S</div>
+      <div class="logo-text">
+        <span class="gradient-text">ShopMall</span>
+        <span class="sub">管理后台</span>
+      </div>
+    </div>
+    
+    <!-- 菜单组：运营 -->
+    <div class="menu-group">
+      <div class="menu-title">运营</div>
+      <ul class="menu-list">
+        <li class="menu-item active" data-page="dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          <span>运营看板</span>
+        </li>
+        <li class="menu-item" data-page="audit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9c2.39 0 4.68.94 6.36 2.64"/></svg>
+          <span>商家审核</span>
+        </li>
+        <li class="menu-item" data-page="system">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span>系统管理</span>
+        </li>
+      </ul>
+    </div>
+    
+    <!-- 菜单组：业务（禁用） -->
+    <div class="menu-group">
+      <div class="menu-title">业务</div>
+      <ul class="menu-list">
+        <li class="menu-item disabled">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7L12 3 4 7l8 4 8-4z"/><path d="M4 7v10l8 4 8-4V7"/><path d="M12 11v10"/></svg>
+          <span>商品</span>
+        </li>
+        <li class="menu-item disabled">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0H5a2 2 0 0 1-2-2v-4m6 6h10a2 2 0 0 0 2-2v-4M3 9h6m6 6h6"/></svg>
+          <span>订单</span>
+        </li>
+        <li class="menu-item disabled">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span>用户</span>
+        </li>
+      </ul>
+    </div>
+    
+    <!-- 底部管理员信息 -->
+    <div class="admin-profile">
+      <div class="admin-avatar">
+        <img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=professional%20admin%20manager%20avatar%20portrait%20asian%20male&image_size=square_hd" alt="管理员" onerror="this.style.display='none';this.parentElement.textContent='超'">
+      </div>
+      <div class="admin-info">
+        <div class="admin-name">超级管理员</div>
+        <div class="admin-role">平台运营总监</div>
+      </div>
+      <div class="logout-btn" title="退出登录">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </div>
+    </div>
+  </aside>
+  
+  <!-- ============ 主内容区 ============ -->
+  <main class="main">
+    <!-- 顶部栏 -->
+    <div class="topbar">
+      <div class="topbar-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" placeholder="搜索商家、订单、商品..." />
+      </div>
+      <div class="topbar-actions">
+        <button class="icon-btn" title="通知">
+          <span class="dot"></span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        </button>
+        <button class="icon-btn" title="消息">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </button>
+        <div class="topbar-avatar">
+          <img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=professional%20admin%20manager%20avatar%20portrait%20asian%20male&image_size=square_hd" alt="头像" onerror="this.style.background='var(--gradient-brand)';this.alt='超'">
+        </div>
+      </div>
+    </div>
+    
+    <!-- 内容区 -->
+    <div class="content">
+      
+      <!-- ============ 页面1：运营看板 ============ -->
+      <section class="page active" id="page-dashboard">
+        
+        <!-- 概览区 -->
+        <div class="overview-banner">
+          <div class="overview-header">
+            <div>
+              <h1 class="overview-title"><span class="emoji">📊</span>平台运营概览</h1>
+              <div class="overview-meta">更新时间：2026-06-30 14:32 · 数据每 5 分钟自动刷新</div>
+            </div>
+            <div class="range-picker">
+              <button>今日</button>
+              <button class="active">近 7 日</button>
+              <button>近 30 日</button>
+              <button>近 90 日</button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 4 个核心数据卡片 -->
+        <div class="stats-grid">
+          <div class="stat-card card-hover">
+            <div class="stat-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            </div>
+            <div class="stat-label">平台总交易额</div>
+            <div class="stat-value" data-count="1286540" data-prefix="¥">¥0</div>
+            <div class="stat-trend up">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="18 15 12 9 6 15"/></svg>
+              +15.2% vs 上周
+            </div>
+          </div>
+          <div class="stat-card card-hover">
+            <div class="stat-icon" style="background:linear-gradient(135deg,#06B6D4,#3B82F6)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+            </div>
+            <div class="stat-label">今日订单数</div>
+            <div class="stat-value" data-count="3256">0</div>
+            <div class="stat-trend up">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="18 15 12 9 6 15"/></svg>
+              +8.7% vs 昨日
+            </div>
+          </div>
+          <div class="stat-card card-hover">
+            <div class="stat-icon" style="background:linear-gradient(135deg,#8B5CF6,#EC4899)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            </div>
+            <div class="stat-label">活跃商家</div>
+            <div class="stat-value" data-count="486">0</div>
+            <div class="stat-trend up">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="18 15 12 9 6 15"/></svg>
+              +3.1% vs 上周
+            </div>
+          </div>
+          <div class="stat-card card-hover">
+            <div class="stat-icon" style="background:linear-gradient(135deg,#F59E0B,#EF4444)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <div class="stat-label">平台用户数</div>
+            <div class="stat-value" data-count="28560">0</div>
+            <div class="stat-trend up">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="18 15 12 9 6 15"/></svg>
+              +5.6% vs 上月
+            </div>
+          </div>
+        </div>
+        
+        <!-- 销售趋势图 + 商家排行榜 -->
+        <div class="dashboard-row">
+          <!-- 销售趋势图 -->
+          <div class="chart-card glass">
+            <div class="section-header">
+              <h3 class="section-title"><span class="dot-mark"></span>销售趋势</h3>
+              <div class="tab-group" id="chartTabs">
+                <div class="tab-indicator"></div>
+                <button data-range="7">7 天</button>
+                <button class="active" data-range="30">30 天</button>
+                <button data-range="90">90 天</button>
+              </div>
+            </div>
+            <div class="chart-container" id="chartContainer"></div>
+            <div class="chart-xaxis">
+              <span>06-01</span><span>06-08</span><span>06-15</span><span>06-22</span><span>06-30</span>
+            </div>
+          </div>
+          
+          <!-- 商家排行榜 -->
+          <div class="chart-card glass">
+            <div class="section-header">
+              <h3 class="section-title"><span class="dot-mark"></span>商家排行榜</h3>
+              <span class="badge badge-brand">Top 5</span>
+            </div>
+            <ul class="rank-list" id="rankList"></ul>
+          </div>
+        </div>
+        
+        <!-- 实时活动动态 -->
+        <div class="activity-card glass">
+          <div class="section-header">
+            <h3 class="section-title"><span class="dot-mark"></span>实时活动动态</h3>
+            <span class="badge badge-success">● 实时</span>
+          </div>
+          <div class="timeline">
+            <div class="timeline-item">
+              <div class="timeline-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              </div>
+              <div class="timeline-content">
+                <div class="timeline-desc">新商家 <strong>「锦绣服饰旗舰店」</strong> 提交入驻申请，类目：服装鞋包</div>
+                <div class="timeline-time">2 分钟前</div>
+              </div>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-icon info">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+              </div>
+              <div class="timeline-content">
+                <div class="timeline-desc">大额订单产生：<strong>¥48,900</strong> · 商家「数码官方店」· 用户 ID U28534</div>
+                <div class="timeline-time">12 分钟前</div>
+              </div>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-icon warn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              </div>
+              <div class="timeline-content">
+                <div class="timeline-desc">退款申请：<strong>¥2,340</strong> · 订单号 ORD20260630-7821 · 待审核</div>
+                <div class="timeline-time">28 分钟前</div>
+              </div>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              </div>
+              <div class="timeline-content">
+                <div class="timeline-desc">新商家 <strong>「鲜果时光」</strong> 提交入驻申请，类目：生鲜食品</div>
+                <div class="timeline-time">45 分钟前</div>
+              </div>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-icon error">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              </div>
+              <div class="timeline-content">
+                <div class="timeline-desc">商家 <strong>「某电器店」</strong> 触发风控规则，订单异常波动，已自动暂停</div>
+                <div class="timeline-time">1 小时前</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- ============ 页面2：商家审核 ============ -->
+      <section class="page" id="page-audit">
+        <div class="page-header">
+          <h2 class="page-title">商家审核</h2>
+          <p class="page-subtitle">审核商家入驻申请，把控平台商家质量</p>
+        </div>
+        
+        <!-- 顶部工具栏 -->
+        <div class="toolbar glass">
+          <div class="toolbar-left">
+            <div class="search-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" placeholder="搜索商家名称 / 手机号" />
+            </div>
+            <div class="tab-group" id="auditTabs">
+              <div class="tab-indicator"></div>
+              <button class="active" data-status="pending">待审核<span class="badge badge-warning" style="margin-left:6px">6</span></button>
+              <button data-status="passed">已通过</button>
+              <button data-status="rejected">已驳回</button>
+            </div>
+          </div>
+          <div class="toolbar-right">
+            <button class="btn btn-secondary btn-sm">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              导出
+            </button>
+          </div>
+        </div>
+        
+        <!-- 审核列表表格 -->
+        <div class="table-card glass">
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>商家名称</th>
+                  <th>联系人</th>
+                  <th>联系电话</th>
+                  <th>经营类目</th>
+                  <th>申请时间</th>
+                  <th>状态</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="auditTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+      
+      <!-- ============ 页面3：系统管理 ============ -->
+      <section class="page" id="page-system">
+        <div class="page-header">
+          <h2 class="page-title">系统管理</h2>
+          <p class="page-subtitle">管理平台角色、权限与后台用户</p>
+        </div>
+        
+        <!-- 二级 Tab -->
+        <div class="subtabs" id="systemTabs">
+          <div class="subtab active" data-tab="roles">角色管理</div>
+          <div class="subtab" data-tab="permissions">权限管理</div>
+          <div class="subtab" data-tab="users">用户管理</div>
+          <div class="subtab-indicator"></div>
+        </div>
+        
+        <!-- 角色管理 -->
+        <div class="sys-panel" id="panel-roles">
+          <div class="toolbar glass" style="border-radius:var(--radius-lg)">
+            <div class="toolbar-left">
+              <div class="search-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" placeholder="搜索角色名称" />
+              </div>
+            </div>
+            <div class="toolbar-right">
+              <button class="btn btn-primary btn-sm">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                新增角色
+              </button>
+            </div>
+          </div>
+          <div class="table-card glass" style="margin-top:16px">
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>角色名称</th>
+                    <th>角色 Code</th>
+                    <th>用户数</th>
+                    <th>创建时间</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="rolesTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 权限管理 -->
+        <div class="sys-panel" id="panel-permissions" style="display:none">
+          <div class="permission-layout">
+            <div class="tree-card glass">
+              <div class="section-header">
+                <h3 class="section-title"><span class="dot-mark"></span>权限树</h3>
+              </div>
+              <ul class="tree" id="permissionTree"></ul>
+            </div>
+            <div class="permission-detail glass">
+              <h4><span class="dot-mark"></span>已选权限详情</h4>
+              <ul class="permission-list" id="permissionDetail"></ul>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 用户管理 -->
+        <div class="sys-panel" id="panel-users" style="display:none">
+          <div class="toolbar glass" style="border-radius:var(--radius-lg)">
+            <div class="toolbar-left">
+              <div class="search-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" placeholder="搜索用户名 / 部门" />
+              </div>
+            </div>
+            <div class="toolbar-right">
+              <button class="btn btn-primary btn-sm">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                新增用户
+              </button>
+            </div>
+          </div>
+          <div class="table-card glass" style="margin-top:16px">
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>用户</th>
+                    <th>角色</th>
+                    <th>部门</th>
+                    <th>最后登录</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="usersTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+    </div>
+  </main>
+</div>
+
+<!-- ============ 审核详情抽屉 ============ -->
+<div class="drawer-mask" id="drawerMask"></div>
+<aside class="drawer" id="auditDrawer">
+  <div class="drawer-header">
+    <h3 class="drawer-title">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9c2.39 0 4.68.94 6.36 2.64"/></svg>
+      审核详情
+    </h3>
+    <div class="drawer-close" id="drawerClose">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </div>
+  </div>
+  <div class="drawer-body" id="drawerBody"></div>
+  <div class="drawer-footer">
+    <div class="reject-reason">
+      <textarea placeholder="驳回理由（仅在驳回时填写）"></textarea>
+    </div>
+    <div class="drawer-actions">
+      <button class="btn btn-danger" id="btnReject">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        驳回
+      </button>
+      <button class="btn btn-primary" id="btnApprove">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        通过
+      </button>
+    </div>
+  </div>
+</aside>
+
+<script>
+/* ============================================================
+ * ShopMall 管理端原型交互脚本
+ * 小白友好版：每个函数都加了中文注释，说明它在做什么
+ * ============================================================ */
+
+/* ---------- 工具函数：给按钮添加点击波纹效果 ---------- */
+function bindRipple(){
+  // 找到所有带 .btn 类的按钮，给它们绑定点击事件
+  document.querySelectorAll('.btn').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+      // 计算点击位置相对于按钮的坐标
+      const rect = btn.getBoundingClientRect();
+      const size = Math.max(rect.width, rect.height);
+      const ripple = document.createElement('span');
+      ripple.className = 'ripple';
+      ripple.style.width = ripple.style.height = size + 'px';
+      ripple.style.left = (e.clientX - rect.left - size/2) + 'px';
+      ripple.style.top = (e.clientY - rect.top - size/2) + 'px';
+      btn.appendChild(ripple);
+      // 0.6s 后自动移除这个涟漪元素，避免堆积
+      setTimeout(()=>ripple.remove(), 600);
+    });
+  });
+}
+
+/* ---------- 页面切换功能：点击侧边栏切换显示不同页面 ---------- */
+function bindPageSwitch(){
+  const menuItems = document.querySelectorAll('.menu-item[data-page]');
+  const pages = document.querySelectorAll('.page');
+  menuItems.forEach(function(item){
+    item.addEventListener('click', function(){
+      const target = item.getAttribute('data-page');
+      // 切换菜单高亮
+      menuItems.forEach(m=>m.classList.remove('active'));
+      item.classList.add('active');
+      // 切换页面显示（fadeInUp 动画由 CSS 自动处理）
+      pages.forEach(p=>{
+        p.classList.remove('active');
+        if(p.id === 'page-' + target){
+          p.classList.add('active');
+        }
+      });
+      // 触发对应页面的数据初始化（仅首次）
+      if(target === 'dashboard' && !window._dashInited){ initDashboard(); window._dashInited = true; }
+    });
+  });
+}
+
+/* ---------- 数字滚动动画：让看板数据从 0 递增到目标值 ---------- */
+function countUp(el, target, prefix){
+  const duration = 1200;       // 动画总时长 1.2 秒
+  const startTime = performance.now();
+  prefix = prefix || '';
+  function tick(now){
+    const progress = Math.min((now - startTime) / duration, 1);
+    // 用 easeOutCubic 缓动函数，让数字越接近终点越慢
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const current = Math.floor(target * eased);
+    // 千分位格式化，例如 1286540 -> 1,286,540
+    el.textContent = prefix + current.toLocaleString('en-US');
+    if(progress < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+/* ---------- 初始化运营看板：触发数字动画 + 绘制图表 ---------- */
+function initDashboard(){
+  // 触发所有数据卡片的数字滚动
+  document.querySelectorAll('[data-count]').forEach(function(el){
+    const target = parseInt(el.getAttribute('data-count'), 10);
+    const prefix = el.getAttribute('data-prefix') || '';
+    countUp(el, target, prefix);
+  });
+  // 绘制销售趋势柱状图
+  renderChart(30);
+  // 渲染商家排行榜
+  renderRankList();
+}
+
+/* ---------- 绘制柱状图：根据天数生成随机但合理的销售数据 ---------- */
+function renderChart(days){
+  const container = document.getElementById('chartContainer');
+  container.innerHTML = '';
+  // 生成 30 个数据点，模拟销售额波动
+  const data = [];
+  for(let i = 0; i < days; i++){
+    // 用正弦波 + 随机数模拟真实波动
+    const base = 50 + Math.sin(i * 0.4) * 20;
+    const noise = Math.random() * 25;
+    data.push(Math.max(10, Math.floor(base + noise)));
+  }
+  const max = Math.max(...data);
+  data.forEach(function(val, idx){
+    const bar = document.createElement('div');
+    bar.className = 'bar';
+    const heightPct = (val / max) * 100;
+    bar.style.height = '0%';
+    container.appendChild(bar);
+    // 延迟动画，让柱子一根根长出来，更有质感
+    setTimeout(()=>{
+      bar.style.transition = 'height .6s cubic-bezier(.16,1,.3,1)';
+      bar.style.height = heightPct + '%';
+    }, idx * 20);
+    // hover 时显示具体金额
+    const amount = (val * 380).toLocaleString('en-US');
+    const tooltip = document.createElement('div');
+    tooltip.className = 'bar-tooltip';
+    tooltip.textContent = '¥' + amount;
+    bar.appendChild(tooltip);
+  });
+}
+
+/* ---------- 渲染商家排行榜：Top 5 商家列表 ---------- */
+function renderRankList(){
+  const list = document.getElementById('rankList');
+  const merchants = [
+    {name: '锦绣服饰旗舰店', amount: '¥328,540', trend: '+12.4%'},
+    {name: '数码官方店', amount: '¥286,900', trend: '+8.7%'},
+    {name: '家居生活馆', amount: '¥215,300', trend: '+5.2%'},
+    {name: '鲜果时光', amount: '¥168,720', trend: '+3.1%'},
+    {name: '美妆集合店', amount: '¥142,580', trend: '-1.8%'}
+  ];
+  list.innerHTML = merchants.map(function(m, i){
+    const numClass = i === 0 ? 'top1' : i === 1 ? 'top2' : i === 2 ? 'top3' : '';
+    const trendClass = m.trend.startsWith('-') ? 'down' : 'up';
+    const trendColor = m.trend.startsWith('-') ? 'color:var(--color-error)' : '';
+    return '<li class="rank-item">' +
+      '<div class="rank-num ' + numClass + '">' + (i+1) + '</div>' +
+      '<div class="rank-info">' +
+        '<div class="rank-name">' + m.name + '</div>' +
+        '<div class="rank-amount">销售额 ' + m.amount + '</div>' +
+      '</div>' +
+      '<div class="rank-trend" style="' + trendColor + '">' + m.trend + '</div>' +
+    '</li>';
+  }).join('');
+}
+
+/* ---------- Tab 指示器滑动：让下划线滑到当前选中的 tab 下面 ---------- */
+function bindTabIndicator(groupSelector){
+  const group = document.getElementById(groupSelector);
+  if(!group) return;
+  const indicator = group.querySelector('.tab-indicator');
+  const btns = group.querySelectorAll('button');
+  function moveIndicator(btn){
+    indicator.style.left = btn.offsetLeft + 'px';
+    indicator.style.width = btn.offsetWidth + 'px';
+  }
+  // 初始化指示器位置
+  const active = group.querySelector('button.active');
+  if(active) setTimeout(()=>moveIndicator(active), 50);
+  btns.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      btns.forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      moveIndicator(btn);
+      // 销售趋势图切换天数时重新绘制
+      if(groupSelector === 'chartTabs'){
+        renderChart(parseInt(btn.getAttribute('data-range'), 10));
+      }
+    });
+  });
+}
+
+/* ---------- 商家审核数据 ---------- */
+const auditData = [
+  {name:'锦绣服饰旗舰店', contact:'张明华', phone:'138****5621', category:'服装鞋包', time:'2026-06-30 10:23', status:'pending'},
+  {name:'鲜果时光', contact:'李思琪', phone:'139****8842', category:'生鲜食品', time:'2026-06-30 09:45', status:'pending'},
+  {name:'极客数码专营店', contact:'王建国', phone:'137****2093', category:'数码电器', time:'2026-06-29 18:32', status:'pending'},
+  {name:'潮流美妆集合', contact:'陈晓琳', phone:'186****7156', category:'美妆护肤', time:'2026-06-29 15:08', status:'pending'},
+  {name:'母婴优选馆', contact:'刘伟强', phone:'135****4072', category:'母婴用品', time:'2026-06-29 11:24', status:'pending'},
+  {name:'居家好物旗舰店', contact:'赵雅芝', phone:'188****9320', category:'家居家装', time:'2026-06-28 16:50', status:'pending'}
+];
+
+/* ---------- 渲染审核列表表格 ---------- */
+function renderAuditTable(){
+  const tbody = document.getElementById('auditTableBody');
+  tbody.innerHTML = auditData.map(function(m, i){
+    return '<tr>' +
+      '<td class="cell-strong">' + m.name + '</td>' +
+      '<td>' + m.contact + '</td>' +
+      '<td class="cell-muted">' + m.phone + '</td>' +
+      '<td><span class="badge badge-info">' + m.category + '</span></td>' +
+      '<td class="cell-muted">' + m.time + '</td>' +
+      '<td><span class="badge badge-warning">待审核</span></td>' +
+      '<td><div class="cell-actions">' +
+        '<button class="btn btn-primary btn-sm" onclick="openDrawer(' + i + ')">审核</button>' +
+        '<button class="btn btn-secondary btn-sm" onclick="openDrawer(' + i + ')">详情</button>' +
+      '</div></td>' +
+    '</tr>';
+  }).join('');
+}
+
+/* ---------- 打开审核详情抽屉 ---------- */
+function openDrawer(index){
+  const m = auditData[index];
+  const body = document.getElementById('drawerBody');
+  // 填充抽屉内容（基本信息 + 营业执照 + 法人信息）
+  body.innerHTML =
+    '<div class="drawer-section">' +
+      '<div class="drawer-section-title">基本信息</div>' +
+      '<div class="info-row"><span class="label">商家名称</span><span class="value">' + m.name + '</span></div>' +
+      '<div class="info-row"><span class="label">联系人</span><span class="value">' + m.contact + '</span></div>' +
+      '<div class="info-row"><span class="label">联系电话</span><span class="value">' + m.phone + '</span></div>' +
+      '<div class="info-row"><span class="label">经营类目</span><span class="value">' + m.category + '</span></div>' +
+      '<div class="info-row"><span class="label">申请时间</span><span class="value">' + m.time + '</span></div>' +
+    '</div>' +
+    '<div class="drawer-section">' +
+      '<div class="drawer-section-title">营业执照</div>' +
+      '<div class="license-img"><img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=official%20business%20license%20document%20china%20company%20certificate&image_size=portrait_4_3" alt="营业执照"></div>' +
+    '</div>' +
+    '<div class="drawer-section">' +
+      '<div class="drawer-section-title">法人信息</div>' +
+      '<div class="info-row"><span class="label">法人姓名</span><span class="value">' + m.contact + '</span></div>' +
+      '<div class="info-row"><span class="label">证件类型</span><span class="value">居民身份证</span></div>' +
+      '<div class="info-row"><span class="label">证件号码</span><span class="value">3201**********1234</span></div>' +
+    '</div>' +
+    '<div class="drawer-section">' +
+      '<div class="drawer-section-title">申请说明</div>' +
+      '<p style="font-size:13px;color:var(--color-text-secondary);line-height:1.6">本公司承诺所提交资料均真实有效，愿遵守平台各项规则，如有虚假愿承担相应责任。期待与 ShopMall 平台合作共赢。</p>' +
+    '</div>';
+  // 打开抽屉与遮罩
+  document.getElementById('auditDrawer').classList.add('open');
+  document.getElementById('drawerMask').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+/* ---------- 关闭抽屉 ---------- */
+function closeDrawer(){
+  document.getElementById('auditDrawer').classList.remove('open');
+  document.getElementById('drawerMask').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+/* ---------- 角色管理数据 ---------- */
+const rolesData = [
+  {name:'超级管理员', code:'super_admin', count:2, time:'2026-01-01 00:00', status:'active'},
+  {name:'运营', code:'operator', count:8, time:'2026-01-05 10:23', status:'active'},
+  {name:'财务', code:'finance', count:3, time:'2026-02-12 14:08', status:'active'},
+  {name:'客服', code:'service', count:15, time:'2026-03-20 09:45', status:'active'},
+  {name:'审核员', code:'auditor', count:5, time:'2026-04-08 16:32', status:'disabled'}
+];
+
+/* ---------- 渲染角色列表 ---------- */
+function renderRolesTable(){
+  const tbody = document.getElementById('rolesTableBody');
+  tbody.innerHTML = rolesData.map(function(r){
+    const badge = r.status === 'active'
+      ? '<span class="badge badge-success">启用</span>'
+      : '<span class="badge badge-error">禁用</span>';
+    return '<tr>' +
+      '<td class="cell-strong">' + r.name + '</td>' +
+      '<td><code style="font-family:Sora,monospace;font-size:12px;color:var(--color-emerald-dark)">' + r.code + '</code></td>' +
+      '<td>' + r.count + ' 人</td>' +
+      '<td class="cell-muted">' + r.time + '</td>' +
+      '<td>' + badge + '</td>' +
+      '<td><div class="cell-actions">' +
+        '<button class="btn btn-ghost btn-sm">编辑</button>' +
+        '<button class="btn btn-ghost btn-sm">权限</button>' +
+      '</div></td>' +
+    '</tr>';
+  }).join('');
+}
+
+/* ---------- 权限树数据 ---------- */
+const permissionData = [
+  {name:'运营管理', code:'ops', desc:'看板、统计', children:[
+    {name:'看板查看', code:'ops:dashboard'},
+    {name:'数据导出', code:'ops:export'},
+    {name:'活动配置', code:'ops:activity'}
+  ]},
+  {name:'商品管理', code:'product', desc:'商品、类目、品牌', children:[
+    {name:'商品列表', code:'product:list'},
+    {name:'商品审核', code:'product:audit'},
+    {name:'类目管理', code:'product:category'},
+    {name:'品牌管理', code:'product:brand'}
+  ]},
+  {name:'订单管理', code:'order', desc:'订单、退款', children:[
+    {name:'订单查看', code:'order:list'},
+    {name:'退款审核', code:'order:refund'}
+  ]},
+  {name:'系统管理', code:'system', desc:'角色、权限、用户', children:[
+    {name:'角色管理', code:'system:role'},
+    {name:'权限管理', code:'system:permission'},
+    {name:'用户管理', code:'system:user'}
+  ]}
+];
+
+/* ---------- 渲染权限树 ---------- */
+function renderPermissionTree(){
+  const tree = document.getElementById('permissionTree');
+  tree.innerHTML = permissionData.map(function(node, i){
+    const children = (node.children || []).map(function(c){
+      return '<li style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;cursor:pointer;transition:background .2s" onmouseover="this.style.background=\'rgba(16,185,129,.06)\'" onmouseout="this.style.background=\'transparent\'">' +
+        '<div class="checkbox checked" onclick="toggleCheckbox(this)"></div>' +
+        '<span class="tree-label">' + c.name + '</span>' +
+        '<span class="tree-desc">(' + c.code + ')</span>' +
+      '</li>';
+    }).join('');
+    return '<li class="tree-node open">' +
+      '<div class="tree-toggle" onclick="this.parentElement.classList.toggle(\'open\')">' +
+        '<svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>' +
+        '<div class="checkbox checked" onclick="toggleCheckbox(this,event)"></div>' +
+        '<span class="tree-label" style="font-weight:600">' + node.name + '</span>' +
+        '<span class="tree-desc">' + node.desc + '</span>' +
+      '</div>' +
+      '<ul class="tree-children">' + children + '</ul>' +
+    '</li>';
+  }).join('');
+  renderPermissionDetail();
+}
+
+/* ---------- 复选框切换 ---------- */
+function toggleCheckbox(el, e){
+  if(e) e.stopPropagation();
+  el.classList.toggle('checked');
+  renderPermissionDetail();
+}
+
+/* ---------- 渲染已选权限详情 ---------- */
+function renderPermissionDetail(){
+  const detail = document.getElementById('permissionDetail');
+  const selected = [];
+  document.querySelectorAll('#permissionTree .tree-children > li').forEach(function(li){
+    const cb = li.querySelector('.checkbox');
+    const name = li.querySelector('.tree-label').textContent;
+    const code = li.querySelector('.tree-desc').textContent.replace(/[()]/g,'');
+    if(cb.classList.contains('checked')) selected.push({name, code});
+  });
+  if(selected.length === 0){
+    detail.innerHTML = '<li style="color:var(--color-text-muted);font-size:13px;padding:10px">暂无选中权限</li>';
+    return;
+  }
+  detail.innerHTML = selected.map(function(p){
+    return '<li class="permission-item"><span>' + p.name + '</span><span class="code">' + p.code + '</span></li>';
+  }).join('');
+}
+
+/* ---------- 用户管理数据 ---------- */
+const usersData = [
+  {name:'超级管理员', role:'超级管理员', dept:'总经办', login:'2026-06-30 14:20', status:'active', seed:'admin1'},
+  {name:'周晓彤', role:'运营', dept:'运营部', login:'2026-06-30 09:15', status:'active', seed:'user2'},
+  {name:'吴志远', role:'财务', dept:'财务部', login:'2026-06-29 18:42', status:'active', seed:'user3'},
+  {name:'黄丽娜', role:'客服', dept:'客服部', login:'2026-06-29 16:08', status:'active', seed:'user4'},
+  {name:'林浩然', role:'审核员', dept:'审核部', login:'2026-06-28 11:30', status:'disabled', seed:'user5'},
+  {name:'徐静怡', role:'运营', dept:'运营部', login:'2026-06-27 10:25', status:'active', seed:'user6'}
+];
+
+/* ---------- 渲染用户列表 ---------- */
+function renderUsersTable(){
+  const tbody = document.getElementById('usersTableBody');
+  tbody.innerHTML = usersData.map(function(u){
+    const badge = u.status === 'active'
+      ? '<span class="badge badge-success">在线</span>'
+      : '<span class="badge badge-error">禁用</span>';
+    const avatarUrl = 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=professional%20' + encodeURIComponent(u.name) + '%20avatar%20portrait%20office%20worker&image_size=square_hd';
+    return '<tr>' +
+      '<td><div class="avatar-cell">' +
+        '<div class="av"><img src="' + avatarUrl + '" alt="' + u.name + '" onerror="this.style.display=\'none\'"></div>' +
+        '<div class="info"><div class="name">' + u.name + '</div></div>' +
+      '</div></td>' +
+      '<td><span class="badge badge-brand">' + u.role + '</span></td>' +
+      '<td class="cell-muted">' + u.dept + '</td>' +
+      '<td class="cell-muted">' + u.login + '</td>' +
+      '<td>' + badge + '</td>' +
+      '<td><div class="cell-actions">' +
+        '<button class="btn btn-ghost btn-sm">编辑</button>' +
+        '<button class="btn btn-ghost btn-sm">重置密码</button>' +
+      '</div></td>' +
+    '</tr>';
+  }).join('');
+}
+
+/* ---------- 二级 Tab 切换：角色 / 权限 / 用户 ---------- */
+function bindSystemTabs(){
+  const tabs = document.querySelectorAll('#systemTabs .subtab');
+  const indicator = document.querySelector('#systemTabs .subtab-indicator');
+  const panels = ['roles','permissions','users'];
+  function moveIndicator(tab){
+    indicator.style.left = tab.offsetLeft + 'px';
+    indicator.style.width = tab.offsetWidth + 'px';
+  }
+  const active = document.querySelector('#systemTabs .subtab.active');
+  if(active) setTimeout(()=>moveIndicator(active), 50);
+  tabs.forEach(function(tab){
+    tab.addEventListener('click', function(){
+      tabs.forEach(t=>t.classList.remove('active'));
+      tab.classList.add('active');
+      moveIndicator(tab);
+      const target = tab.getAttribute('data-tab');
+      panels.forEach(function(p){
+        const panel = document.getElementById('panel-' + p);
+        panel.style.display = (p === target) ? 'block' : 'none';
+      });
+    });
+  });
+}
+
+/* ---------- 抽屉关闭事件绑定 ---------- */
+function bindDrawerClose(){
+  document.getElementById('drawerClose').addEventListener('click', closeDrawer);
+  document.getElementById('drawerMask').addEventListener('click', closeDrawer);
+  // 通过/驳回按钮的简单反馈
+  document.getElementById('btnApprove').addEventListener('click', function(){
+    this.textContent = '✓ 已通过';
+    setTimeout(closeDrawer, 600);
+    setTimeout(()=>{ this.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>通过'; }, 1200);
+  });
+  document.getElementById('btnReject').addEventListener('click', function(){
+    this.textContent = '✕ 已驳回';
+    setTimeout(closeDrawer, 600);
+    setTimeout(()=>{ this.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>驳回'; }, 1200);
+  });
+}
+
+/* ---------- 时间范围选择器（概览区） ---------- */
+function bindRangePicker(){
+  document.querySelectorAll('.range-picker button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('.range-picker button').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+}
+
+/* ---------- 页面加载完成后初始化所有功能 ---------- */
+document.addEventListener('DOMContentLoaded', function(){
+  bindRipple();              // 1. 按钮波纹
+  bindPageSwitch();          // 2. 页面切换
+  bindRangePicker();        // 3. 时间范围切换
+  bindTabIndicator('chartTabs');  // 4. 图表 tab 指示器
+  bindTabIndicator('auditTabs');  // 5. 审核 tab 指示器
+  bindSystemTabs();         // 6. 系统管理二级 tab
+  bindDrawerClose();        // 7. 抽屉关闭
+  initDashboard();          // 8. 看板数据初始化
+  renderAuditTable();       // 9. 渲染审核列表
+  renderRolesTable();       // 10. 渲染角色列表
+  renderPermissionTree();   // 11. 渲染权限树
+  renderUsersTable();       // 12. 渲染用户列表
+  window._dashInited = true;
+});
+</script>
+</body>
+</html>

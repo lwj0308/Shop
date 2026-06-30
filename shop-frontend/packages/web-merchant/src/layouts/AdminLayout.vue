@@ -1,9 +1,9 @@
 <template>
-  <!-- 后台管理布局：左侧深蓝灰侧边栏 + 顶部白底导航 + 浅灰蓝内容区 -->
+  <!-- 后台管理布局：左侧深色玻璃侧边栏 + 顶部玻璃白导航 + 翡翠氛围内容区 -->
   <div class="admin-layout">
-    <!-- 左侧菜单栏：深蓝灰背景 #304156 -->
+    <!-- 左侧菜单栏：深色玻璃背景 + 高斯模糊 -->
     <aside class="admin-sidebar">
-      <!-- Logo区域：更深背景 #263445 -->
+      <!-- Logo区域：渐变图标 + 渐变文字 -->
       <div class="sidebar-logo">
         <span class="logo-icon">🏪</span>
         <span class="logo-text">商家后台</span>
@@ -11,9 +11,9 @@
       <el-menu
         :default-active="activeMenu"
         router
-        background-color="#304156"
-        text-color="#bfcbd9"
-        active-text-color="#409eff"
+        background-color="transparent"
+        text-color="rgba(255,255,255,0.7)"
+        active-text-color="#34D399"
       >
         <el-menu-item index="/">
           <el-icon><DataBoard /></el-icon>
@@ -224,117 +224,272 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* 整体布局：左右结构 */
+/* ==================== 整体布局：左右结构 + 氛围光晕 ==================== */
 .admin-layout {
   display: flex;
   min-height: 100vh;
+  position: relative;
 }
 
-/* 左侧侧边栏：深蓝灰背景，固定宽度 */
+/* 内容区底层 mesh 光晕：翡翠+青蓝柔和扩散，营造氛围感 */
+.admin-layout::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: var(--gradient-mesh);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ==================== 左侧深色玻璃侧边栏 ==================== */
 .admin-sidebar {
   width: 220px;
-  background-color: var(--color-sidebar-bg);
+  /* 深色玻璃：半透明深底 + 高斯模糊 + 饱和度提升 */
+  background: var(--color-sidebar-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
   overflow-y: auto;
   flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+  padding: 0 12px 16px;
 }
 
-/* Logo区域：更深背景，居中显示 */
+/* Logo区域：渐变图标 + 渐变文字，不再加深背景 */
 .sidebar-logo {
-  height: 60px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 8px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Logo图标：翡翠青绿渐变方块，内嵌emoji */
+.logo-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-button);
+  background: var(--gradient-brand);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  color: #fff;
-  font-size: 18px;
-  font-weight: bold;
-  background-color: var(--color-sidebar-dark);
+  font-size: 20px;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+  flex-shrink: 0;
 }
 
-.logo-icon {
-  font-size: 24px;
+/* Logo文字：渐变填充（翡翠→青蓝） */
+.logo-text {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 800;
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -0.01em;
 }
 
-/* Element Plus菜单选中项左边框高亮 */
+/* ==================== Element Plus 菜单玻璃化（深度穿透） ==================== */
+/* 菜单容器透明，让深色玻璃底透出 */
+.admin-sidebar :deep(.el-menu) {
+  background: transparent !important;
+  border-right: none !important;
+  padding: 8px 0;
+}
+
+/* 菜单项 / 子菜单标题：透明底 + 圆角 + 缓动 */
+.admin-sidebar :deep(.el-menu-item),
+.admin-sidebar :deep(.el-sub-menu__title) {
+  background: transparent !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+  border-radius: var(--radius-button);
+  margin: 2px 0;
+  height: 46px;
+  line-height: 46px;
+  transition: all 0.3s var(--ease-out);
+}
+
+/* 菜单项 hover：浅白玻璃底 */
+.admin-sidebar :deep(.el-menu-item:hover),
+.admin-sidebar :deep(.el-sub-menu__title:hover) {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #fff !important;
+}
+
+/* 子菜单展开后的内嵌菜单：稍深玻璃底，区分层级 */
+.admin-sidebar :deep(.el-sub-menu .el-menu) {
+  background: rgba(0, 0, 0, 0.18) !important;
+  border-radius: var(--radius-button);
+  margin: 2px 0;
+  padding: 4px 0;
+}
+
+/* 子菜单内的菜单项缩进 */
+.admin-sidebar :deep(.el-sub-menu .el-menu .el-menu-item) {
+  height: 42px;
+  line-height: 42px;
+}
+
+/* 菜单激活项：渐变柔光背景 + 翡翠文字 + 左侧渐变指示条 */
 .admin-sidebar :deep(.el-menu-item.is-active) {
-  border-left: 3px solid var(--color-sidebar-active) !important;
+  background: var(--gradient-brand-soft) !important;
+  color: var(--color-sidebar-active) !important;
+  font-weight: 600;
+  position: relative;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
 }
 
-.admin-sidebar :deep(.el-sub-menu .el-menu-item.is-active) {
-  border-left: 3px solid var(--color-sidebar-active) !important;
+/* 激活项左侧渐变竖条指示器（带辉光） */
+.admin-sidebar :deep(.el-menu-item.is-active)::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 60%;
+  border-radius: 0 4px 4px 0;
+  background: var(--gradient-brand);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
 }
 
-/* 右侧主区域 */
+/* 子菜单内的激活项同样加指示条 */
+.admin-sidebar :deep(.el-sub-menu .el-menu-item.is-active)::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 60%;
+  border-radius: 0 4px 4px 0;
+  background: var(--gradient-brand);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
+}
+
+/* 菜单图标颜色跟随文字色 */
+.admin-sidebar :deep(.el-menu-item .el-icon),
+.admin-sidebar :deep(.el-sub-menu__title .el-icon) {
+  color: inherit;
+}
+
+/* 折叠箭头颜色 */
+.admin-sidebar :deep(.el-sub-menu__icon-arrow) {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* ==================== 右侧主区域 ==================== */
 .admin-main {
   flex: 1;
   display: flex;
   flex-direction: column;
   background-color: var(--color-bg);
   min-width: 0;
+  position: relative;
+  z-index: 1;
 }
 
-/* 顶部导航栏：白底，底部阴影 */
+/* ==================== 顶部玻璃导航栏 ==================== */
 .admin-header {
-  height: 60px;
-  background: var(--color-card);
+  height: 64px;
+  background: var(--color-glass);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid var(--color-glass-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
-  box-shadow: var(--shadow-header);
+  padding: 0 24px;
+  position: sticky;
+  top: 0;
+  z-index: 20;
 }
 
 .header-right {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
-/* 通知铃铛：可点击，hover 变色 */
+/* 面包屑翡翠色高亮 */
+.admin-header :deep(.el-breadcrumb__inner) {
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+.admin-header :deep(.el-breadcrumb__inner.is-link):hover {
+  color: var(--color-primary);
+}
+
+/* ==================== 通知铃铛：圆形玻璃按钮 + hover 辉光 ==================== */
 .notification-bell {
   cursor: pointer;
-  font-size: 18px;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-tag);
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid var(--color-border);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 4px;
-  transition: color 0.2s;
+  color: var(--color-text-secondary);
+  transition: all 0.3s var(--ease-out);
 }
 
 .notification-bell:hover {
   color: var(--color-primary);
+  border-color: var(--color-primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow);
 }
 
-/* 用户信息：头像 + 名称 + 下拉箭头 */
+/* ==================== 用户信息：玻璃胶囊 + hover 翡翠边 ==================== */
 .user-info {
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  padding: 4px 14px 4px 4px;
+  border-radius: var(--radius-tag);
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid var(--color-border);
+  transition: all 0.3s var(--ease-out);
 }
 
-/* 用户头像：蓝色圆形，显示名称首字 */
+.user-info:hover {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-card);
+}
+
+/* 用户头像：翡翠青绿渐变圆形 */
 .user-avatar {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
-  background: var(--color-primary);
+  background: var(--gradient-brand);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 14px;
+  font-weight: 700;
+  font-family: var(--font-display);
+  flex-shrink: 0;
 }
 
 .user-name {
   font-size: 14px;
+  font-weight: 600;
   color: var(--color-text);
 }
 
-/* 内容区：带内边距 */
+/* ==================== 内容区 ==================== */
 .admin-content {
   flex: 1;
-  padding: 20px;
+  padding: 24px;
   overflow-y: auto;
 }
 </style>

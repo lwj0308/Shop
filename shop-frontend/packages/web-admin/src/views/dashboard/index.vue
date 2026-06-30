@@ -1,49 +1,67 @@
 <template>
-  <!-- 管理后台仪表盘：数据概览 + 图表 + 待办事项 + 最近登录 -->
+  <!-- 管理后台仪表盘：玻璃统计卡 + 玻璃图表面板 + 玻璃待办/登录 -->
   <div class="dashboard-page">
-    <!-- 数据概览卡片 -->
-    <div class="stat-cards">
-      <div class="stat-card">
-        <div class="stat-label">总用户数</div>
-        <div class="stat-value">{{ overview.totalUsers }}</div>
-        <div class="stat-icon" style="background: #ecf5ff; color: #409EFF;">
-          <el-icon :size="24"><User /></el-icon>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">总商家数</div>
-        <div class="stat-value">{{ overview.totalMerchants }}</div>
-        <div class="stat-icon" style="background: #f0f9eb; color: #67C23A;">
-          <el-icon :size="24"><OfficeBuilding /></el-icon>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">总订单数</div>
-        <div class="stat-value">{{ overview.totalOrders }}</div>
-        <div class="stat-icon" style="background: #fdf6ec; color: #E6A23C;">
-          <el-icon :size="24"><ShoppingCart /></el-icon>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">今日销售额</div>
-        <div class="stat-value">¥{{ overview.todaySalesAmount }}</div>
-        <div class="stat-icon" style="background: #fef0f0; color: #F56C6C;">
-          <el-icon :size="24"><Wallet /></el-icon>
+    <!-- 顶部概览横幅：渐变 mesh 背景 + 标题 -->
+    <div class="overview-banner">
+      <div class="overview-header">
+        <div>
+          <h1 class="overview-title">📊 平台运营概览</h1>
+          <div class="overview-meta">实时数据看板 · 数据每 5 分钟自动刷新</div>
         </div>
       </div>
     </div>
 
-    <!-- 图表区域：左边柱状图对比核心指标，右边饼图展示待办占比 -->
+    <!-- 数据概览卡片：4 个，渐变图标 + 大数字，hover 上浮 -->
+    <div class="stat-cards">
+      <div class="stat-card">
+        <div class="stat-icon icon-emerald">
+          <el-icon :size="22"><User /></el-icon>
+        </div>
+        <div class="stat-label">总用户数</div>
+        <div class="stat-value">{{ overview.totalUsers }}</div>
+        <div class="stat-trend up">实时同步</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon icon-cyan">
+          <el-icon :size="22"><OfficeBuilding /></el-icon>
+        </div>
+        <div class="stat-label">总商家数</div>
+        <div class="stat-value">{{ overview.totalMerchants }}</div>
+        <div class="stat-trend up">实时同步</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon icon-violet">
+          <el-icon :size="22"><ShoppingCart /></el-icon>
+        </div>
+        <div class="stat-label">总订单数</div>
+        <div class="stat-value">{{ overview.totalOrders }}</div>
+        <div class="stat-trend up">实时同步</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon icon-amber">
+          <el-icon :size="22"><Wallet /></el-icon>
+        </div>
+        <div class="stat-label">今日销售额</div>
+        <div class="stat-value">¥{{ overview.todaySalesAmount }}</div>
+        <div class="stat-trend up">实时同步</div>
+      </div>
+    </div>
+
+    <!-- 图表区域：左边柱状图对比核心指标，右边饼图展示待办占比，均用玻璃卡片包裹 -->
     <div class="chart-row">
-      <el-card>
+      <el-card class="glass-chart-card">
         <template #header>
-          <div class="card-header">平台数据概览</div>
+          <div class="card-header">
+            <span class="section-title"><span class="dot-mark"></span>平台数据概览</span>
+          </div>
         </template>
         <div ref="barChartRef" class="chart-container"></div>
       </el-card>
-      <el-card>
+      <el-card class="glass-chart-card">
         <template #header>
-          <div class="card-header">待办事项分布</div>
+          <div class="card-header">
+            <span class="section-title"><span class="dot-mark"></span>待办事项分布</span>
+          </div>
         </template>
         <div ref="pieChartRef" class="chart-container"></div>
       </el-card>
@@ -51,32 +69,34 @@
 
     <!-- 第二行：待办事项 + 最近登录日志 -->
     <div class="second-row">
-      <!-- 待办事项 -->
-      <el-card>
+      <!-- 待办事项：玻璃卡片 + 渐变软背景项 -->
+      <el-card class="glass-chart-card">
         <template #header>
-          <div class="card-header">待办事项</div>
+          <div class="card-header">
+            <span class="section-title"><span class="dot-mark"></span>待办事项</span>
+          </div>
         </template>
         <div class="todo-list">
-          <div class="todo-item" style="background: #fdf6ec;" @click="router.push('/business/merchant')">
+          <div class="todo-item todo-amber" @click="router.push('/business/merchant')">
             <span class="todo-label">待审核商家</span>
-            <span class="todo-count" style="color: #E6A23C;">{{ overview.pendingAuditMerchants }}</span>
+            <span class="todo-count">{{ overview.pendingAuditMerchants }}</span>
           </div>
-          <div class="todo-item" style="background: #fef0f0;" @click="router.push('/business/refund')">
+          <div class="todo-item todo-rose" @click="router.push('/business/refund')">
             <span class="todo-label">待处理退款</span>
-            <span class="todo-count" style="color: #F56C6C;">{{ overview.pendingRefunds }}</span>
+            <span class="todo-count">{{ overview.pendingRefunds }}</span>
           </div>
-          <div class="todo-item" style="background: #ecf5ff;" @click="router.push('/business/order')">
+          <div class="todo-item todo-emerald" @click="router.push('/business/order')">
             <span class="todo-label">待发货订单</span>
-            <span class="todo-count" style="color: #409EFF;">{{ overview.pendingShipOrders }}</span>
+            <span class="todo-count">{{ overview.pendingShipOrders }}</span>
           </div>
         </div>
       </el-card>
 
-      <!-- 最近登录日志 -->
-      <el-card>
+      <!-- 最近登录日志：玻璃卡片 -->
+      <el-card class="glass-chart-card">
         <template #header>
           <div class="card-header">
-            <span>最近登录</span>
+            <span class="section-title"><span class="dot-mark"></span>最近登录</span>
             <el-button text type="primary" @click="router.push('/log/login')">查看全部</el-button>
           </div>
         </template>
@@ -171,6 +191,7 @@ function initPieChart() {
 function updateBarChart() {
   if (!barChart.value) return
   // 柱状图配置：x 轴是分类名称，y 轴是数值，series 用 bar 类型
+  // 视觉层：柱子用翡翠青绿渐变，与整体玻璃拟态风格一致
   barChart.value.setOption({
     tooltip: { trigger: 'axis' },
     grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
@@ -189,7 +210,14 @@ function updateBarChart() {
           overview.totalOrders,
           overview.todayOrderCount,
         ],
-        itemStyle: { color: '#409EFF' },
+        itemStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: '#06B6D4' },
+            { offset: 1, color: '#10B981' },
+          ]),
+          borderRadius: [8, 8, 0, 0],
+        },
+        barWidth: '40%',
       },
     ],
   })
@@ -223,10 +251,12 @@ function updatePieChart() {
   }
 
   // 饼图配置：环形图，label 显示名称和数量，tooltip 显示占比
+  // 视觉层：饼图用翡翠青绿色系
   pieChart.value.setOption(
     {
       tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
       legend: { bottom: 0 },
+      color: ['#10B981', '#06B6D4', '#34D399'],
       series: [
         {
           name: '待办事项',
@@ -301,18 +331,59 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* 仪表盘根容器：垂直布局 + 间距 */
 .dashboard-page {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
+/* 顶部概览横幅：mesh 渐变 + 玻璃边框 + 装饰光晕 */
+.overview-banner {
+  background: var(--gradient-mesh), linear-gradient(135deg, rgba(16, 185, 129, 0.06) 0%, rgba(6, 182, 212, 0.06) 100%);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-card);
+  padding: 24px 28px;
+  position: relative;
+  overflow: hidden;
+}
+
+.overview-banner::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -10%;
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.15) 0, transparent 70%);
+  pointer-events: none;
+}
+
+.overview-header {
+  position: relative;
+}
+
+.overview-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--color-text);
+  letter-spacing: -0.02em;
+}
+
+.overview-meta {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-top: 6px;
+}
+
+/* 数据卡片网格：4 列 */
 .stat-cards {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
+  gap: 16px;
 }
 
+/* 单个统计卡片：白底 + 圆角 + 顶部渐变指示条 hover 显现 + 上浮动效 */
 .stat-card {
   background: var(--color-card);
   border-radius: var(--radius-card);
@@ -320,84 +391,240 @@ onUnmounted(() => {
   position: relative;
   overflow: hidden;
   box-shadow: var(--shadow-card);
+  border: 1px solid var(--color-border);
+  transition: transform 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out);
+  cursor: pointer;
 }
 
-.stat-label {
-  font-size: 14px;
-  color: var(--color-text-muted);
-  margin-bottom: 8px;
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-hover);
 }
 
-.stat-value {
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--color-text);
-}
-
-.stat-icon {
+/* 顶部 3px 渐变指示条，hover 时显现 */
+.stat-card::before {
+  content: '';
   position: absolute;
-  right: 16px;
-  top: 16px;
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-card);
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--gradient-brand);
+  opacity: 0;
+  transition: opacity 0.3s var(--ease-out);
+}
+
+.stat-card:hover::before {
+  opacity: 1;
+}
+
+/* 渐变图标：四种色系渐变 */
+.stat-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-button);
   display: flex;
   align-items: center;
   justify-content: center;
+  color: #fff;
+  margin-bottom: 14px;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
 }
 
+/* 翡翠青绿渐变（主色） */
+.icon-emerald {
+  background: var(--gradient-brand);
+}
+
+/* 青蓝渐变 */
+.icon-cyan {
+  background: linear-gradient(135deg, #06B6D4 0%, #3B82F6 100%);
+  box-shadow: 0 4px 12px rgba(6, 182, 212, 0.25);
+}
+
+/* 紫粉渐变 */
+.icon-violet {
+  background: linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+}
+
+/* 琥珀红渐变 */
+.icon-amber {
+  background: linear-gradient(135deg, #F59E0B 0%, #EF4444 100%);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
+}
+
+.stat-label {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.stat-value {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--color-text);
+  margin: 4px 0 6px;
+  letter-spacing: -0.02em;
+}
+
+.stat-trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.stat-trend.up {
+  color: var(--color-success);
+}
+
+/* 图表行：2 列 */
 .chart-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
 }
 
+/* 玻璃图表卡片：覆盖 el-card 默认样式 */
+.glass-chart-card {
+  background: var(--color-glass) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--color-glass-border) !important;
+  border-radius: var(--radius-card) !important;
+  box-shadow: var(--shadow-card) !important;
+}
+
+.glass-chart-card :deep(.el-card__header) {
+  border-bottom: 1px solid var(--color-border) !important;
+  padding: 16px 20px;
+}
+
+.glass-chart-card :deep(.el-card__body) {
+  padding: 20px;
+}
+
 .chart-container {
   height: 300px;
 }
 
+/* 第二行：待办 + 登录日志，2 列 */
 .second-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
 }
 
+/* 卡片标题区：左右对齐 */
 .card-header {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 700;
   color: var(--color-text);
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
+/* 章节标题：渐变小圆点 + 文字 */
+.section-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display);
+}
+
+.dot-mark {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gradient-brand);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+}
+
+/* 待办列表：垂直布局 + 间距 */
 .todo-list {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
+/* 待办项：玻璃软背景 + 左侧色条 + hover 上浮 */
 .todo-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px;
-  border-radius: 6px;
+  padding: 14px 16px;
+  border-radius: var(--radius-button);
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: transform 0.25s var(--ease-out), box-shadow 0.25s var(--ease-out);
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+}
+
+.todo-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
 }
 
 .todo-item:hover {
-  opacity: 0.85;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card);
+}
+
+.todo-amber {
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.todo-amber::before {
+  background: linear-gradient(to bottom, #F59E0B, #FBBF24);
+}
+
+.todo-rose {
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.todo-rose::before {
+  background: linear-gradient(to bottom, #EF4444, #F87171);
+}
+
+.todo-emerald {
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.todo-emerald::before {
+  background: var(--gradient-brand);
 }
 
 .todo-label {
   font-size: 14px;
+  font-weight: 500;
   color: var(--color-text-secondary);
 }
 
 .todo-count {
-  font-size: 20px;
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+/* 响应式：窄屏单列 */
+@media (max-width: 1100px) {
+  .stat-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .chart-row,
+  .second-row {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

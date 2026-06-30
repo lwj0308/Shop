@@ -348,9 +348,12 @@ onMounted(() => {
   gap: 16px;
 }
 
-/* 搜索栏卡片 */
+/* 搜索栏：玻璃卡片 */
 .search-card {
-  background: var(--color-card);
+  background: var(--color-glass);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--color-glass-border);
   border-radius: var(--radius-card);
   padding: 20px;
   box-shadow: var(--shadow-card);
@@ -388,33 +391,39 @@ onMounted(() => {
   color: var(--color-text-muted);
 }
 
+/* 高亮数字用翡翠色 */
 .highlight {
-  color: var(--color-text);
+  color: var(--color-primary);
+  font-weight: 700;
+  font-family: var(--font-display);
 }
 
-/* 批量操作栏 */
+/* 批量操作栏：翡翠柔光底 */
 .batch-bar {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 16px;
-  background: #ecf5ff;
+  padding: 12px 16px;
+  background: var(--gradient-brand-soft);
+  border: 1px solid rgba(16, 185, 129, 0.2);
   border-radius: var(--radius-button);
   font-size: 14px;
-  color: var(--color-primary);
+  font-weight: 600;
+  color: var(--color-primary-dark);
 }
 
-/* 商品图片 */
+/* 商品图片：圆角 + 边框 */
 .product-image {
-  width: 60px;
-  height: 60px;
+  width: 56px;
+  height: 56px;
   border-radius: var(--radius-button);
   flex-shrink: 0;
+  border: 1px solid var(--color-border);
 }
 
 /* 商品名称 */
 .product-name {
-  font-weight: 500;
+  font-weight: 600;
   color: var(--color-text);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -427,23 +436,78 @@ onMounted(() => {
   margin-top: 4px;
 }
 
-/* 价格：红色 */
+/* 价格：红色加粗（电商惯例） */
 .price {
-  font-weight: 600;
+  font-weight: 700;
   color: var(--color-danger);
+  font-family: var(--font-display);
 }
 
-/* 分页行 */
+/* ==================== 商品表格：玻璃面板（深度穿透） ==================== */
+.product-list :deep(.el-table) {
+  background: var(--color-glass);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  /* 透明化表格内部，让玻璃底透出 */
+  --el-table-bg-color: transparent;
+  --el-table-tr-bg-color: transparent;
+  --el-table-header-bg-color: transparent;
+  --el-table-border-color: var(--color-border-light);
+  --el-table-row-hover-bg-color: rgba(16, 185, 129, 0.05);
+}
+
+/* 表头：小字大写 + muted */
+.product-list :deep(.el-table th.el-table__cell) {
+  background: transparent !important;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.product-list :deep(.el-table td.el-table__cell),
+.product-list :deep(.el-table th.el-table__cell) {
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+/* 斑马纹：柔和玻璃底 */
+.product-list :deep(.el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell) {
+  background: rgba(248, 250, 252, 0.5);
+}
+
+/* 行 hover：翡翠淡底 */
+.product-list :deep(.el-table__body tr:hover > td.el-table__cell) {
+  background: rgba(16, 185, 129, 0.05) !important;
+}
+
+/* ==================== 分页行 ==================== */
 .pagination-row {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 12px;
   margin-top: 16px;
 }
 
 .pagination-total {
   font-size: 13px;
   color: var(--color-text-secondary);
+}
+
+/* 分页器激活页用翡翠渐变 */
+.pagination-row :deep(.el-pagination.is-background .el-pager li.is-active) {
+  background: var(--gradient-brand) !important;
+  color: #fff !important;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.pagination-row :deep(.el-pagination.is-background .el-pager li:hover) {
+  color: var(--color-primary);
 }
 </style>

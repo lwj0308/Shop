@@ -1,5 +1,5 @@
 <template>
-  <!-- 商品详情页 - 极简独立站风格 -->
+  <!-- 商品详情页 - 玻璃拟态风（Glassmorphism + 翡翠青绿渐变） -->
   <div class="product-detail">
     <!-- 加载中骨架屏 -->
     <div v-if="loading" class="skeleton">
@@ -8,7 +8,7 @@
 
     <!-- 商品详情内容 -->
     <template v-else-if="product">
-      <!-- 面包屑导航（极简） -->
+      <!-- 面包屑导航 -->
       <div class="breadcrumb">
         <router-link to="/" class="breadcrumb-link">首页</router-link>
         <span class="breadcrumb-sep">/</span>
@@ -19,7 +19,7 @@
 
       <!-- 商品主信息区：粘性图片 + 长详情 -->
       <div class="detail-main">
-        <!-- 左侧：粘性图片区（滚动时固定） -->
+        <!-- 左侧：粘性图片区（玻璃面板） -->
         <div class="detail-left">
           <div class="image-sticky">
             <!-- 大图展示 -->
@@ -53,12 +53,12 @@
           </div>
         </div>
 
-        <!-- 右侧：商品信息区（长详情） -->
+        <!-- 右侧：商品信息区 -->
         <div class="detail-right">
-          <!-- 商品标题（衬线大标题） -->
+          <!-- 商品标题 -->
           <h1 class="detail-name">{{ product.name }}</h1>
 
-          <!-- 价格区（香槟金大字） -->
+          <!-- 价格区（玻璃面板 + 渐变价格） -->
           <div class="price-section">
             <div class="price-row">
               <span class="current-price">
@@ -76,7 +76,7 @@
           <!-- 分隔线 -->
           <div class="divider"></div>
 
-          <!-- SKU选择器：极简按钮风格 -->
+          <!-- SKU选择器：胶囊按钮 -->
           <div class="sku-selector">
             <div v-for="spec in product.specs" :key="spec.name" class="sku-group">
               <span class="sku-label">{{ spec.name }}</span>
@@ -112,7 +112,7 @@
             <span class="service-item"><el-icon><Check /></el-icon> 全国联保</span>
           </div>
 
-          <!-- 操作按钮：未选SKU时禁用 -->
+          <!-- 操作按钮：玻璃次按钮 + 渐变主按钮 -->
           <div class="detail-actions">
             <button
               class="btn-cart"
@@ -299,7 +299,7 @@
 
 <script setup lang="ts">
 /**
- * 商品详情页
+ * 商品详情页（玻璃拟态风 - Glassmorphism）
  * 面包屑导航 + 左右分栏(图片+信息) + 店铺信息 + Tab(评价等)
  */
 
@@ -681,13 +681,21 @@ onMounted(async () => {
   padding: 0;
   max-width: 1280px;
   margin: 0 auto;
+  /* 进入动画：与全局 fadeInUp 一致 */
+  animation: fadeInUp 0.4s var(--ease-out);
 }
 
 .skeleton {
   padding: 80px 40px;
+  background: var(--color-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-lg);
+  margin: 24px 0;
 }
 
-/* ==================== 面包屑导航（极简） ==================== */
+/* ==================== 面包屑导航 ==================== */
 .breadcrumb {
   display: flex;
   align-items: center;
@@ -719,17 +727,18 @@ onMounted(async () => {
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 400px;
+  font-weight: 600;
 }
 
 /* ==================== 商品主信息区：左右分栏 ==================== */
 .detail-main {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 80px;
-  padding: 40px 0 80px;
+  gap: 48px;
+  padding: 24px 0 80px;
 }
 
-/* ==================== 左侧：粘性图片区 ==================== */
+/* ==================== 左侧：粘性图片区（玻璃面板） ==================== */
 .detail-left {
   position: relative;
 }
@@ -738,54 +747,66 @@ onMounted(async () => {
 .image-sticky {
   position: sticky;
   top: 96px;
+  background: var(--color-glass);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-md);
 }
 
-/* 主图容器：大方形，无边框，留白充足 */
+/* 主图容器：圆角 + 浅渐变底 */
 .main-image-wrapper {
   width: 100%;
   aspect-ratio: 1 / 1;
-  background: var(--color-bg);
+  background: linear-gradient(135deg, #F8FAFC, #ECFDF5);
   overflow: hidden;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
   position: relative;
+  border-radius: var(--radius-lg);
 }
 
 .main-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.6s var(--ease-out);
 }
 
 .main-image-wrapper:hover .main-image {
-  transform: scale(1.03);
+  transform: scale(1.05);
 }
 
-/* 缩略图列表：横向排列，极简边框 */
+/* 缩略图列表：玻璃圆角小图 */
 .thumbnail-list {
   display: flex;
   gap: 12px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .thumbnail-item {
   width: 64px;
   height: 64px;
-  border: 1px solid transparent;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
   overflow: hidden;
   cursor: pointer;
-  transition: border-color var(--transition-base);
-  opacity: 0.6;
+  transition: all var(--transition-base);
+  opacity: 0.7;
+  background: #F8FAFC;
 }
 
 .thumbnail-item:hover {
   opacity: 1;
-  border-color: var(--color-border);
+  border-color: var(--color-primary-light);
+  transform: translateY(-2px);
 }
 
 .thumbnail-item.active {
   opacity: 1;
   border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
 }
 
 .thumbnail-item img {
@@ -794,11 +815,11 @@ onMounted(async () => {
   object-fit: cover;
 }
 
-/* 分享收藏栏：极简文字按钮 */
+/* 分享收藏栏：玻璃分割线 */
 .image-actions {
   display: flex;
-  gap: 32px;
-  padding-top: 24px;
+  gap: 24px;
+  padding-top: 20px;
   border-top: 1px solid var(--color-border);
 }
 
@@ -811,6 +832,7 @@ onMounted(async () => {
   cursor: pointer;
   transition: color var(--transition-base);
   letter-spacing: 0.02em;
+  font-weight: 600;
 }
 
 .image-action:hover {
@@ -821,45 +843,56 @@ onMounted(async () => {
   font-size: 16px;
 }
 
-/* ==================== 右侧：商品信息区（长详情） ==================== */
+/* ==================== 右侧：商品信息区 ==================== */
 .detail-right {
   display: flex;
   flex-direction: column;
 }
 
-/* 商品标题：衬线字体大标题 */
+/* 商品标题：现代几何字体 */
 .detail-name {
   font-family: var(--font-heading);
-  font-size: 32px;
-  font-weight: 400;
+  font-size: 30px;
+  font-weight: 700;
   color: var(--color-text);
-  line-height: 1.3;
-  margin: 0 0 24px;
-  letter-spacing: -0.01em;
+  line-height: 1.25;
+  margin: 0 0 8px;
+  letter-spacing: -0.02em;
 }
 
-/* ==================== 价格区：香槟金大字 ==================== */
+/* ==================== 价格区：玻璃面板 + 渐变价格 ==================== */
 .price-section {
-  margin-bottom: 32px;
+  margin-bottom: 28px;
 }
 
+/* 价格行：柔和渐变背景 + 圆角 */
 .price-row {
   display: flex;
   align-items: baseline;
-  gap: 16px;
+  gap: 14px;
   flex-wrap: wrap;
+  padding: 20px 24px;
+  background: var(--gradient-brand-soft);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-lg);
 }
 
+/* 当前价格：翡翠青绿渐变文字 */
 .current-price {
-  color: var(--color-accent);
+  font-family: var(--font-heading);
   font-size: 36px;
-  font-weight: 300;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .price-unit {
   font-size: 18px;
+  font-weight: 700;
   margin-right: 2px;
 }
 
@@ -867,17 +900,19 @@ onMounted(async () => {
   color: var(--color-text-muted);
   text-decoration: line-through;
   font-size: 16px;
-  font-weight: 300;
+  font-weight: 400;
 }
 
-/* 降价标签：极简边框 */
+/* 降价标签：玻璃红胶囊 */
 .discount-tag {
   display: inline-block;
-  padding: 2px 10px;
-  border: 1px solid var(--color-accent);
-  color: var(--color-accent);
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--color-error);
   font-size: 12px;
-  letter-spacing: 0.05em;
+  font-weight: 700;
+  letter-spacing: 0.03em;
 }
 
 .price-info {
@@ -890,30 +925,31 @@ onMounted(async () => {
 }
 
 .highlight {
-  color: var(--color-accent);
+  color: var(--color-primary);
+  font-weight: 600;
 }
 
 .sales-count {
   color: var(--color-text);
-  font-weight: 500;
+  font-weight: 600;
 }
 
 /* ==================== 极细分隔线 ==================== */
 .divider {
   height: 1px;
   background: var(--color-border);
-  margin: 32px 0;
+  margin: 28px 0;
 }
 
-/* ==================== SKU选择器：极简按钮 ==================== */
+/* ==================== SKU 选择器：胶囊按钮 ==================== */
 .sku-selector {
-  margin-bottom: 32px;
+  margin-bottom: 28px;
 }
 
 .sku-group {
   display: flex;
   align-items: flex-start;
-  gap: 24px;
+  gap: 20px;
   margin-bottom: 20px;
 }
 
@@ -923,6 +959,7 @@ onMounted(async () => {
 
 .sku-label {
   font-size: 13px;
+  font-weight: 600;
   color: var(--color-text-muted);
   margin-top: 10px;
   white-space: nowrap;
@@ -934,29 +971,33 @@ onMounted(async () => {
 .sku-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
 }
 
-/* SKU按钮：极简边框，选中黑色填充 */
+/* SKU按钮：胶囊式，选中渐变背景 */
 .sku-btn {
   padding: 10px 20px;
-  border: 1px solid var(--color-border);
-  background: transparent;
+  border: 1.5px solid var(--color-border);
+  background: var(--color-surface, #fff);
+  border-radius: var(--radius-pill);
   cursor: pointer;
-  font-size: 13px;
-  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
   transition: all var(--transition-base);
   letter-spacing: 0.02em;
 }
 
 .sku-btn:hover {
-  border-color: var(--color-primary);
+  border-color: var(--color-primary-light);
+  transform: translateY(-1px);
 }
 
+/* 选中：渐变背景 + 翡翠描边 */
 .sku-btn.active {
+  background: var(--gradient-brand-soft);
   border-color: var(--color-primary);
-  background: var(--color-primary);
-  color: #fff;
+  color: var(--color-primary-hover);
 }
 
 /* ==================== 数量选择器 ==================== */
@@ -964,50 +1005,58 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-bottom: 32px;
+  margin-bottom: 28px;
 }
 
 .qty-label {
   font-size: 13px;
+  font-weight: 600;
   color: var(--color-text-muted);
   letter-spacing: 0.05em;
   text-transform: uppercase;
   min-width: 40px;
 }
 
+/* 数量步进器：胶囊式 */
 .qty-control {
   display: inline-flex;
   align-items: center;
-  border: 1px solid var(--color-border);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  background: var(--color-surface, #fff);
 }
 
 .qty-btn {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: 18px;
+  font-weight: 700;
   background: transparent;
   border: none;
   cursor: pointer;
-  color: var(--color-text);
-  transition: background var(--transition-base);
+  color: var(--color-text-secondary);
+  transition: all var(--transition-base);
 }
 
 .qty-btn:hover {
-  background: var(--color-bg);
+  background: var(--gradient-brand-soft);
+  color: var(--color-primary);
 }
 
 .qty-input {
-  width: 56px;
-  height: 36px;
+  width: 48px;
+  height: 40px;
   text-align: center;
+  border: none;
   border-left: 1px solid var(--color-border);
   border-right: 1px solid var(--color-border);
-  border-top: none;
-  border-bottom: none;
-  font-size: 14px;
+  font-family: var(--font-heading);
+  font-size: 15px;
+  font-weight: 600;
   outline: none;
   color: var(--color-text);
   background: transparent;
@@ -1020,12 +1069,14 @@ onMounted(async () => {
   letter-spacing: 0.02em;
 }
 
-/* ==================== 服务承诺：极简文字+图标 ==================== */
+/* ==================== 服务承诺 ==================== */
 .service-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 24px;
-  margin-bottom: 40px;
+  gap: 20px;
+  padding-top: 24px;
+  margin-top: 28px;
+  border-top: 1px solid var(--color-border);
   font-size: 13px;
   color: var(--color-text-secondary);
 }
@@ -1035,85 +1086,125 @@ onMounted(async () => {
   align-items: center;
   gap: 6px;
   letter-spacing: 0.02em;
+  font-weight: 500;
 }
 
 .service-item .el-icon {
-  color: var(--color-accent);
+  color: var(--color-primary);
   font-size: 14px;
 }
 
-/* ==================== 操作按钮：极简风格 ==================== */
+/* ==================== 操作按钮：渐变主按钮 + 玻璃次按钮 ==================== */
 .detail-actions {
   display: flex;
-  gap: 16px;
+  gap: 14px;
+  margin-top: 36px;
   margin-bottom: 8px;
 }
 
-/* 加入购物车：黑底白字 */
+/* 加入购物车：玻璃次按钮 */
 .btn-cart {
   flex: 1;
-  background: var(--color-primary);
-  color: #fff;
-  border: 1px solid var(--color-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--color-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: var(--color-text);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
   padding: 16px 32px;
-  font-size: 14px;
-  font-weight: 400;
+  font-size: 15px;
+  font-weight: 600;
   cursor: pointer;
-  transition: all var(--transition-base);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  transition: var(--transition-base);
+  letter-spacing: 0.03em;
 }
 
 .btn-cart:hover:not(:disabled) {
-  background: transparent;
-  color: var(--color-primary);
+  transform: translateY(-2px);
+  border-color: var(--color-primary);
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.15);
+  background: rgba(255, 255, 255, 0.85);
 }
 
-/* 立即购买：白底黑边 */
+/* 立即购买：翡翠青绿渐变主按钮 + 光泽掠过 */
 .btn-buy {
   flex: 1;
-  background: transparent;
-  color: var(--color-primary);
-  border: 1px solid var(--color-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--gradient-brand);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
   padding: 16px 32px;
-  font-size: 14px;
-  font-weight: 400;
+  font-size: 15px;
+  font-weight: 600;
   cursor: pointer;
-  transition: all var(--transition-base);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  position: relative;
+  overflow: hidden;
+  letter-spacing: 0.03em;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+  transition: transform 0.2s var(--ease-out), box-shadow 0.3s var(--ease-out);
 }
 
 .btn-buy:hover:not(:disabled) {
-  background: var(--color-primary);
-  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4), 0 0 32px rgba(6, 182, 212, 0.3);
+}
+
+/* 光泽掠过 */
+.btn-buy::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);
+  transform: translateX(-100%);
+  transition: transform 0.6s var(--ease-out);
+  pointer-events: none;
+}
+
+.btn-buy:hover:not(:disabled)::after {
+  transform: translateX(100%);
 }
 
 /* 按钮禁用状态 */
 .btn-cart:disabled,
 .btn-buy:disabled {
-  background: var(--color-bg);
+  background: var(--color-bg-secondary);
   color: var(--color-text-muted);
   border-color: var(--color-border);
+  box-shadow: none;
   cursor: not-allowed;
 }
 
-/* ==================== 详情区块（商品描述/规格/评价） ==================== */
+/* ==================== 详情区块（玻璃面板） ==================== */
 .detail-section {
   margin-bottom: 48px;
+  padding: 24px;
+  background: var(--color-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .detail-section:last-child {
   margin-bottom: 0;
 }
 
-/* 区块标题：衬线字体 */
+/* 区块标题：现代几何字体 */
 .section-heading {
   font-family: var(--font-heading);
-  font-size: 24px;
-  font-weight: 400;
+  font-size: 22px;
+  font-weight: 700;
   color: var(--color-text);
-  margin: 0 0 24px;
+  margin: 0 0 20px;
   letter-spacing: -0.01em;
 }
 
@@ -1130,21 +1221,34 @@ onMounted(async () => {
 .spec-table {
   display: flex;
   flex-direction: column;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
 }
 
 .spec-row {
   display: flex;
-  padding: 16px 0;
+  padding: 14px 20px;
   border-bottom: 1px solid var(--color-border);
+  transition: background var(--transition-base);
 }
 
 .spec-row:first-child {
-  border-top: 1px solid var(--color-border);
+  border-top: none;
+}
+
+.spec-row:last-child {
+  border-bottom: none;
+}
+
+.spec-row:hover {
+  background: var(--gradient-brand-soft);
 }
 
 .spec-label {
   width: 160px;
   font-size: 13px;
+  font-weight: 600;
   color: var(--color-text-muted);
   letter-spacing: 0.02em;
   flex-shrink: 0;
@@ -1154,34 +1258,42 @@ onMounted(async () => {
   flex: 1;
   font-size: 14px;
   color: var(--color-text);
+  font-weight: 500;
 }
 
 /* ==================== 评价区 ==================== */
+/* 评价摘要：渐变背景面板 */
 .review-summary {
   display: flex;
-  align-items: baseline;
-  gap: 12px;
+  align-items: center;
+  gap: 20px;
   margin-bottom: 24px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid var(--color-border);
+  padding: 24px;
+  background: var(--gradient-brand-soft);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-lg);
 }
 
+/* 评分大字：渐变文字 */
 .review-rate {
   font-family: var(--font-heading);
-  color: var(--color-accent);
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
   font-size: 48px;
-  font-weight: 300;
+  font-weight: 800;
   line-height: 1;
 }
 
 .review-rate-label {
-  font-size: 13px;
-  color: var(--color-text-muted);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  letter-spacing: 0.02em;
+  font-weight: 500;
 }
 
-/* 评分筛选 Tab */
+/* 评分筛选 Tab：胶囊式 */
 .review-tabs {
   display: flex;
   gap: 8px;
@@ -1190,25 +1302,27 @@ onMounted(async () => {
 }
 
 .review-tab {
-  padding: 6px 16px;
-  background: transparent;
+  padding: 8px 18px;
+  background: var(--color-surface, #fff);
   color: var(--color-text-secondary);
-  border: 1px solid var(--color-border);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-pill);
   cursor: pointer;
   font-size: 13px;
+  font-weight: 600;
   letter-spacing: 0.02em;
   transition: all var(--transition-base);
 }
 
 .review-tab:hover {
-  border-color: var(--color-primary);
+  border-color: var(--color-primary-light);
   color: var(--color-primary);
 }
 
 .review-tab.active {
-  background: var(--color-primary);
+  background: var(--gradient-brand);
   color: #fff;
-  border-color: var(--color-primary);
+  border-color: transparent;
 }
 
 /* 评价加载与空状态 */
@@ -1222,7 +1336,7 @@ onMounted(async () => {
 }
 
 .review-empty .empty-icon {
-  font-size: 40px;
+  font-size: 48px;
   display: block;
   margin-bottom: 12px;
 }
@@ -1236,11 +1350,21 @@ onMounted(async () => {
 .review-list {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 20px;
 }
 
+/* 评价项：玻璃卡片 */
 .review-item {
-  padding: 0;
+  padding: 20px;
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  transition: var(--transition-base);
+}
+
+.review-item:hover {
+  border-color: var(--color-primary-light);
+  box-shadow: var(--shadow-sm);
 }
 
 .review-user {
@@ -1250,22 +1374,23 @@ onMounted(async () => {
   margin-bottom: 12px;
 }
 
+/* 用户头像：渐变底圆形 */
 .user-avatar {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  background: var(--color-bg);
-  color: var(--color-text-secondary);
+  background: var(--gradient-brand-soft);
+  color: var(--color-primary-hover);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
 }
 
 .user-name {
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   color: var(--color-text);
 }
 
@@ -1281,7 +1406,7 @@ onMounted(async () => {
   color: var(--color-text-secondary);
   line-height: 1.7;
   margin: 0 0 12px;
-  padding-left: 48px;
+  padding-left: 56px;
 }
 
 /* 评价图片 */
@@ -1289,7 +1414,7 @@ onMounted(async () => {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  margin-left: 48px;
+  margin-left: 56px;
   margin-bottom: 12px;
 }
 
@@ -1298,21 +1423,25 @@ onMounted(async () => {
   height: 80px;
   cursor: pointer;
   object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
 }
 
-/* 商家回复 */
+/* 商家回复：玻璃面板 */
 .merchant-reply {
-  margin-left: 48px;
+  margin-left: 56px;
   margin-bottom: 12px;
-  padding: 12px 16px;
-  background: var(--color-bg-secondary);
+  padding: 14px 18px;
+  background: var(--color-glass);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-md);
   font-size: 13px;
   line-height: 1.7;
 }
 
 .reply-label {
-  color: var(--color-text-muted);
-  font-weight: 500;
+  color: var(--color-primary);
+  font-weight: 700;
 }
 
 .reply-text {
@@ -1321,8 +1450,8 @@ onMounted(async () => {
 
 /* 追评列表 */
 .append-list {
-  margin-left: 48px;
-  border-left: 2px solid var(--color-border);
+  margin-left: 56px;
+  border-left: 2px solid var(--color-primary-light);
   padding-left: 16px;
 }
 
@@ -1339,11 +1468,13 @@ onMounted(async () => {
 
 .append-tag {
   display: inline-block;
-  padding: 1px 6px;
-  background: var(--color-accent);
+  padding: 2px 10px;
+  background: var(--gradient-brand);
   color: #fff;
   font-size: 11px;
+  font-weight: 700;
   letter-spacing: 0.05em;
+  border-radius: var(--radius-pill);
 }
 
 .append-date {
@@ -1380,23 +1511,23 @@ onMounted(async () => {
 .related-section .section-eyebrow {
   font-size: var(--font-size-caption);
   letter-spacing: 0.3em;
-  color: var(--color-text-muted);
+  color: var(--color-primary);
   text-transform: uppercase;
   margin-bottom: 8px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .related-section .section-title {
   font-family: var(--font-heading);
-  font-size: 24px;
-  font-weight: 400;
+  font-size: 28px;
+  font-weight: 700;
   color: var(--color-text);
   margin: 0 0 8px;
   letter-spacing: -0.01em;
 }
 
 .related-section .section-desc {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-text-secondary);
   margin: 0;
 }
@@ -1408,31 +1539,42 @@ onMounted(async () => {
 .related-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 24px;
+  gap: 20px;
 }
 
+/* 相关推荐卡片：玻璃卡片 */
 .related-item {
   cursor: pointer;
-  transition: transform var(--transition-base);
+  background: var(--color-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-lg);
+  padding: 8px;
+  transition: transform var(--transition-base), box-shadow var(--transition-base),
+              border-color var(--transition-base);
 }
 
 .related-item:hover {
   transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--color-primary-light);
 }
 
 .related-image {
   width: 100%;
   aspect-ratio: 1;
   overflow: hidden;
-  background: var(--color-bg);
+  background: linear-gradient(135deg, #F8FAFC, #ECFDF5);
   margin-bottom: 12px;
+  border-radius: var(--radius-md);
 }
 
 .related-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.5s ease;
+  transition: transform 0.5s var(--ease-out);
 }
 
 .related-item:hover .related-image img {
@@ -1441,6 +1583,7 @@ onMounted(async () => {
 
 .related-info {
   text-align: center;
+  padding: 0 4px;
 }
 
 .related-name {
@@ -1455,10 +1598,15 @@ onMounted(async () => {
   height: 38px;
 }
 
+/* 相关推荐价格：渐变文字 */
 .related-price {
-  font-size: 14px;
-  color: var(--color-accent);
-  font-weight: 600;
+  font-family: var(--font-heading);
+  font-size: 16px;
+  font-weight: 700;
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
   margin: 0;
 }
 
@@ -1466,7 +1614,7 @@ onMounted(async () => {
 @media (max-width: 1024px) {
   .detail-main {
     grid-template-columns: 1fr;
-    gap: 40px;
+    gap: 32px;
   }
 
   .image-sticky {
@@ -1474,11 +1622,11 @@ onMounted(async () => {
   }
 
   .detail-name {
-    font-size: 28px;
+    font-size: 26px;
   }
 
   .current-price {
-    font-size: 28px;
+    font-size: 30px;
   }
 
   .related-grid {
@@ -1488,8 +1636,8 @@ onMounted(async () => {
 
 @media (max-width: 768px) {
   .detail-main {
-    gap: 24px;
-    padding: 24px 0 40px;
+    gap: 20px;
+    padding: 16px 0 40px;
   }
 
   .detail-name {
@@ -1498,7 +1646,7 @@ onMounted(async () => {
   }
 
   .current-price {
-    font-size: 24px;
+    font-size: 26px;
   }
 
   .detail-actions {

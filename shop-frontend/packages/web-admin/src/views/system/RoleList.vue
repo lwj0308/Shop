@@ -1,7 +1,14 @@
 <template>
-  <!-- 角色管理页面 -->
+  <!-- 角色管理页：玻璃搜索栏 + 玻璃表格 + 玻璃弹窗 -->
   <div class="role-list">
-    <el-card class="search-card">
+    <!-- 页面标题 -->
+    <div class="page-header">
+      <h2 class="page-title">角色管理</h2>
+      <p class="page-subtitle">管理平台角色、权限分配</p>
+    </div>
+
+    <!-- 搜索栏：玻璃卡片 -->
+    <el-card class="glass-card search-card">
       <el-form :inline="true" :model="queryForm">
         <el-form-item label="关键词">
           <el-input v-model="queryForm.keyword" placeholder="角色名称" clearable />
@@ -13,11 +20,13 @@
       </el-form>
     </el-card>
 
+    <!-- 操作栏：右对齐新增按钮 -->
     <div class="action-bar">
       <el-button v-permission="['admin:role:add']" type="primary" @click="handleAdd">新增角色</el-button>
     </div>
 
-    <el-card>
+    <!-- 数据表格：玻璃卡片 -->
+    <el-card class="glass-card">
       <el-table v-loading="loading" :data="tableData" stripe>
         <el-table-column label="ID" prop="id" width="80" />
         <el-table-column label="角色名称" prop="name" width="150" />
@@ -59,8 +68,8 @@
       </div>
     </el-card>
 
-    <!-- 新增/编辑弹窗 -->
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px" destroy-on-close>
+    <!-- 新增/编辑弹窗：玻璃化 -->
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px" destroy-on-close class="glass-dialog">
       <el-form ref="formRef" :model="form" :rules="formRules" label-width="90px">
         <el-form-item label="角色名称" prop="name">
           <el-input v-model="form.name" placeholder="请输入角色名称" />
@@ -95,8 +104,8 @@
       </template>
     </el-dialog>
 
-    <!-- 分配权限弹窗 -->
-    <el-dialog v-model="permDialogVisible" title="分配权限" width="500px" destroy-on-close>
+    <!-- 分配权限弹窗：玻璃化 -->
+    <el-dialog v-model="permDialogVisible" title="分配权限" width="500px" destroy-on-close class="glass-dialog">
       <el-tree
         ref="permTreeRef"
         :data="permissionTree"
@@ -251,8 +260,158 @@ onMounted(() => { loadData() })
 </script>
 
 <style scoped>
-.role-list { display: flex; flex-direction: column; gap: 16px; }
-.search-card :deep(.el-card__body) { padding-bottom: 0; }
-.action-bar { display: flex; justify-content: flex-end; }
-.pagination-wrapper { display: flex; justify-content: flex-end; margin-top: 16px; }
+/* 角色列表根容器 */
+.role-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* 页面标题 */
+.page-header {
+  margin-bottom: 4px;
+}
+
+.page-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--color-text);
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+.page-subtitle {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-top: 4px;
+}
+
+/* 玻璃卡片：覆盖 el-card 默认样式 */
+.glass-card {
+  background: var(--color-glass) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--color-glass-border) !important;
+  border-radius: var(--radius-card) !important;
+  box-shadow: var(--shadow-card) !important;
+}
+
+.glass-card :deep(.el-card__header) {
+  border-bottom: 1px solid var(--color-border) !important;
+}
+
+.glass-card :deep(.el-card__body) {
+  padding: 20px;
+}
+
+/* 搜索卡片：表单底部不留白 */
+.search-card :deep(.el-card__body) {
+  padding-bottom: 0;
+}
+
+/* 搜索表单项：圆角输入框 */
+.search-card :deep(.el-input__wrapper),
+.search-card :deep(.el-select__wrapper) {
+  border-radius: var(--radius-button);
+}
+
+/* 操作栏：右对齐 */
+.action-bar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* 表格容器：圆角 + 透明背景 */
+.glass-card :deep(.el-table) {
+  border-radius: var(--radius-button);
+  overflow: hidden;
+  background: transparent;
+}
+
+/* 表头：浅色玻璃背景 + 次要色文字 */
+.glass-card :deep(.el-table th.el-table__cell) {
+  background: rgba(248, 250, 252, 0.6);
+  color: var(--color-text-secondary);
+  font-weight: 600;
+}
+
+/* 表格行：透明背景 */
+.glass-card :deep(.el-table tr),
+.glass-card :deep(.el-table td.el-table__cell) {
+  background: transparent;
+}
+
+html.dark .glass-card :deep(.el-table th.el-table__cell) {
+  background: rgba(30, 41, 59, 0.5);
+}
+
+/* text 类型按钮：hover 时翡翠软色背景 */
+.glass-card :deep(.el-button.is-text:hover) {
+  background: var(--gradient-brand-soft) !important;
+  color: var(--color-primary) !important;
+}
+
+/* 分页器：右对齐 */
+.pagination-wrapper {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+/* 权限树节点 hover 态：el-tree 在弹窗内，通过 :deep 穿透 */
+:deep(.el-tree-node__content:hover) {
+  background: var(--gradient-brand-soft) !important;
+}
+
+:deep(.el-tree-node__content.is-checked) {
+  color: var(--color-primary);
+}
+</style>
+
+<!-- 非 scoped 全局样式：el-dialog 会 teleport 到 body，scoped 无法穿透，必须用全局样式 -->
+<style>
+/* 玻璃弹窗：圆角 + 头部渐变软背景 + body 玻璃白 */
+.glass-dialog {
+  border-radius: var(--radius-card) !important;
+  overflow: hidden;
+  border: 1px solid var(--color-glass-border) !important;
+  box-shadow: var(--shadow-hover) !important;
+}
+
+.glass-dialog .el-dialog__header {
+  background: var(--gradient-brand-soft);
+  border-bottom: 1px solid var(--color-border);
+  padding: 18px 24px;
+  margin: 0;
+}
+
+.glass-dialog .el-dialog__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.glass-dialog .el-dialog__body {
+  padding: 24px;
+  background: var(--color-card);
+}
+
+.glass-dialog .el-dialog__footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--color-border);
+  background: rgba(248, 250, 252, 0.5);
+}
+
+/* 暗色模式：弹窗背景更深 */
+html.dark .glass-dialog {
+  background: rgba(30, 41, 59, 0.95) !important;
+}
+
+html.dark .glass-dialog .el-dialog__body {
+  background: rgba(30, 41, 59, 0.95);
+}
+
+html.dark .glass-dialog .el-dialog__footer {
+  background: rgba(15, 23, 42, 0.5);
+}
 </style>

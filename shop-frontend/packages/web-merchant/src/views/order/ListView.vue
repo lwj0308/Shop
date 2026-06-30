@@ -395,45 +395,66 @@ onMounted(() => {
   gap: 16px;
 }
 
-/* Tab切换栏 */
+/* Tab切换栏：玻璃底 + 底部翡翠渐变指示条 */
 .order-tabs {
   display: flex;
-  border-bottom: 2px solid #e4e7ed;
+  gap: 4px;
+  border-bottom: 1px solid var(--color-border);
   margin-bottom: 4px;
-  background: var(--color-card);
-  border-radius: var(--radius-card) var(--radius-card) 0 0;
-  padding: 0 20px;
+  background: var(--color-glass);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-card);
+  padding: 4px 12px;
+  flex-wrap: wrap;
 }
 
 .tab-item {
-  padding: 12px 20px;
+  position: relative;
+  padding: 12px 18px;
   cursor: pointer;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   font-size: 14px;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
-  transition: all 0.2s;
+  font-weight: 600;
+  border-bottom: none;
+  margin-bottom: 0;
+  transition: color 0.3s var(--ease-out);
 }
 
 .tab-item:hover {
-  color: var(--color-primary);
+  color: var(--color-text);
 }
 
 .tab-item.active {
-  color: var(--color-primary);
-  border-bottom-color: var(--color-primary);
-  font-weight: 500;
+  color: var(--color-primary-dark);
+  font-weight: 700;
+}
+
+/* 激活项底部翡翠渐变指示条（带辉光） */
+.tab-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 18px;
+  right: 18px;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--gradient-brand);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
 }
 
 .tab-count {
-  font-size: 12px;
+  font-size: 11px;
   margin-left: 4px;
+  font-weight: 700;
 }
 
-/* 金额：红色加粗 */
+/* 金额：红色加粗 + Sora 字体 */
 .amount {
   color: var(--color-danger);
-  font-weight: bold;
+  font-weight: 700;
+  font-family: var(--font-display);
 }
 
 /* 订单商品信息 */
@@ -449,11 +470,13 @@ onMounted(() => {
   gap: 8px;
 }
 
+/* 商品缩略图：圆角 + 边框 */
 .item-image {
   width: 40px;
   height: 40px;
   border-radius: var(--radius-button);
   flex-shrink: 0;
+  border: 1px solid var(--color-border);
 }
 
 .item-text {
@@ -473,22 +496,68 @@ onMounted(() => {
   color: var(--color-text-muted);
 }
 
-/* 订单号：蓝色可点击 */
+/* 订单号：翡翠色可点击 */
 .order-no {
   color: var(--color-primary);
   cursor: pointer;
+  font-weight: 600;
+  font-family: var(--font-display);
+  transition: color 0.2s var(--ease-out);
 }
 
 .order-no:hover {
+  color: var(--color-primary-dark);
   text-decoration: underline;
 }
 
-/* 分页行 */
+/* ==================== 订单表格：玻璃面板（深度穿透） ==================== */
+.order-list :deep(.el-table) {
+  background: var(--color-glass);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  /* 透明化表格内部，让玻璃底透出 */
+  --el-table-bg-color: transparent;
+  --el-table-tr-bg-color: transparent;
+  --el-table-header-bg-color: transparent;
+  --el-table-border-color: var(--color-border-light);
+  --el-table-row-hover-bg-color: rgba(16, 185, 129, 0.05);
+}
+
+/* 表头：小字大写 + muted */
+.order-list :deep(.el-table th.el-table__cell) {
+  background: transparent !important;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.order-list :deep(.el-table td.el-table__cell),
+.order-list :deep(.el-table th.el-table__cell) {
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+/* 斑马纹：柔和玻璃底 */
+.order-list :deep(.el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell) {
+  background: rgba(248, 250, 252, 0.5);
+}
+
+/* 行 hover：翡翠淡底 */
+.order-list :deep(.el-table__body tr:hover > td.el-table__cell) {
+  background: rgba(16, 185, 129, 0.05) !important;
+}
+
+/* ==================== 分页行 ==================== */
 .pagination-row {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 12px;
   margin-top: 16px;
 }
 
@@ -497,23 +566,38 @@ onMounted(() => {
   color: var(--color-text-secondary);
 }
 
-/* 弹窗内信息区域 */
+/* 分页器激活页用翡翠渐变 */
+.pagination-row :deep(.el-pagination.is-background .el-pager li.is-active) {
+  background: var(--gradient-brand) !important;
+  color: #fff !important;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.pagination-row :deep(.el-pagination.is-background .el-pager li:hover) {
+  color: var(--color-primary);
+}
+
+/* ==================== 弹窗内信息区：翡翠柔光底 ==================== */
 .dialog-info {
   margin-bottom: 16px;
-  padding: 12px;
-  background: #f5f7fa;
-  border-radius: 6px;
+  padding: 14px 16px;
+  background: var(--gradient-brand-soft);
+  border: 1px solid rgba(16, 185, 129, 0.15);
+  border-radius: var(--radius-button);
 }
 
 .dialog-info-label {
   font-size: 13px;
   color: var(--color-text-muted);
+  font-weight: 600;
 }
 
 .dialog-info-value {
   font-size: 14px;
   color: var(--color-text);
   margin-top: 4px;
+  font-weight: 600;
 }
 
 .dialog-info-reason {

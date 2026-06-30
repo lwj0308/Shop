@@ -1,44 +1,66 @@
 /**
- * 全局样式 - 极简黑白灰风格（跨境独立站风格）
- * 定义CSS变量、基础重置样式、通用组件样式
- * 设计理念：大量留白、极简边框、衬线标题、黑白为主、香槟金点缀
+ * 全局样式 - 现代玻璃拟态风（Glassmorphism + 翡翠青绿渐变）
+ * 设计理念：浅色背景 + 毛玻璃卡片 + 翡翠青绿渐变主色 + 微动效
+ * 参考：Stripe / Apple / Linear 的现代质感
+ *
+ * 重要：保留所有旧变量名（避免已有代码报错），只改变量值
  */
+
+/* ==================== Google Fonts ==================== */
+/* 标题用 Sora（现代几何无衬线），正文用 Manrope（清晰可读） */
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Manrope:wght@300;400;500;600;700;800&display=swap');
 
 /* ==================== CSS变量定义 ==================== */
 :root {
-  /* 主色系 - 极简黑白灰 */
-  --color-primary: #1A1A1A;
-  --color-primary-hover: #333333;
-  --color-primary-light: #4A4A4A;
-  --color-accent: #C9A961;
-  --color-accent-hover: #B89651;
+  /* 主色系 - 翡翠青绿（替换原黑白灰） */
+  --color-primary: #10B981;            /* 主色：翡翠绿（原#1A1A1A） */
+  --color-primary-hover: #059669;      /* 主色悬停：深翡翠 */
+  --color-primary-light: #34D399;     /* 主色浅：浅翡翠 */
+  --color-accent: #06B6D4;             /* 点缀色：青蓝（原香槟金#C9A961） */
+  --color-accent-hover: #0891B2;       /* 点缀色悬停：深青蓝 */
+
+  /* 品牌渐变 - 翡翠→青蓝 */
+  --gradient-brand: linear-gradient(135deg, #10B981 0%, #06B6D4 100%);
+  --gradient-brand-hover: linear-gradient(135deg, #059669 0%, #0891B2 100%);
+  --gradient-brand-soft: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(6, 182, 212, 0.1) 100%);
+
+  /* 氛围渐变光晕（mesh gradient，用于背景氛围） */
+  --gradient-mesh:
+    radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.12) 0px, transparent 50%),
+    radial-gradient(at 98% 2%, rgba(6, 182, 212, 0.12) 0px, transparent 50%),
+    radial-gradient(at 50% 98%, rgba(16, 185, 129, 0.08) 0px, transparent 50%);
+
+  /* 玻璃拟态 */
+  --color-glass: rgba(255, 255, 255, 0.65);
+  --color-glass-strong: rgba(255, 255, 255, 0.85);
+  --color-glass-border: rgba(255, 255, 255, 0.6);
 
   /* 背景色 */
-  --color-bg: #FFFFFF;
-  --color-bg-secondary: #F8F8F8;
-  --color-bg-tertiary: #F0F0F0;
+  --color-bg: #F8FAFC;                 /* 页面背景：极浅灰蓝（原纯白） */
+  --color-bg-secondary: #F1F5F9;       /* 次背景：浅灰蓝 */
+  --color-bg-tertiary: #E2E8F0;       /* 三级背景：更浅灰蓝 */
 
   /* 文字颜色 */
-  --color-text: #1A1A1A;
-  --color-text-secondary: #666666;
-  --color-text-muted: #999999;
+  --color-text: #0F172A;               /* 主文字：深 slate */
+  --color-text-secondary: #475569;     /* 次文字 */
+  --color-text-muted: #94A3B8;         /* 弱文字 */
 
   /* 边框色 */
-  --color-border: #E5E5E5;
-  --color-border-light: #F0F0F0;
+  --color-border: #E2E8F0;             /* 边框：浅灰蓝 */
+  --color-border-light: #F1F5F9;       /* 浅边框 */
 
   /* 功能色 */
-  --color-success: #52C41A;
-  --color-warning: #FAAD14;
-  --color-error: #FF4D4F;
+  --color-success: #22C55E;
+  --color-warning: #F59E0B;
+  --color-error: #EF4444;
 
   /* 字体 */
-  --font-heading: 'Playfair Display', 'Noto Serif SC', Georgia, 'Times New Roman', serif;
-  --font-body: 'Inter', -apple-system, 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', sans-serif;
+  --font-heading: 'Sora', 'PingFang SC', 'Noto Sans SC', sans-serif;  /* 标题：Sora（原Playfair Display） */
+  --font-body: 'Manrope', 'PingFang SC', 'Microsoft YaHei', sans-serif; /* 正文：Manrope（原Inter） */
 
   /* 字号规范 */
   --font-size-hero: 56px;
-  --font-size-h1: 36px;
+  --font-size-h1: 40px;
   --font-size-h2: 28px;
   --font-size-h3: 20px;
   --font-size-body: 15px;
@@ -54,28 +76,32 @@
   --space-2xl: 64px;
   --space-3xl: 96px;
 
-  /* 圆角 */
-  --radius-sm: 2px;
-  --radius-md: 4px;
-  --radius-lg: 8px;
+  /* 圆角（比原来大，更现代） */
+  --radius-sm: 8px;        /* 原2px */
+  --radius-md: 12px;       /* 原4px */
+  --radius-lg: 16px;       /* 原8px */
+  --radius-xl: 24px;
   --radius-pill: 999px;
 
-  /* 阴影 - 极淡 */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08);
-  --shadow-hover: 0 12px 32px rgba(0, 0, 0, 0.10);
+  /* 阴影 - 柔和 slate 系 */
+  --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 4px 16px rgba(15, 23, 42, 0.07);
+  --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.1);
+  --shadow-hover: 0 20px 48px rgba(15, 23, 42, 0.14);
+  --shadow-glow: 0 0 24px rgba(16, 185, 129, 0.35);  /* 翡翠光晕 */
 
-  /* 过渡 */
-  --transition-base: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* 过渡 - 优雅缓动 */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --transition-base: all 0.3s var(--ease-out);
 
-  /* Element Plus 主题色覆盖为近黑 */
-  --el-color-primary: #1A1A1A;
-  --el-color-primary-light-3: #4A4A4A;
-  --el-color-primary-light-5: #7A7A7A;
-  --el-color-primary-light-7: #AAAAAA;
-  --el-color-primary-light-9: #E5E5E5;
-  --el-color-primary-dark-2: #000000;
+  /* Element Plus 主题色覆盖为翡翠绿 */
+  --el-color-primary: #10B981;
+  --el-color-primary-light-3: #34D399;
+  --el-color-primary-light-5: #6EE7B7;
+  --el-color-primary-light-7: #A7F3D0;
+  --el-color-primary-light-9: #ECFDF5;
+  --el-color-primary-dark-2: #059669;
 }
 
 /* ==================== 基础重置 ==================== */
@@ -107,19 +133,55 @@ img {
   display: block;
 }
 
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
 /* ==================== 标题样式 ==================== */
-/* 衬线字体标题 - 显高级 */
+/* Sora 无衬线标题 - 现代几何感 */
 h1, h2, h3, .heading {
   font-family: var(--font-heading);
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: -0.02em;
 }
 
+/* ==================== 玻璃拟态工具类 ==================== */
+/* 毛玻璃卡片：半透明白 + 背景模糊 + 细边框 */
+.glass {
+  background: var(--color-glass);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--color-glass-border);
+  box-shadow: var(--shadow-md);
+}
+
+/* 强玻璃卡片：更不透明 */
+.glass-strong {
+  background: var(--color-glass-strong);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid var(--color-glass-border);
+  box-shadow: var(--shadow-lg);
+}
+
+/* ==================== 渐变文字 ==================== */
+/* 价格、强调数字用渐变文字色 */
+.gradient-text {
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
 /* ==================== 价格样式 ==================== */
-/* 价格统一用香槟金，数字等宽对齐 */
+/* 价格用渐变色，数字等宽对齐 */
 .price {
-  color: var(--color-accent);
-  font-weight: 600;
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
@@ -132,44 +194,64 @@ h1, h2, h3, .heading {
 }
 
 /* ==================== 通用标签样式 ==================== */
-/* 极简标签：黑色边框 */
+/* 玻璃标签 */
 .tag {
   display: inline-block;
-  padding: 2px 10px;
-  border-radius: var(--radius-sm);
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
   font-size: var(--font-size-caption);
   letter-spacing: 0.05em;
+  background: var(--color-glass);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--color-border);
   color: var(--color-text-secondary);
 }
 
-/* 黑色实心标签 */
+/* 渐变实心标签 */
 .tag-dark {
   display: inline-block;
-  padding: 2px 10px;
-  border-radius: var(--radius-sm);
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
   font-size: var(--font-size-caption);
   letter-spacing: 0.05em;
-  background: var(--color-primary);
+  background: var(--gradient-brand);
   color: #fff;
 }
 
-/* 香槟金标签 */
+/* 青蓝标签 */
 .tag-accent {
   display: inline-block;
-  padding: 2px 10px;
-  border-radius: var(--radius-sm);
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
   font-size: var(--font-size-caption);
   letter-spacing: 0.05em;
   background: var(--color-accent);
   color: #fff;
 }
 
+/* ==================== 状态徽章 ==================== */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 600;
+}
+.badge-success { background: rgba(34, 197, 94, 0.12); color: var(--color-success); }
+.badge-warning { background: rgba(245, 158, 11, 0.12); color: var(--color-warning); }
+.badge-error { background: rgba(239, 68, 68, 0.12); color: var(--color-error); }
+.badge-brand { background: var(--gradient-brand-soft); color: var(--color-primary); }
+
 /* ==================== 搜索标签样式 ==================== */
 .search-tag {
   display: inline-block;
   padding: 8px 20px;
-  background: transparent;
+  background: var(--color-glass);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-pill);
   font-size: var(--font-size-small);
@@ -182,61 +264,89 @@ h1, h2, h3, .heading {
 .search-tag:hover {
   border-color: var(--color-primary);
   color: var(--color-primary);
-  background: var(--color-bg-secondary);
+  background: rgba(16, 185, 129, 0.08);
+  transform: translateY(-1px);
 }
 
 /* ==================== 按钮基础样式 ==================== */
-/* 主按钮：黑底白字 */
+/* 主按钮：翡翠青绿渐变 + 光泽掠过 + 点击波纹 */
 .btn-primary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 14px 32px;
-  background: var(--color-primary);
+  padding: 12px 28px;
+  background: var(--gradient-brand);
   color: #fff;
-  border: 1px solid var(--color-primary);
-  border-radius: var(--radius-sm);
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
   font-size: var(--font-size-body);
-  font-weight: 500;
-  letter-spacing: 0.05em;
+  font-weight: 600;
   cursor: pointer;
-  transition: var(--transition-base);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+  transition: transform 0.2s var(--ease-out), box-shadow 0.3s var(--ease-out);
 }
 
+/* hover：上浮 + 光晕扩散 */
 .btn-primary:hover:not(:disabled) {
-  background: var(--color-primary-hover);
-  border-color: var(--color-primary-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4), 0 0 32px rgba(6, 182, 212, 0.3);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* 光泽掠过效果：伪元素从左滑到右 */
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);
+  transform: translateX(-100%);
+  transition: transform 0.6s var(--ease-out);
+  pointer-events: none;
+}
+
+.btn-primary:hover:not(:disabled)::after {
+  transform: translateX(100%);
 }
 
 .btn-primary:disabled {
   background: var(--color-bg-tertiary);
-  border-color: var(--color-bg-tertiary);
+  box-shadow: none;
   color: var(--color-text-muted);
   cursor: not-allowed;
 }
 
-/* 次按钮：白底黑边 */
+/* 次按钮：玻璃白底 + 渐变描边 */
 .btn-outline {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 14px 32px;
-  background: transparent;
-  color: var(--color-primary);
-  border: 1px solid var(--color-primary);
-  border-radius: var(--radius-sm);
+  padding: 12px 28px;
+  background: var(--color-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: var(--color-text);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
   font-size: var(--font-size-body);
-  font-weight: 500;
-  letter-spacing: 0.05em;
+  font-weight: 600;
   cursor: pointer;
   transition: var(--transition-base);
 }
 
 .btn-outline:hover:not(:disabled) {
-  background: var(--color-primary);
-  color: #fff;
+  transform: translateY(-2px);
+  border-color: var(--color-primary);
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.15);
+  background: rgba(255, 255, 255, 0.85);
 }
 
 .btn-outline:disabled {
@@ -245,10 +355,52 @@ h1, h2, h3, .heading {
   cursor: not-allowed;
 }
 
+/* ==================== 点击波纹效果 ==================== */
+/* 给 .btn-primary 添加点击涟漪 */
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  transform: scale(0);
+  animation: ripple 0.6s var(--ease-out);
+  pointer-events: none;
+}
+
+@keyframes ripple {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+/* ==================== 骨架屏流光 ==================== */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, rgba(241, 245, 249, 0.6) 25%, rgba(226, 232, 240, 0.9) 50%, rgba(241, 245, 249, 0.6) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* ==================== 页面切换动画 ==================== */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* ==================== 自定义滚动条 ==================== */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -256,12 +408,12 @@ h1, h2, h3, .heading {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: 3px;
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-muted);
+  background: rgba(148, 163, 184, 0.5);
 }
 
 /* ==================== 通用工具类 ==================== */
@@ -286,9 +438,22 @@ h1, h2, h3, .heading {
   padding: 0 var(--space-lg);
 }
 
-/* 搜索高亮关键词 */
+/* 搜索高亮关键词 - 改为翡翠绿 */
 em {
-  color: var(--color-accent);
+  color: var(--color-primary);
   font-style: normal;
   font-weight: 600;
+}
+
+/* ==================== Element Plus 全局微调 ==================== */
+/* 卡片用玻璃风格 */
+.el-card {
+  border-radius: var(--radius-lg) !important;
+  border: 1px solid var(--color-border) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+/* 输入框 focus 时翡翠色边框 */
+.el-input__wrapper:focus-within {
+  box-shadow: 0 0 0 1px var(--color-primary) inset, 0 0 0 4px rgba(16, 185, 129, 0.12) !important;
 }

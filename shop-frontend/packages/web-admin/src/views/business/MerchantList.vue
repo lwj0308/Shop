@@ -1,6 +1,14 @@
 <template>
+  <!-- 商家审核页：玻璃搜索栏 + 玻璃表格 + 渐变审核按钮 -->
   <div class="merchant-list">
-    <el-card class="search-card">
+    <!-- 页面标题 -->
+    <div class="page-header">
+      <h2 class="page-title">商家审核</h2>
+      <p class="page-subtitle">审核商家入驻申请，把控平台商家质量</p>
+    </div>
+
+    <!-- 搜索栏：玻璃卡片包裹 -->
+    <el-card class="glass-card search-card">
       <el-form :inline="true" :model="queryForm">
         <el-form-item label="关键词">
           <el-input v-model="queryForm.keyword" placeholder="商家名称" clearable />
@@ -20,7 +28,8 @@
       </el-form>
     </el-card>
 
-    <el-card>
+    <!-- 数据表格：玻璃卡片包裹 -->
+    <el-card class="glass-card">
       <el-table v-loading="loading" :data="tableData" stripe>
         <el-table-column label="ID" prop="id" width="80" />
         <el-table-column label="商家名称" prop="shopName" min-width="150" />
@@ -122,7 +131,121 @@ onMounted(() => { loadData() })
 </script>
 
 <style scoped>
-.merchant-list { display: flex; flex-direction: column; gap: 16px; }
-.search-card :deep(.el-card__body) { padding-bottom: 0; }
-.pagination-wrapper { display: flex; justify-content: flex-end; margin-top: 16px; }
+/* 商家列表根容器：垂直布局 + 间距 */
+.merchant-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* 页面标题 */
+.page-header {
+  margin-bottom: 4px;
+}
+
+.page-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--color-text);
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+.page-subtitle {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-top: 4px;
+}
+
+/* 玻璃卡片：覆盖 el-card 默认样式 */
+.glass-card {
+  background: var(--color-glass) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--color-glass-border) !important;
+  border-radius: var(--radius-card) !important;
+  box-shadow: var(--shadow-card) !important;
+}
+
+.glass-card :deep(.el-card__header) {
+  border-bottom: 1px solid var(--color-border) !important;
+}
+
+.glass-card :deep(.el-card__body) {
+  padding: 20px;
+}
+
+/* 搜索卡片：表单底部不留白 */
+.search-card :deep(.el-card__body) {
+  padding-bottom: 0;
+}
+
+/* 搜索表单项：圆角输入框 */
+.search-card :deep(.el-input__wrapper),
+.search-card :deep(.el-select__wrapper) {
+  border-radius: var(--radius-button);
+}
+
+/* 表格容器：圆角 + overflow hidden 防止表头溢出 */
+.glass-card :deep(.el-table) {
+  border-radius: var(--radius-button);
+  overflow: hidden;
+  background: transparent;
+}
+
+/* 表头：浅色玻璃背景 + 次要色文字 */
+.glass-card :deep(.el-table th.el-table__cell) {
+  background: rgba(248, 250, 252, 0.6);
+  color: var(--color-text-secondary);
+  font-weight: 600;
+}
+
+/* 表格行：透明背景，hover 时翡翠软色 */
+.glass-card :deep(.el-table tr),
+.glass-card :deep(.el-table td.el-table__cell) {
+  background: transparent;
+}
+
+html.dark .glass-card :deep(.el-table th.el-table__cell) {
+  background: rgba(30, 41, 59, 0.5);
+}
+
+/* 操作按钮：success 类型用翡翠渐变（覆盖 Element Plus 默认蓝色） */
+.glass-card :deep(.el-button--success) {
+  background: linear-gradient(135deg, #10B981 0%, #22C55E 100%) !important;
+  border: none !important;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3) !important;
+}
+
+.glass-card :deep(.el-button--success:hover) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4) !important;
+}
+
+/* danger 类型保持原色但加渐变 */
+.glass-card :deep(.el-button--danger) {
+  background: linear-gradient(135deg, #EF4444 0%, #F87171 100%) !important;
+  border: none !important;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3) !important;
+}
+
+/* warning 类型加渐变 */
+.glass-card :deep(.el-button--warning) {
+  background: linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%) !important;
+  border: none !important;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3) !important;
+}
+
+/* text 类型按钮：hover 时翡翠软色背景 */
+.glass-card :deep(.el-button.is-text:hover) {
+  background: var(--gradient-brand-soft) !important;
+  color: var(--color-primary) !important;
+}
+
+/* 分页器：右对齐 */
+.pagination-wrapper {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
 </style>

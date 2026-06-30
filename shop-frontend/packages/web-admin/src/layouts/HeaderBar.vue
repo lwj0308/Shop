@@ -169,45 +169,91 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* 顶栏容器：左右对齐，玻璃白背景由父级 AdminLayout 提供 */
 .header-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 0 16px;
+  padding: 0 20px;
   height: 56px;
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
 }
 
+/* 折叠按钮：圆形玻璃胶囊，hover 时翡翠色 + 上浮 + 发光 */
 .collapse-btn {
   font-size: 20px;
   cursor: pointer;
-  color: var(--color-text);
+  color: var(--color-text-secondary);
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-tag);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-glass);
+  border: 1px solid var(--color-border);
+  transition: all 0.25s var(--ease-out);
 }
 
 .collapse-btn:hover {
   color: var(--color-primary);
+  border-color: var(--color-primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow);
+}
+
+/* 面包屑：文字次要色，最后一项变主色 */
+:deep(.el-breadcrumb__item) {
+  font-size: 13px;
+}
+
+:deep(.el-breadcrumb__inner) {
+  color: var(--color-text-muted) !important;
+  font-weight: 500;
+}
+
+:deep(.el-breadcrumb__item:last-child .el-breadcrumb__inner) {
+  color: var(--color-primary) !important;
+  font-weight: 600;
+}
+
+:deep(.el-breadcrumb__separator) {
+  color: var(--color-text-muted) !important;
 }
 
 .header-right {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 10px;
 }
 
+/* 顶部图标按钮：玻璃胶囊，hover 翡翠色 + 上浮 */
 .header-action {
   font-size: 18px;
   cursor: pointer;
   color: var(--color-text-secondary);
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-tag);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-glass);
+  border: 1px solid var(--color-border);
+  transition: all 0.25s var(--ease-out);
 }
 
 .header-action:hover {
   color: var(--color-primary);
+  border-color: var(--color-primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow);
 }
 
 /* 通知铃铛徽章：让 badge 与其他图标对齐 */
@@ -216,15 +262,41 @@ onMounted(() => {
   align-items: center;
 }
 
+/* 用户信息：玻璃胶囊 + 渐变边框 hover */
 .user-info {
   display: flex;
   align-items: center;
   gap: 8px;
   cursor: pointer;
   color: var(--color-text);
+  padding: 4px 12px 4px 4px;
+  border-radius: var(--radius-tag);
+  background: var(--color-glass);
+  border: 1px solid var(--color-border);
+  transition: all 0.25s var(--ease-out);
+}
+
+.user-info:hover {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-glow);
+  transform: translateY(-1px);
+}
+
+/* 头像渐变边框 */
+:deep(.el-avatar) {
+  background: var(--gradient-brand) !important;
+  border: 2px solid var(--color-glass-border);
 }
 
 .username {
-  font-size: 14px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* 暗色模式微调：玻璃边框更暗 */
+html.dark .collapse-btn,
+html.dark .header-action,
+html.dark .user-info {
+  background: rgba(30, 41, 59, 0.6);
 }
 </style>

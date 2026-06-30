@@ -8,28 +8,28 @@
         <div class="stat-label">今日销售额</div>
         <div class="stat-value">{{ formatPriceWithSymbol(stats.todaySales) }}</div>
         <div class="stat-change up">↑ 12.5% 较昨日</div>
-        <div class="stat-icon" style="background: #ecf5ff; color: #409EFF;">💰</div>
+        <div class="stat-icon">💰</div>
       </div>
       <!-- 今日订单数 -->
       <div class="stat-card" @click="goTo('/order/list')">
         <div class="stat-label">今日订单数</div>
         <div class="stat-value">{{ stats.todayOrders }}</div>
         <div class="stat-change up">↑ 8.2% 较昨日</div>
-        <div class="stat-icon" style="background: #f0f9eb; color: #67C23A;">📋</div>
+        <div class="stat-icon">📋</div>
       </div>
       <!-- 待发货订单 -->
       <div class="stat-card" @click="goTo('/order/list')">
         <div class="stat-label">待发货订单</div>
         <div class="stat-value">{{ stats.pendingShip }}</div>
         <div class="stat-change down">↓ 3.1% 较昨日</div>
-        <div class="stat-icon" style="background: #fdf6ec; color: #E6A23C;">🚚</div>
+        <div class="stat-icon">🚚</div>
       </div>
       <!-- 商品总数 -->
       <div class="stat-card" @click="goTo('/product/list')">
         <div class="stat-label">商品总数</div>
         <div class="stat-value">{{ stats.totalProducts }}</div>
         <div class="stat-change up">↑ 2 新增</div>
-        <div class="stat-icon" style="background: #fef0f0; color: #F56C6C;">📦</div>
+        <div class="stat-icon">📦</div>
       </div>
     </div>
 
@@ -64,21 +64,21 @@
           </div>
         </template>
         <div class="todo-list">
-          <div class="todo-item" style="background: #fdf6ec;" @click="goTo('/order/list')">
+          <div class="todo-item" style="background: rgba(245,158,11,0.1);" @click="goTo('/order/list')">
             <span class="todo-label">待发货订单</span>
-            <span class="todo-count" style="color: #E6A23C;">12</span>
+            <span class="todo-count" style="color: var(--color-warning);">12</span>
           </div>
-          <div class="todo-item" style="background: #fef0f0;" @click="goTo('/order/list')">
+          <div class="todo-item" style="background: rgba(239,68,68,0.1);" @click="goTo('/order/list')">
             <span class="todo-label">退款待处理</span>
-            <span class="todo-count" style="color: #F56C6C;">3</span>
+            <span class="todo-count" style="color: var(--color-danger);">3</span>
           </div>
-          <div class="todo-item" style="background: #ecf5ff;" @click="goTo('/product/list')">
+          <div class="todo-item" style="background: rgba(59,130,246,0.1);" @click="goTo('/product/list')">
             <span class="todo-label">库存预警</span>
-            <span class="todo-count" style="color: #409EFF;">5</span>
+            <span class="todo-count" style="color: var(--color-info);">5</span>
           </div>
-          <div class="todo-item" style="background: #f0f9eb;" @click="goTo('/data')">
+          <div class="todo-item" style="background: rgba(34,197,94,0.1);" @click="goTo('/data')">
             <span class="todo-label">新评价待回复</span>
-            <span class="todo-count" style="color: #67C23A;">8</span>
+            <span class="todo-count" style="color: var(--color-success);">8</span>
           </div>
         </div>
       </el-card>
@@ -237,92 +237,196 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* ==================== 页面容器 ==================== */
 .dashboard-page {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-/* 数据卡片行：4列网格 */
+/* ==================== 数据卡片行：4列网格 ==================== */
 .stat-cards {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 20px;
 }
 
-/* 统计卡片：白底圆角，带图标 */
+/* 统计卡片：白底圆角 + 顶部渐变指示线（hover 显现）+ 上浮动效 */
 .stat-card {
   background: var(--color-card);
   border-radius: var(--radius-card);
-  padding: 20px;
+  border: 1px solid var(--color-border);
+  padding: 22px;
   position: relative;
   overflow: hidden;
   box-shadow: var(--shadow-card);
   cursor: pointer;
-  transition: box-shadow 0.3s;
+  transition: transform 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out);
 }
 
+/* hover 上浮 + 加深阴影 */
 .stat-card:hover {
+  transform: translateY(-4px);
   box-shadow: var(--shadow-hover);
 }
 
+/* 顶部翡翠渐变指示线，默认隐藏，hover 显现 */
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--gradient-brand);
+  opacity: 0;
+  transition: opacity 0.3s var(--ease-out);
+}
+
+.stat-card:hover::before {
+  opacity: 1;
+}
+
+/* 卡片标签：小字 muted */
 .stat-label {
-  font-size: 14px;
-  color: var(--color-text-muted);
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  font-weight: 500;
   margin-bottom: 8px;
+  padding-right: 56px;
 }
 
+/* 大数字：Sora 字体 + 粗体 */
 .stat-value {
-  font-size: 28px;
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 800;
   color: var(--color-text);
+  line-height: 1;
+  margin-bottom: 6px;
 }
 
+/* 第一张卡片（销售额）数字用翡翠渐变填充 */
+.stat-card:first-child .stat-value {
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* 趋势变化：胶囊标签 */
 .stat-change {
+  display: inline-flex;
+  align-items: center;
   font-size: 12px;
+  font-weight: 700;
   margin-top: 8px;
+  padding: 3px 8px;
+  border-radius: var(--radius-tag);
 }
 
 .stat-change.up {
+  background: rgba(34, 197, 94, 0.12);
   color: var(--color-success);
 }
 
 .stat-change.down {
+  background: rgba(239, 68, 68, 0.12);
   color: var(--color-danger);
 }
 
-/* 卡片右侧图标 */
+/* 卡片右上角图标：翡翠渐变柔光底 + 翡翠文字 */
 .stat-icon {
   position: absolute;
   right: 16px;
   top: 16px;
   width: 48px;
   height: 48px;
-  border-radius: var(--radius-card);
+  border-radius: var(--radius-button);
+  background: var(--gradient-brand-soft);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 24px;
-  opacity: 0.8;
 }
 
-/* 第二行：趋势图 + 待办事项 */
+/* ==================== 第二行：趋势图 + 待办事项 ==================== */
 .second-row {
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 20px;
 }
 
+/* 卡片标题：翡翠圆点 + Sora 字体 */
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--color-text);
 }
 
-/* 柱状图 */
+.card-header span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display);
+}
+
+/* 标题前翡翠渐变小圆点 */
+.card-header span::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gradient-brand);
+  flex-shrink: 0;
+}
+
+/* ==================== el-card 玻璃化（深度穿透） ==================== */
+.dashboard-page :deep(.el-card) {
+  background: var(--color-glass-strong);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid var(--color-glass-border) !important;
+  border-radius: var(--radius-card) !important;
+  box-shadow: var(--shadow-card) !important;
+}
+
+.dashboard-page :deep(.el-card__header) {
+  border-bottom: 1px solid var(--color-border-light) !important;
+  padding: 16px 20px;
+}
+
+.dashboard-page :deep(.el-card__body) {
+  padding: 20px;
+}
+
+/* 表格 hover 翡翠淡底（叠加在玻璃卡上） */
+.dashboard-page :deep(.el-table) {
+  background: transparent;
+  --el-table-border-color: var(--color-border-light);
+  --el-table-header-bg-color: transparent;
+  --el-table-tr-bg-color: transparent;
+  --el-table-row-hover-bg-color: rgba(16, 185, 129, 0.04);
+}
+
+.dashboard-page :deep(.el-table th.el-table__cell) {
+  background: transparent !important;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.dashboard-page :deep(.el-table td.el-table__cell),
+.dashboard-page :deep(.el-table th.el-table__cell) {
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+/* ==================== 柱状图 ==================== */
 .chart-placeholder {
   width: 100%;
 }
@@ -331,8 +435,8 @@ onMounted(() => {
   display: flex;
   align-items: flex-end;
   gap: 12px;
-  height: 200px;
-  padding: 0 20px;
+  height: 220px;
+  padding: 10px 4px 0;
 }
 
 .bar-item {
@@ -344,67 +448,90 @@ onMounted(() => {
   justify-content: flex-end;
 }
 
+/* 柱子：翡翠→青蓝垂直渐变，hover 提亮 */
 .bar {
   width: 100%;
   max-width: 40px;
-  background: linear-gradient(180deg, #409EFF, #66B1FF);
-  border-radius: 4px 4px 0 0;
+  background: linear-gradient(180deg, #10B981 0%, #06B6D4 100%);
+  border-radius: 6px 6px 0 0;
   min-height: 4px;
-  transition: height 0.5s ease;
+  transition: height 0.6s var(--ease-out), filter 0.3s var(--ease-out), transform 0.3s var(--ease-out);
+  transform-origin: bottom;
 }
 
 .bar:hover {
-  opacity: 0.8;
+  filter: brightness(1.1) saturate(1.2);
+  transform: scaleX(1.08);
 }
 
 .bar-label {
   font-size: 11px;
   color: var(--color-text-muted);
   margin-top: 8px;
+  font-weight: 600;
 }
 
-/* 待办事项 */
+/* ==================== 待办事项 ==================== */
 .todo-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
+/* 待办项：圆角 + 缓动，hover 上浮 */
 .todo-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px;
-  border-radius: 6px;
+  padding: 14px 16px;
+  border-radius: var(--radius-button);
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: transform 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out);
 }
 
 .todo-item:hover {
-  opacity: 0.85;
+  transform: translateX(4px);
+  box-shadow: var(--shadow-card);
 }
 
 .todo-label {
   font-size: 14px;
+  font-weight: 600;
   color: var(--color-text-secondary);
 }
 
 .todo-count {
-  font-size: 20px;
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
 }
 
-/* 最近订单 */
+/* ==================== 最近订单 ==================== */
 .order-no {
   color: var(--color-primary);
   cursor: pointer;
+  font-weight: 600;
+  font-family: var(--font-display);
+  transition: color 0.2s var(--ease-out);
 }
 
 .order-no:hover {
+  color: var(--color-primary-dark);
   text-decoration: underline;
 }
 
 .amount {
-  font-weight: 600;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+/* ==================== 响应式 ==================== */
+@media (max-width: 1100px) {
+  .stat-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .second-row {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

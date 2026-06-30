@@ -1,19 +1,22 @@
 <template>
-  <!-- 左侧侧边栏 -->
+  <!-- 左侧侧边栏：深色玻璃质感 + 渐变 Logo + 渐变激活指示条 -->
   <div class="sidebar-wrapper">
-    <!-- Logo区域 -->
+    <!-- Logo区域：渐变方块图标 + 渐变文字 -->
     <div class="sidebar-logo" :class="{ collapse: collapse }">
-      <h1 v-if="!collapse">ShopMall</h1>
-      <h1 v-else>S</h1>
+      <div class="logo-icon">S</div>
+      <div v-if="!collapse" class="logo-text">
+        <span class="gradient-text">ShopMall</span>
+        <span class="sub">管理后台</span>
+      </div>
     </div>
 
-    <!-- 导航菜单 -->
+    <!-- 导航菜单：保留所有业务绑定（router / activeMenu / collapse / 菜单数据） -->
     <el-scrollbar>
       <el-menu
         :default-active="activeMenu"
         :collapse="collapse"
         :collapse-transition="false"
-        background-color="var(--color-sidebar-bg)"
+        background-color="transparent"
         text-color="var(--color-sidebar-text)"
         active-text-color="var(--color-sidebar-active)"
         router
@@ -180,34 +183,111 @@ const menuList = [
   flex-direction: column;
 }
 
+/* Logo 区：上下居中，底部细分隔线 */
 .sidebar-logo {
   height: 56px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-size: 20px;
-  font-weight: 700;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  gap: 10px;
+  padding: 0 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   white-space: nowrap;
   overflow: hidden;
 }
 
-.sidebar-logo.collapse h1 {
-  font-size: 24px;
+.sidebar-logo.collapse {
+  justify-content: center;
+  padding: 0;
 }
 
-/* 覆盖Element Plus菜单样式 */
+/* 渐变方块图标：白字 + 翡翠青绿渐变背景 + 发光阴影 */
+.logo-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--gradient-brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 18px;
+  flex-shrink: 0;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+}
+
+.logo-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.logo-text .sub {
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 2px;
+  letter-spacing: 0.02em;
+}
+
+/* ===== 覆盖 Element Plus el-menu 在深色玻璃侧边栏中的样式 ===== */
+
+/* 去掉菜单右侧默认边框 */
 :deep(.el-menu) {
   border-right: none;
+  padding: 12px 8px;
+  background: transparent;
 }
 
+/* 菜单项：圆角 + 半透明 hover 态 + 平滑过渡 */
+:deep(.el-menu-item),
+:deep(.el-sub-menu__title) {
+  border-radius: var(--radius-button);
+  margin: 2px 0;
+  transition: all 0.25s var(--ease-out);
+}
+
+/* hover：翡翠渐变软背景 + 翡翠亮文字 */
+:deep(.el-menu-item:hover),
+:deep(.el-sub-menu__title:hover) {
+  background: var(--gradient-brand-soft) !important;
+  color: var(--color-sidebar-active) !important;
+}
+
+/* 激活态：渐变软背景 + 翡翠亮文字 + 左侧渐变指示条 */
 :deep(.el-menu-item.is-active) {
-  background-color: var(--color-sidebar-active) !important;
-  color: #fff !important;
+  background: var(--gradient-brand-soft) !important;
+  color: var(--color-sidebar-active) !important;
+  font-weight: 600;
+  position: relative;
 }
 
+/* 激活项左侧的翡翠青绿渐变指示条 */
+:deep(.el-menu-item.is-active::before) {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--gradient-brand);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.6);
+}
+
+/* 子菜单项缩进保持 */
 :deep(.el-sub-menu .el-menu-item) {
   padding-left: 52px !important;
+}
+
+/* 展开子菜单标题箭头颜色 */
+:deep(.el-sub-menu__icon-arrow) {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* 暗色模式下侧边栏更深更沉浸 */
+html.dark .sidebar-logo {
+  border-bottom-color: rgba(51, 65, 85, 0.4);
 }
 </style>

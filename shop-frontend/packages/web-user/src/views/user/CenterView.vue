@@ -1,10 +1,12 @@
 <template>
-  <!-- 个人中心页 - 参考V1原型设计 -->
+  <!-- 个人中心页 - 玻璃拟态风（Glassmorphism + 翡翠青绿渐变） -->
   <div class="user-center">
-    <!-- 用户信息卡片 -->
+    <!-- 用户信息卡片：翡翠渐变玻璃卡 -->
     <div class="user-card">
+      <!-- 装饰性光晕 -->
+      <div class="card-glow"></div>
       <div class="user-info">
-        <!-- 用户头像 -->
+        <!-- 用户头像：玻璃白底圆形 -->
         <div class="user-avatar">
           <img v-if="userInfo?.avatar" :src="userInfo.avatar" alt="头像" />
           <span v-else>👤</span>
@@ -23,7 +25,7 @@
       </div>
     </div>
 
-    <!-- 订单快捷入口 -->
+    <!-- 订单快捷入口：玻璃面板 -->
     <div class="order-shortcut">
       <div class="shortcut-header">
         <h3 class="shortcut-title">我的订单</h3>
@@ -68,7 +70,7 @@
       </div>
     </div>
 
-    <!-- 功能入口 -->
+    <!-- 功能入口：玻璃面板 -->
     <div class="service-section">
       <h3 class="section-title">我的服务</h3>
       <div class="service-grid">
@@ -89,7 +91,8 @@
 <script setup lang="ts">
 /**
  * 个人中心页
- * 参考V1原型设计：用户信息卡片、订单快捷入口、功能网格
+ * 玻璃拟态风（Glassmorphism + 翡翠青绿渐变）
+ * 用户信息卡片、订单快捷入口、功能网格全部玻璃化
  *
  * 功能说明（小白版）：
  * 1. 从用户Store获取当前登录用户的信息（昵称、头像、手机号）
@@ -188,36 +191,61 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+/* ==================== 根容器 ==================== */
+/* 整页淡入上浮动效 */
 .user-center {
   padding: 0;
+  animation: fadeInUp 0.5s ease both;
 }
 
-/* ==================== 用户信息卡片 ==================== */
+/* ==================== 用户信息卡片：翡翠渐变玻璃卡 ==================== */
 .user-card {
-  background: linear-gradient(135deg, #E4393C 0%, #C62F32 100%);
+  position: relative;
+  overflow: hidden;
+  background: var(--gradient-brand);
   border-radius: var(--radius-card);
-  padding: 24px;
+  padding: 32px 28px;
   margin-bottom: 24px;
   color: #fff;
+  box-shadow: 0 12px 32px rgba(16, 185, 129, 0.25);
+}
+
+/* 装饰性光晕：右上角圆形光斑 */
+.card-glow {
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.25) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
 }
 
 .user-info {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 16px;
+  z-index: 1;
 }
 
+/* 用户头像：玻璃白底圆形 */
 .user-avatar {
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 255, 255, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 32px;
   overflow: hidden;
   flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .user-avatar img {
@@ -231,66 +259,110 @@ onMounted(async () => {
   min-width: 0;
 }
 
+/* 用户名：白色加粗 */
 .user-name {
   font-size: 20px;
-  font-weight: bold;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .user-meta {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
+/* 手机号：半透明白色胶囊 */
 .user-phone {
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.9);
+  padding: 3px 10px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-pill);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
+/* 退出登录按钮：玻璃白边胶囊 */
 .user-settings {
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 14px;
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 13px;
   cursor: pointer;
-  transition: color 0.2s;
+  transition: all var(--transition-base);
   flex-shrink: 0;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: var(--radius-pill);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .user-settings:hover {
-  color: #fff;
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-/* ==================== 订单快捷入口 ==================== */
+/* ==================== 订单快捷入口：玻璃面板 ==================== */
 .order-shortcut {
-  background: #fff;
-  border: 1px solid var(--color-border);
+  background: var(--color-glass);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid var(--color-glass-border);
   border-radius: var(--radius-card);
-  padding: 20px;
+  padding: 24px;
   margin-bottom: 24px;
+  box-shadow: var(--shadow-sm);
 }
 
 .shortcut-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-glass-border);
 }
 
+/* 标题：翡翠色加粗 */
 .shortcut-title {
   font-size: 16px;
-  font-weight: 500;
+  font-weight: 600;
   margin: 0;
+  color: var(--color-text);
+  position: relative;
+  padding-left: 12px;
 }
 
+/* 标题左侧翡翠竖条装饰 */
+.shortcut-title::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 16px;
+  background: var(--gradient-brand);
+  border-radius: var(--radius-pill);
+}
+
+/* 全部订单链接 */
 .shortcut-more {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--color-text-muted);
   cursor: pointer;
-  transition: color 0.2s;
+  transition: all var(--transition-base);
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
 }
 
 .shortcut-more:hover {
   color: var(--color-primary);
+  background: rgba(16, 185, 129, 0.08);
 }
 
 .order-grid {
@@ -299,99 +371,203 @@ onMounted(async () => {
   gap: 16px;
 }
 
+/* 订单入口：hover 上浮 + 翡翠色 */
 .order-entry {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   cursor: pointer;
+  padding: 12px 8px;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-base);
+}
+
+.order-entry:hover {
+  background: rgba(16, 185, 129, 0.06);
+  transform: translateY(-2px);
 }
 
 .order-entry:hover .entry-label {
   color: var(--color-primary);
 }
 
+/* 图标 wrapper：玻璃圆形 */
 .entry-icon-wrapper {
   position: relative;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-glass);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--color-glass-border);
+  transition: all var(--transition-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.order-entry:hover .entry-icon-wrapper {
+  background: var(--gradient-brand-soft);
+  border-color: rgba(16, 185, 129, 0.3);
+  transform: scale(1.08);
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.15);
 }
 
 .entry-icon {
-  font-size: 28px;
+  font-size: 26px;
+  line-height: 1;
 }
 
 .entry-label {
   font-size: 12px;
   color: var(--color-text-secondary);
-  transition: color 0.2s;
+  transition: color var(--transition-base);
+  font-weight: 500;
 }
 
-/* ==================== 功能入口 ==================== */
+/* ==================== 功能入口：玻璃面板 ==================== */
 .service-section {
-  background: #fff;
-  border: 1px solid var(--color-border);
+  background: var(--color-glass);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid var(--color-glass-border);
   border-radius: var(--radius-card);
-  padding: 20px;
+  padding: 24px;
   margin-bottom: 24px;
+  box-shadow: var(--shadow-sm);
 }
 
+/* 标题：翡翠色加粗 + 左侧装饰条 */
 .section-title {
   font-size: 16px;
-  font-weight: 500;
-  margin: 0 0 16px;
+  font-weight: 600;
+  margin: 0 0 20px;
+  color: var(--color-text);
+  position: relative;
+  padding-left: 12px;
+}
+
+.section-title::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 16px;
+  background: var(--gradient-brand);
+  border-radius: var(--radius-pill);
 }
 
 .service-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 24px;
+  gap: 20px;
 }
 
+/* 服务项：hover 上浮 */
 .service-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   cursor: pointer;
+  padding: 16px 8px;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-base);
+}
+
+.service-item:hover {
+  background: rgba(16, 185, 129, 0.06);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-sm);
 }
 
 .service-item:hover .service-name {
   color: var(--color-primary);
 }
 
+/* 服务图标：圆角方块 + hover 放大 */
 .service-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
-  transition: transform 0.2s;
+  font-size: 22px;
+  transition: all var(--transition-base);
+  box-shadow: var(--shadow-sm);
 }
 
 .service-item:hover .service-icon {
-  transform: scale(1.1);
+  transform: scale(1.1) rotate(-5deg);
+  box-shadow: var(--shadow-md);
 }
 
 .service-name {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--color-text-secondary);
-  transition: color 0.2s;
+  transition: color var(--transition-base);
+  font-weight: 500;
 }
 
 /* ==================== 响应式适配 ==================== */
 @media (max-width: 768px) {
-  .service-grid {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
+  .user-card {
+    padding: 24px 20px;
   }
 
-  .order-grid {
+  .user-avatar {
+    width: 56px;
+    height: 56px;
+    font-size: 28px;
+  }
+
+  .user-name {
+    font-size: 18px;
+  }
+
+  .service-grid {
+    grid-template-columns: repeat(4, 1fr);
     gap: 12px;
   }
 
+  .order-grid {
+    gap: 8px;
+  }
+
+  .entry-icon-wrapper {
+    width: 48px;
+    height: 48px;
+  }
+
   .entry-icon {
-    font-size: 24px;
+    font-size: 22px;
+  }
+
+  .service-icon {
+    width: 44px;
+    height: 44px;
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .service-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+
+  .service-item {
+    padding: 12px 4px;
+  }
+
+  .service-name {
+    font-size: 12px;
   }
 }
 </style>

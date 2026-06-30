@@ -371,14 +371,19 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* ==================== 布局根容器 ==================== */
 .default-layout {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  /* 页面背景叠加 mesh 光晕，营造氛围感 */
   background-color: var(--color-bg);
+  background-image: var(--gradient-mesh);
+  background-attachment: fixed;
 }
 
-/* ==================== 顶部导航栏 ==================== */
+/* ==================== 顶部玻璃导航栏 ==================== */
+/* 导航栏默认透明（首页 Hero 区上方），滚动或非首页时变为毛玻璃白 */
 .layout-header {
   position: fixed;
   top: 0;
@@ -386,28 +391,38 @@ onUnmounted(() => {
   right: 0;
   z-index: 100;
   background: transparent;
-  transition: var(--transition-base);
+  transition: background 0.4s var(--ease-out), box-shadow 0.4s var(--ease-out),
+              backdrop-filter 0.4s var(--ease-out);
 }
 
-/* 非首页或滚动后：白色背景 + 阴影 */
+/* 滚动后 / 非首页：毛玻璃白 + 柔和阴影 + 细底边 */
 .layout-header.scrolled,
 .default-layout:not(.is-home) .layout-header {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
+  background: var(--color-glass);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   box-shadow: var(--shadow-sm);
+  border-bottom: 1px solid var(--color-glass-border);
+}
+
+/* 滚动后进一步加强模糊与阴影 */
+.layout-header.scrolled {
+  background: var(--color-glass-strong);
+  box-shadow: var(--shadow-md);
 }
 
 .header-content {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 0 var(--space-lg);
-  height: 72px;
+  padding: 0 var(--space-xl);
+  height: 68px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--space-xl);
 }
 
-/* Logo */
+/* ---------- Logo（渐变文字） ---------- */
 .logo {
   text-decoration: none;
   display: flex;
@@ -416,78 +431,96 @@ onUnmounted(() => {
 
 .logo-text {
   font-family: var(--font-heading);
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--color-primary);
-  letter-spacing: 0.05em;
-  transition: var(--transition-base);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  /* 翡翠青绿渐变文字 */
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  transition: transform 0.3s var(--ease-out);
 }
 
-/* 首页未滚动时，Logo文字变白（适配深色Hero背景） */
+.logo:hover .logo-text {
+  transform: scale(1.03);
+}
+
+/* 首页未滚动时，Logo 变白（适配深色 Hero 背景） */
 .default-layout.is-home .layout-header:not(.scrolled) .logo-text {
+  background: none;
+  -webkit-text-fill-color: #fff;
   color: #fff;
 }
 
-/* 导航菜单 */
+/* ---------- 导航菜单（胶囊式） ---------- */
 .nav-menu {
   display: flex;
   align-items: center;
-  gap: var(--space-xl);
+  gap: 4px;
+  flex: 1;
 }
 
 .nav-link {
   font-size: var(--font-size-body);
-  color: var(--color-text);
+  font-weight: 600;
+  color: var(--color-text-secondary);
   text-decoration: none;
-  padding: 8px 0;
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
   position: relative;
-  transition: var(--transition-base);
-  letter-spacing: 0.02em;
+  transition: all 0.3s var(--ease-out);
+  letter-spacing: 0.01em;
 }
 
-/* 首页未滚动时，导航文字变白 */
+.nav-link:hover {
+  color: var(--color-primary);
+  background: var(--gradient-brand-soft);
+}
+
+.nav-link.active {
+  color: var(--color-primary-dark);
+  background: var(--gradient-brand-soft);
+}
+
+/* 激活态下方小渐变条 */
+.nav-link.active::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 18px;
+  height: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--gradient-brand);
+}
+
+/* 首页未滚动时，导航文字变白（适配深色 Hero） */
 .default-layout.is-home .layout-header:not(.scrolled) .nav-link {
   color: rgba(255, 255, 255, 0.9);
+  background: transparent;
 }
 
 .default-layout.is-home .layout-header:not(.scrolled) .nav-link:hover {
   color: #fff;
+  background: rgba(255, 255, 255, 0.12);
 }
 
-.nav-link:hover,
-.nav-link.active {
-  color: var(--color-primary);
+.default-layout.is-home .layout-header:not(.scrolled) .nav-link.active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.18);
 }
 
-.default-layout:not(.is-home) .nav-link:hover,
-.default-layout:not(.is-home) .nav-link.active,
-.layout-header.scrolled .nav-link:hover,
-.layout-header.scrolled .nav-link.active {
-  color: var(--color-primary);
+.default-layout.is-home .layout-header:not(.scrolled) .nav-link.active::after {
+  background: #fff;
 }
 
-/* 导航链接下划线动画 */
-.nav-link::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 0;
-  height: 1px;
-  background: currentColor;
-  transition: width 0.3s ease;
-}
-
-.nav-link:hover::after,
-.nav-link.active::after {
-  width: 100%;
-}
-
-/* 右侧操作图标 */
+/* ---------- 右侧操作图标（玻璃圆钮） ---------- */
 .header-actions {
   display: flex;
   align-items: center;
-  gap: var(--space-lg);
+  gap: 8px;
 }
 
 .action-item {
@@ -495,49 +528,73 @@ onUnmounted(() => {
   cursor: pointer;
   display: flex;
   align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
   color: var(--color-text);
-  transition: var(--transition-base);
+  transition: all 0.3s var(--ease-out);
+}
+
+/* 玻璃态时图标钮带半透明背景 */
+.layout-header.scrolled .action-item,
+.default-layout:not(.is-home) .action-item {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.action-item:hover {
+  color: var(--color-primary);
+  background: var(--gradient-brand-soft);
+  transform: translateY(-2px);
 }
 
 /* 首页未滚动时，图标变白 */
 .default-layout.is-home .layout-header:not(.scrolled) .action-item {
   color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .default-layout.is-home .layout-header:not(.scrolled) .action-item:hover {
   color: #fff;
+  background: rgba(255, 255, 255, 0.22);
 }
 
-.action-item:hover {
-  color: var(--color-primary);
-}
-
-/* 购物车角标 */
+/* 购物车 / 通知角标：渐变胶囊 */
 .cart-badge {
   position: absolute;
-  top: -6px;
-  right: -8px;
-  background: var(--color-accent);
-  color: #fff;
-  font-size: 10px;
-  border-radius: var(--radius-pill);
+  top: -2px;
+  right: -2px;
   min-width: 18px;
   height: 18px;
-  line-height: 18px;
-  text-align: center;
   padding: 0 5px;
-  font-weight: 600;
+  border-radius: var(--radius-pill);
+  background: var(--gradient-brand);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--color-bg);
+  box-shadow: var(--shadow-sm);
 }
 
-/* ==================== 搜索下拉框 ==================== */
+/* 首页未滚动时角标边框适配深色背景 */
+.default-layout.is-home .layout-header:not(.scrolled) .cart-badge {
+  border-color: rgba(15, 23, 42, 0.4);
+}
+
+/* ==================== 搜索下拉框（玻璃面板） ==================== */
 .search-dropdown {
   position: absolute;
   top: calc(100% + 12px);
   right: 0;
   width: 420px;
-  background: #fff;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  background: var(--color-glass-strong);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   padding: var(--space-lg);
   z-index: 200;
@@ -549,11 +606,13 @@ onUnmounted(() => {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-pill);
   overflow: hidden;
+  background: rgba(255, 255, 255, 0.7);
   transition: var(--transition-base);
 }
 
 .search-box:focus-within {
   border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
 }
 
 .search-input {
@@ -562,6 +621,7 @@ onUnmounted(() => {
   border: none;
   padding: 0 var(--space-md);
   font-size: var(--font-size-body);
+  font-family: var(--font-body);
   outline: none;
   background: transparent;
   color: var(--color-text);
@@ -575,7 +635,7 @@ onUnmounted(() => {
   width: 44px;
   height: 44px;
   border: none;
-  background: var(--color-primary);
+  background: var(--gradient-brand);
   color: #fff;
   cursor: pointer;
   display: flex;
@@ -585,7 +645,7 @@ onUnmounted(() => {
 }
 
 .search-btn:hover {
-  background: var(--color-primary-hover);
+  background: var(--gradient-brand-hover);
 }
 
 /* 热门搜索词 */
@@ -607,33 +667,34 @@ onUnmounted(() => {
   font-size: var(--font-size-small);
   color: var(--color-text-secondary);
   text-decoration: none;
-  padding: 4px 10px;
+  padding: 4px 12px;
   border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.5);
   transition: var(--transition-base);
 }
 
 .hot-word:hover {
   color: var(--color-primary);
-  background: var(--color-bg-secondary);
+  background: var(--gradient-brand-soft);
 }
 
-/* 搜索下拉框动画 */
+/* 搜索下拉框淡入动画 */
 .search-dropdown-enter-active,
 .search-dropdown-leave-active {
-  transition: all 0.3s ease;
+  transition: all 0.3s var(--ease-out);
 }
 
 .search-dropdown-enter-from,
 .search-dropdown-leave-to {
   opacity: 0;
-  transform: translateY(-10px);
+  transform: translateY(-10px) scale(0.98);
 }
 
 /* ==================== 主内容区 ==================== */
 .layout-main {
   flex: 1;
   /* 非首页时，顶部留出导航栏高度 */
-  padding-top: 72px;
+  padding-top: 68px;
 }
 
 /* 首页不需要顶部padding（Hero区从顶部开始） */
@@ -651,10 +712,10 @@ onUnmounted(() => {
 .footer-content {
   max-width: 1280px;
   margin: 0 auto;
-  padding: var(--space-2xl) var(--space-lg) var(--space-lg);
+  padding: var(--space-2xl) var(--space-xl) var(--space-lg);
 }
 
-/* 服务承诺 */
+/* 服务承诺（玻璃卡片网格） */
 .footer-services {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -669,13 +730,23 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   gap: var(--space-xs);
+  padding: var(--space-md);
+  border-radius: var(--radius-lg);
+  background: var(--color-glass);
+  border: 1px solid var(--color-glass-border);
+  transition: var(--transition-base);
+}
+
+.service-item:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
 }
 
 .service-title {
   font-size: var(--font-size-body);
-  font-weight: 600;
+  font-weight: 700;
   color: var(--color-text);
-  letter-spacing: 0.05em;
+  letter-spacing: 0.03em;
 }
 
 .service-desc {
@@ -698,9 +769,9 @@ onUnmounted(() => {
 }
 
 .footer-col h4 {
-  font-family: var(--font-body);
+  font-family: var(--font-heading);
   font-size: var(--font-size-small);
-  font-weight: 600;
+  font-weight: 700;
   color: var(--color-text);
   margin: 0 0 var(--space-xs);
   letter-spacing: 0.05em;
@@ -735,6 +806,10 @@ onUnmounted(() => {
 @media (max-width: 768px) {
   .nav-menu {
     display: none;
+  }
+
+  .header-content {
+    padding: 0 var(--space-md);
   }
 
   .footer-services {
