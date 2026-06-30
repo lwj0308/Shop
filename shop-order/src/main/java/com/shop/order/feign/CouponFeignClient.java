@@ -22,7 +22,7 @@ import java.math.BigDecimal;
  * 2. 取消订单时回退优惠券（rollbackCoupon），恢复优惠券为未使用状态
  * </p>
  */
-@FeignClient(name = "shop-user", fallbackFactory = CouponFeignClientFallbackFactory.class)
+@FeignClient(name = "shop-user", contextId = "orderCoupon", fallbackFactory = CouponFeignClientFallbackFactory.class)
 public interface CouponFeignClient {
 
     /**

@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RequestBody;
  * 降级时只记录日志，通知可以后续补偿。
  * </p>
  */
-@FeignClient(name = "shop-user", path = "/user/notification", fallbackFactory = NotificationFeignClientFallbackFactory.class)
+@FeignClient(name = "shop-user", contextId = "orderNotification", path = "/user/notification", fallbackFactory = NotificationFeignClientFallbackFactory.class)
 public interface NotificationFeignClient {
 
     /**

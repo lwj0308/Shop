@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.PathVariable;
  * 下单时需要获取地址信息来创建地址快照。
  * </p>
  */
-@FeignClient(name = "shop-user", fallbackFactory = UserFeignClientFallbackFactory.class)
+@FeignClient(name = "shop-user", contextId = "orderUser", fallbackFactory = UserFeignClientFallbackFactory.class)
 public interface UserFeignClient {
 
     /**

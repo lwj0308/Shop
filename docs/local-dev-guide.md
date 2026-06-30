@@ -1,4 +1,4 @@
-﻿# ShopMall 商城 - 本地开发手册（Windows）
+# ShopMall 商城 - 本地开发手册（Windows）
 
 ## 目录
 
@@ -223,10 +223,14 @@ mvn clean install -DskipTests
 | 2 | shop-user | 8845 | 用户服务 |
 | 3 | shop-merchant | 8846 | 商家服务 |
 | 4 | shop-product | 8847 | 商品服务 |
-| 5 | shop-cart | 8848 | 购物车服务 |
-| 6 | shop-order | 8849 | 订单服务 |
-| 7 | shop-payment | 8850 | 支付服务 |
-| 8 | shop-admin | 8851 | 管理后台服务 |
+| 5 | shop-marketing | 8852 | 营销服务（优惠券/促销，被 user/order/admin 依赖） |
+| 6 | shop-seckill | 8853 | 秒杀服务（被 order/admin 依赖） |
+| 7 | shop-cart | 8848 | 购物车服务 |
+| 8 | shop-order | 8849 | 订单服务（依赖 marketing/seckill/product/user/merchant/cart） |
+| 9 | shop-payment | 8850 | 支付服务 |
+| 10 | shop-admin | 8851 | 管理后台服务（依赖前面所有服务） |
+
+> **重要**：shop-marketing 和 shop-seckill 必须在 shop-order / shop-admin 之前启动。虽然 Feign 客户端有降级兜底，但先启动被依赖方可以避免启动期告警。
 
 ### 4.3 在IDEA中启动（推荐）
 
@@ -510,6 +514,38 @@ UPDATE shop_user.user SET password = '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM
 brokerIP1 = 127.0.0.1
 ```
 然后重启：`docker-compose restart rocketmq-broker`
+
+### Q9: 微服务启动报错 "FactoryBean threw exception on object creation" / Feign 客户端创建失败
+
+**原因**：该服务（如 shop-user）缺少 `spring-cloud-starter-loadbalancer` 依赖。`@FeignClient(name = "shop-marketing")` 靠服务名从 Nacos 选实例，没有 loadbalancer 就无法创建 Feign 代理 Bean。
+
+**解决**：在报错服务的 `pom.xml` 中加入依赖（与 OpenFeign 配套使用）：
+```xml
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-loadbalancer</artifactId>
+</dependency>
+```
+然后重新编译：`mvn clean install -DskipTests -pl <报错的服务名>`，再重启服务。
+
+> 项目中所有用到 Feign 的服务都应同时引入 `spring-cloud-starter-openfeign` 和 `spring-cloud-starter-loadbalancer`。
+
+### Q10: shop-order / shop-admin 启动失败提示找不到 shop-marketing / shop-seckill
+
+**原因**：模块拆分后新增了 shop-marketing（8852）和 shop-seckill（8853），但未按启动顺序先启动它们。Feign 客户端虽有降级兜底，但启动期缺少被依赖服务仍可能告警。
+
+**解决**：按文档「4.2 启动顺序」表格依次启动 10 个微服务，确保 shop-marketing、shop-seckill 在 shop-order / shop-admin 之前启动。
+
+### Q11: 启动报错 "bean 'xxx.FeignClientSpecification' could not be registered ... already been defined"
+
+**原因**：同一个微服务里多个 `@FeignClient` 指向相同的服务名（如 shop-order 里 CouponFeignClient、UserFeignClient、NotificationFeignClient 都指向 `shop-user`），Spring Cloud 会为每个 Feign 客户端注册一个名为 `{服务名}.FeignClientSpecification` 的 Bean，名字重复就冲突。
+
+**解决**：给每个 `@FeignClient` 加上唯一的 `contextId` 属性，让它们各自独立。例如：
+```java
+@FeignClient(name = "shop-user", contextId = "orderCoupon", fallbackFactory = ...)
+@FeignClient(name = "shop-user", contextId = "orderUser", fallbackFactory = ...)
+```
+项目中已统一修复：shop-order 的 3 个指向 shop-user 的客户端、shop-admin 的 2 个指向 shop-marketing + 2 个指向 shop-user 的客户端都已加上 contextId。
 
 ---
 

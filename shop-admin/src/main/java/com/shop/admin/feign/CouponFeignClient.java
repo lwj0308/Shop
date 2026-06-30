@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
  * shop-marketing 校验登录态后放行（管理端接口不需要商家身份，只要登录即可）。
  * </p>
  */
-@FeignClient(name = "shop-marketing", path = "/marketing/coupon", fallbackFactory = CouponFeignClientFallbackFactory.class)
+@FeignClient(name = "shop-marketing", contextId = "adminCoupon", path = "/marketing/coupon", fallbackFactory = CouponFeignClientFallbackFactory.class)
 public interface CouponFeignClient {
 
     /**

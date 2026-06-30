@@ -37,10 +37,17 @@
             <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
         </dependency>
 
-        <!-- OpenFeign：声明式HTTP客户端，用于调用其他微服务（如调用shop-merchant查询优惠券模板） -->
+        <!-- OpenFeign：声明式HTTP客户端，用于调用其他微服务（如调用shop-marketing查询优惠券模板） -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-openfeign</artifactId>
+        </dependency>
+
+        <!-- Spring Cloud LoadBalancer：配合 OpenFeign 按服务名从 Nacos 选实例 -->
+        <!-- 没有它，@FeignClient(name="shop-marketing") 会因无法解析服务名而启动失败 -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-loadbalancer</artifactId>
         </dependency>
 
         <!-- MyBatis-Plus：不用写XML就能操作数据库 -->

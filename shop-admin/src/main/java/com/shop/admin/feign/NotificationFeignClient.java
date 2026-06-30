@@ -29,7 +29,7 @@ import org.springframework.web.bind.annotation.RequestParam;
  * - 发送通知：降级返回失败提示
  * </p>
  */
-@FeignClient(name = "shop-user", path = "/user/notification", fallbackFactory = NotificationFeignClientFallbackFactory.class)
+@FeignClient(name = "shop-user", contextId = "adminNotification", path = "/user/notification", fallbackFactory = NotificationFeignClientFallbackFactory.class)
 public interface NotificationFeignClient {
 
     /**

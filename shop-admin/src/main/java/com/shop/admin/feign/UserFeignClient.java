@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RequestParam;
  * 不会因为用户服务挂了就导致管理后台也跟着挂。
  * </p>
  */
-@FeignClient(name = "shop-user", path = "/user", fallbackFactory = UserFeignClientFallbackFactory.class)
+@FeignClient(name = "shop-user", contextId = "adminUser", path = "/user", fallbackFactory = UserFeignClientFallbackFactory.class)
 public interface UserFeignClient {
 
     /**
