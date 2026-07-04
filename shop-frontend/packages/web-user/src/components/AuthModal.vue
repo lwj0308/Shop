@@ -445,11 +445,11 @@ onUnmounted(() => {
 .pending-hint {
   text-align: center;
   font-size: var(--font-size-small);
-  color: var(--color-accent);
+  color: var(--color-primary-dark);
   margin-bottom: var(--space-md);
   padding: var(--space-sm) var(--space-md);
-  background: rgba(201, 169, 97, 0.08);
-  border-radius: var(--radius-sm);
+  background: var(--gradient-brand-soft);
+  border-radius: var(--radius-pill);
 }
 
 /* Tab切换 */
@@ -518,54 +518,52 @@ onUnmounted(() => {
   color: var(--color-primary);
 }
 
-/* 提交按钮 */
+/* 提交按钮：翡翠渐变 + 光泽动效 */
 .submit-btn {
   width: 100%;
   height: 44px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   font-size: var(--font-size-body);
-  background: var(--color-primary);
-  border-color: var(--color-primary);
+  font-weight: 600;
+  background: var(--gradient-brand);
+  border: none;
   letter-spacing: 0.05em;
+  color: #fff;
+  transition: all 0.3s var(--ease-out);
 }
 
 .submit-btn:hover {
-  background: var(--color-primary-hover);
-  border-color: var(--color-primary-hover);
+  background: var(--gradient-brand-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-glow);
 }
 
-/* 验证码行 */
-.code-row {
-  display: flex;
-  gap: var(--space-sm);
-  width: 100%;
-}
-
-.code-row .el-input {
-  flex: 1;
-}
-
+/* 验证码按钮 */
 .code-btn {
   width: 120px;
   height: 40px;
   border: 1px solid var(--color-primary);
   color: var(--color-primary);
-  background: #fff;
-  border-radius: var(--radius-sm);
+  background: var(--gradient-brand-soft);
+  border-radius: var(--radius-pill);
   font-size: var(--font-size-small);
+  font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
-  transition: var(--transition-base);
+  transition: all 0.3s var(--ease-out);
 }
 
 .code-btn:hover:not(:disabled) {
-  background: var(--color-bg-secondary);
+  background: var(--gradient-brand);
+  color: #fff;
+  border-color: transparent;
 }
 
 .code-btn:disabled {
   color: var(--color-text-muted);
   border-color: var(--color-border);
+  background: rgba(255, 255, 255, 0.5);
   cursor: not-allowed;
 }
 
@@ -599,7 +597,17 @@ onUnmounted(() => {
 </style>
 
 <style>
-/* 全局样式：覆盖 Element Plus Dialog 样式 */
+/* 全局样式：覆盖 Element Plus Dialog 样式 - 玻璃拟态 */
+.auth-modal .el-dialog {
+  background: var(--color-glass-strong);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
 .auth-modal .el-dialog__header {
   padding: 0;
   margin: 0;
@@ -618,9 +626,15 @@ onUnmounted(() => {
 .auth-modal .el-dialog__headerbtn .el-dialog__close {
   font-size: 20px;
   color: var(--color-text-muted);
+  transition: color 0.3s ease;
 }
 
 .auth-modal .el-dialog__headerbtn:hover .el-dialog__close {
   color: var(--color-primary);
+}
+
+/* 输入框聚焦时用翡翠绿边框 + 柔和光晕 */
+.auth-modal .el-input__wrapper:focus-within {
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12) !important;
 }
 </style>

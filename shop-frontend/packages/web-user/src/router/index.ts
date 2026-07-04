@@ -13,7 +13,7 @@ import { isAuthenticated, cancelAllRequests } from '@shop/shared'
  * 在这里配置路由名称，这些页面即使未登录也能访问
  * 方便后续新增页面时快速配置
  */
-const WHITE_LIST: string[] = ['Home', 'Category', 'ProductDetail', 'Search', 'Login']
+const WHITE_LIST: string[] = ['Home', 'Category', 'ProductDetail', 'Search']
 
 /** 路由规则定义 */
 const routes: RouteRecordRaw[] = [
@@ -159,15 +159,15 @@ const routes: RouteRecordRaw[] = [
       },
     ],
   },
+  // /login 和 /register 直接重定向到首页
+  // 设计意图：打开页面不自动弹登录窗，只有用户主动操作（加购物车、访问需登录页等）时才弹窗
   {
     path: '/login',
-    name: 'Login',
-    component: () => import('@/views/user/LoginView.vue'),
-    meta: { title: '登录' },
+    redirect: '/',
   },
   {
     path: '/register',
-    redirect: { path: '/login', query: { tab: 'register' } },
+    redirect: '/',
   },
 ]
 
@@ -205,12 +205,6 @@ router.beforeEach(async (to, _from, next) => {
       },
     })
     next(false)  // 取消当前导航，留在原页面
-    return
-  }
-
-  // 已登录访问登录页 → 跳转首页
-  if (loggedIn && to.name === 'Login') {
-    next({ name: 'Home' })
     return
   }
 

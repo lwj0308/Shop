@@ -27,7 +27,7 @@
 Shop/
 ├── shop-common/         # 公共模块：统一返回、异常处理、上下文、工具类
 ├── shop-model/          # 数据模型：Entity/DTO/VO/Enum
-├── shop-gateway/        # API网关 (8844)：路由、鉴权、CORS
+├── shop-gateway/        # API网关 (8844)：路由、鉴权、限流、CORS
 ├── shop-user/           # 用户服务 (8845)：注册登录、地址、收藏、足迹
 ├── shop-merchant/       # 商家服务 (8846)：入驻、店铺管理、结算提现
 ├── shop-product/        # 商品服务 (8847)：分类品牌、SPU/SKU、ES搜索、评价
@@ -130,6 +130,7 @@ pnpm dev:admin      # 管理端
 - **异步解耦**：RocketMQ 处理延时消息、商品 ES 同步、支付回调通知
 - **搜索引擎**：ES + ik 中文分词，高亮/聚合/搜索建议
 - **统一鉴权**：Sa-Token + Header 防伪造 + 白名单机制
+- **接口限流**：Redis + Lua 滑动窗口算法，支持 IP/接口双维度分级限流（认证 5 QPS、秒杀 3 QPS、默认 50 QPS），Redis 异常自动降级放行
 - **RBAC 权限**：用户-角色-权限三层结构 + 数据权限控制
 - **订单状态机**：严格的状态流转校验 + 全量变更日志
 - **配置中心**：Nacos 集中管理 + 热更新，分层共享 (common.yml + 服务独立配置)

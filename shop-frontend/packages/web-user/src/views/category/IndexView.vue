@@ -92,9 +92,11 @@
             <!-- loading时显示占位元素，避免高度变化抖动 -->
             <div v-if="loading && productList.length === 0" class="loading-placeholder"></div>
             <ProductCard
-              v-for="product in productList"
+              v-for="(product, index) in productList"
               :key="product.id"
               :product="product"
+              :style="{ animationDelay: `${index * 50}ms` }"
+              class="product-card-item"
             />
             <!-- 空状态 -->
             <div v-if="!loading && productList.length === 0" class="empty-state">
@@ -266,6 +268,9 @@ const loadProducts = async () => {
     total.value = 0
   } finally {
     loading.value = false
+    // 切换分页/分类/排序后，滚动到页面顶部，让用户看到新列表的第一行
+    // 避免用户切换页码后还停留在页面底部
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 }
 
@@ -404,11 +409,22 @@ onMounted(async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 0 20px;
-  border-bottom: 1px solid var(--color-border);
+  padding: 12px 16px 20px;
+  border-bottom: 1px solid var(--color-glass-border);
   margin-bottom: 32px;
   flex-wrap: wrap;
   gap: 16px;
+  /* 固定在顶部，与左侧分类树同步（top 值与 .category-sidebar 一致） */
+  position: sticky;
+  top: 96px;
+  z-index: 10;
+  /* 玻璃拟态背景：半透明 + 模糊，符合项目设计系统 */
+  background: var(--color-glass);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-radius: var(--radius-lg);
+  /* sticky 时柔和阴影增强层次感 */
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
 }
 
 .breadcrumb {
@@ -454,19 +470,29 @@ onMounted(async () => {
   color: var(--color-text-secondary);
   font-size: 12px;
   cursor: pointer;
-  transition: all var(--transition-base);
+  /* 0.2s ease-out 适合微交互（hover/click 反馈） */
+  transition: all 0.2s var(--ease-out);
   letter-spacing: 0.05em;
   text-transform: uppercase;
+  border-radius: var(--radius-pill);
 }
 
+/* hover：轻微上移 + 边框变色，提供悬停反馈 */
 .sort-btn:hover {
   border-color: var(--color-primary);
   color: var(--color-primary);
+  transform: translateY(-1px);
 }
 
+/* active：按下缩小，模拟物理按压感 */
+.sort-btn:active {
+  transform: translateY(0) scale(0.97);
+}
+
+/* 激活态：翡翠渐变背景，与品牌设计系统一致 */
 .sort-btn.active {
-  border-color: var(--color-primary);
-  background: var(--color-primary);
+  border-color: transparent;
+  background: var(--gradient-brand);
   color: #fff;
 }
 
@@ -498,6 +524,24 @@ onMounted(async () => {
   /* 固定高度，避免空状态时页面抖动 */
   min-height: 400px;
   padding: 0;
+}
+
+/* 商品卡片错位淡入动画：每次加载新列表时，卡片依次从下方淡入 */
+/* animation-delay 在 template 中通过 :style 内联设置（index * 50ms） */
+@keyframes productFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* backwards：动画延迟期间应用 from 状态（opacity:0），避免卡片闪现 */
+.product-card-item {
+  animation: productFadeIn 0.4s var(--ease-out) backwards;
 }
 
 /* 分页 */

@@ -118,8 +118,11 @@ gateway:
     - /api/admin/auth/captcha
     # 商品浏览相关接口：公开访问，不需要登录
     - /api/product/list
-    - /api/product/*
+    - /api/product/*              # 商品详情（如 /api/product/123），只匹配一层路径
     - /api/product/search
+    - /api/product/suggest        # 搜索建议（输入框联想）
+    - /api/product/hot-keywords   # 热门搜索词
+    - /api/product/recommend/**   # 商品推荐（热销/新品/相关/猜你喜欢）
     - /api/product/category/**
     - /api/product/brand/**
     - /api/product/comment/**
@@ -135,6 +138,42 @@ gateway:
   cors:
     # 生产环境允许的前端域名（多个用逗号分隔）
     allowed-origins: http://localhost:3000,http://localhost:8080
+  # 限流配置（Redis + Lua 滑动窗口实现，详见 RateLimitFilter）
+  rate-limit:
+    # 限流总开关：true=启用，false=关闭（调试时可临时关闭）
+    enabled: true
+    # 默认IP级别QPS：每个IP每秒允许的最大请求数
+    default-ip-qps: 50
+    # 默认接口级别QPS：每个接口每秒允许的最大请求数
+    default-path-qps: 200
+    # 自定义限流规则（按路径匹配，匹配到的优先使用规则中的QPS）
+    # 排在前面的规则优先匹配，没匹配到的使用默认值
+    rules:
+      # 认证接口：限制严格，防止密码爆破和短信轰炸
+      - path-pattern: /api/user/auth/**
+        ip-qps: 5
+        path-qps: 50
+      - path-pattern: /api/merchant/auth/**
+        ip-qps: 5
+        path-qps: 50
+      - path-pattern: /api/admin/auth/**
+        ip-qps: 5
+        path-qps: 50
+      # 秒杀接口：IP限制严格（防刷单），接口总限制宽松（允许高并发）
+      - path-pattern: /api/seckill/grab/**
+        ip-qps: 3
+        path-qps: 1000
+      # 下单支付接口：限制适中，防止恶意下单占用库存
+      - path-pattern: /api/order/**
+        ip-qps: 10
+        path-qps: 100
+      - path-pattern: /api/payment/**
+        ip-qps: 10
+        path-qps: 100
+      # 评论提交接口：限制严格，防止刷评
+      - path-pattern: /api/product/comment/create
+        ip-qps: 3
+        path-qps: 50
 
 # Sa-Token 配置
 sa-token:

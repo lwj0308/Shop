@@ -143,6 +143,13 @@
       </div>
     </footer>
 
+    <!-- 回到顶部悬浮按钮：向下滚动超过 400px 后显示 -->
+    <transition name="back-to-top">
+      <div v-if="showBackToTop" class="back-to-top" @click="scrollToTop">
+        <el-icon :size="20"><Top /></el-icon>
+      </div>
+    </transition>
+
     <!-- 全局登录弹窗：未登录时执行需登录操作会弹出 -->
     <AuthModal />
   </div>
@@ -157,7 +164,7 @@
 
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Search, User, ShoppingBag, Bell } from '@element-plus/icons-vue'
+import { Search, User, ShoppingBag, Bell, Top } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useCart } from '@shop/shared'
 import { isAuthenticated } from '@shop/shared'
@@ -189,6 +196,9 @@ const isSeckillRoute = computed(() => route.path.startsWith('/seckill'))
 /** 是否已滚动（滚动后导航栏变白） */
 const isScrolled = ref(false)
 
+/** 是否显示回到顶部按钮（滚动超过 400px 时显示） */
+const showBackToTop = ref(false)
+
 /** 是否显示搜索下拉框 */
 const showSearch = ref(false)
 
@@ -206,9 +216,18 @@ const defaultHotWords = ['手机', '电脑', '耳机', '空调', '运动鞋']
 /**
  * 监听滚动事件
  * 首页时滚动超过50px导航栏变白，其他页面始终白色
+ * 滚动超过400px时显示回到顶部按钮
  */
 const handleScroll = () => {
   isScrolled.value = window.scrollY > 50
+  showBackToTop.value = window.scrollY > 400
+}
+
+/**
+ * 平滑滚动到页面顶部
+ */
+const scrollToTop = () => {
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 /**
@@ -352,9 +371,34 @@ watch(() => route.path, () => {
   fetchUnreadCount()
 })
 
+/**
+ * 处理 token 过期事件（由 request.ts 中 redirectToLogin 触发）
+ *
+ * 当后端返回 401 且 refreshToken 也过期时触发。
+ * 不再跳转到 /login（会与 /login→/ 重定向形成循环），而是：
+ * - 在需要登录的页面：弹出 AuthModal 让用户重新登录
+ * - 在公开页面（首页/分类页等）：只提示，不强制弹窗
+ */
+const handleTokenExpired = () => {
+  isLoggedIn.value = false
+  if (route.meta.requiresAuth) {
+    // 在需要登录的页面，弹出登录弹窗
+    authModalStore.openAuthModal({
+      description: '登录已过期，请重新登录',
+      execute: () => {
+        router.push(route.fullPath)
+      },
+    })
+  } else {
+    // 在公开页面，只提示一下，不打扰用户浏览
+    ElMessage.info('登录已过期，请重新登录')
+  }
+}
+
 onMounted(() => {
   window.addEventListener('scroll', handleScroll)
   document.addEventListener('click', handleClickOutside)
+  window.addEventListener('token-expired', handleTokenExpired)
   handleScroll()
   isLoggedIn.value = isAuthenticated()
   if (isLoggedIn.value) {
@@ -367,6 +411,7 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll)
   document.removeEventListener('click', handleClickOutside)
+  window.removeEventListener('token-expired', handleTokenExpired)
 })
 </script>
 
@@ -800,6 +845,47 @@ onUnmounted(() => {
   font-size: var(--font-size-caption);
   color: var(--color-text-muted);
   letter-spacing: 0.05em;
+}
+
+/* ==================== 回到顶部悬浮按钮 ==================== */
+.back-to-top {
+  position: fixed;
+  right: 32px;
+  bottom: 32px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--color-glass-strong);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--color-glass-border);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--color-text);
+  z-index: 90;
+  transition: all 0.3s var(--ease-out);
+}
+
+.back-to-top:hover {
+  background: var(--gradient-brand);
+  color: #fff;
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-glow);
+}
+
+/* 回到顶部按钮淡入淡出动画 */
+.back-to-top-enter-active,
+.back-to-top-leave-active {
+  transition: all 0.3s var(--ease-out);
+}
+
+.back-to-top-enter-from,
+.back-to-top-leave-to {
+  opacity: 0;
+  transform: translateY(20px) scale(0.8);
 }
 
 /* ==================== 响应式 ==================== */

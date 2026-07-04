@@ -1,30 +1,95 @@
 # 网关服务独立配置
 # 在Nacos中配置为：Data ID = shop-gateway.yml, Group = DEFAULT_GROUP, Namespace = dev
+#
+# 重要：白名单配置前缀必须是 gateway（对应 WhitelistConfig 的 @ConfigurationProperties(prefix = "gateway")）
+# 不要写在 sa-token 下面，否则 WhitelistConfig 读取不到
 
-server:
-  port: 8844
+# ==================== 网关自定义配置 ====================
+gateway:
+  # 完全公开的白名单路径（不需要登录就能访问）
+  # 支持Ant风格路径匹配：? 匹配一个字符，* 匹配一层，** 匹配任意层
+  whitelist:
+    # ===== 用户认证接口 =====
+    - /api/user/auth/login          # 用户登录
+    - /api/user/auth/register       # 用户注册
+    - /api/user/auth/captcha        # 图形验证码
+    - /api/user/auth/sms-code       # 短信验证码
+    - /api/user/auth/wx-login       # 微信登录
+    - /api/user/auth/refresh        # 刷新Token
+    # ===== 商家/管理员认证接口 =====
+    - /api/merchant/auth/login      # 商家登录
+    - /api/admin/auth/login         # 管理员登录
+    - /api/admin/auth/captcha       # 管理员验证码
+    # ===== 商品浏览接口（公开访问） =====
+    - /api/product/list             # 商品列表
+    - /api/product/*                # 商品详情（如 /api/product/123），只匹配一层路径
+    - /api/product/search           # 商品搜索
+    - /api/product/suggest          # 搜索建议（输入框联想）
+    - /api/product/hot-keywords     # 热门搜索词
+    - /api/product/recommend/**     # 商品推荐（热销/新品/相关/猜你喜欢）
+    - /api/product/category/**      # 分类树
+    - /api/product/brand/**         # 品牌列表和详情
+    - /api/product/comment/**       # 评价列表
+    # ===== 营销公开接口 =====
+    - /api/marketing/coupon/public/**  # 优惠券公开列表
+    # ===== 秒杀公开接口（抢购需要登录） =====
+    - /api/seckill/public/**        # 秒杀活动列表和详情
+    - /api/seckill/list             # 秒杀列表
+    - /api/seckill/*                # 秒杀详情（如 /api/seckill/123），只匹配一层路径
+  # 仅限登录用户的白名单路径（需要登录，但不需要特定角色）
+  auth-whitelist: []
+  # 跨域配置
+  cors:
+    allowed-origins: http://localhost:3000,http://localhost:8080
+  # 限流配置（Redis + Lua 滑动窗口实现，详见 RateLimitFilter）
+  rate-limit:
+    # 限流总开关：true=启用，false=关闭（调试时可临时关闭）
+    enabled: true
+    # 默认IP级别QPS：每个IP每秒允许的最大请求数
+    default-ip-qps: 50
+    # 默认接口级别QPS：每个接口每秒允许的最大请求数
+    default-path-qps: 200
+    # 自定义限流规则（按路径匹配，匹配到的优先使用规则中的QPS）
+    rules:
+      # 认证接口：限制严格，防止密码爆破和短信轰炸
+      - path-pattern: /api/user/auth/**
+        ip-qps: 5
+        path-qps: 50
+      - path-pattern: /api/merchant/auth/**
+        ip-qps: 5
+        path-qps: 50
+      - path-pattern: /api/admin/auth/**
+        ip-qps: 5
+        path-qps: 50
+      # 秒杀接口：IP限制严格（防刷单），接口总限制宽松（允许高并发）
+      - path-pattern: /api/seckill/grab/**
+        ip-qps: 3
+        path-qps: 1000
+      # 下单支付接口：限制适中，防止恶意下单占用库存
+      - path-pattern: /api/order/**
+        ip-qps: 10
+        path-qps: 100
+      - path-pattern: /api/payment/**
+        ip-qps: 10
+        path-qps: 100
+      # 评论提交接口：限制严格，防止刷评
+      - path-pattern: /api/product/comment/create
+        ip-qps: 3
+        path-qps: 50
 
-spring:
-  application:
-    name: shop-gateway
-
-# Sa-Token 网关配置（响应式版本，适配Spring Cloud Gateway）
+# ==================== Sa-Token 配置 ====================
 sa-token:
-  # token名称（前端请求头里传这个名字）
+  # token名称（同时也是Cookie名称和提交参数名称）
   token-name: Authorization
-  # token有效期2小时（单位：秒）
-  timeout: 7200
+  # token有效期（单位：秒），默认30天
+  timeout: 2592000
+  # token临时有效期（指定时间内无操作就视为过期，单位：秒）
+  active-timeout: 86400
   # 是否允许同一账号多地同时登录
   is-concurrent: true
-  # 多人登录同一账号时，是否共用同一个token
+  # 在多人登录同一账号时，是否共用同一个token
   is-share: true
-  # token风格：uuid是一串随机字符串
+  # token风格（uuid、simple-uuid、random-32、random-64、random-128、tik）
   token-style: uuid
-  # 网关鉴权白名单（这些路径不需要登录就能访问，相当于"免票入场"）
-  whitelist:
-    - /api/user/auth/login        # 用户登录
-    - /api/user/auth/register     # 用户注册
-    - /api/user/auth/wx-login     # 微信登录
-    - /api/user/auth/refresh      # 刷新Token（AccessToken过期后用RefreshToken换新的）
-    - /api/product/**             # 商品浏览（公开，不需要登录就能看商品）
-    - /api/merchant/auth/login    # 商家登录
+  # 是否输出操作日志
+  is-log: false

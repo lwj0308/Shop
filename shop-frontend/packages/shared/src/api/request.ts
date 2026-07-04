@@ -284,15 +284,22 @@ function handleTokenRefresh(config: AxiosRequestConfig): Promise<unknown> {
 }
 
 /**
- * 跳转到登录页
- * 根据当前路径判断是用户端还是商家端，跳到对应的登录页
+ * Token失效后的跳转处理
+ *
+ * 用户端：不再用 window.location.href 跳转到 /login（会与 /login→/ 重定向形成循环），
+ * 而是触发全局 token-expired 事件，由布局组件监听后弹出 AuthModal 登录弹窗。
+ *
+ * 商家端：仍用整页跳转（商家端有独立的登录页）。
  */
 function redirectToLogin(): void {
+  clearToken()
   const currentPath = window.location.pathname
   if (currentPath.includes('/merchant')) {
+    // 商家端：整页跳转到商家登录页
     window.location.href = '/merchant/login'
   } else {
-    window.location.href = '/login'
+    // 用户端：触发全局事件，由 DefaultLayout 监听并弹出 AuthModal
+    window.dispatchEvent(new CustomEvent('token-expired'))
   }
 }
 
