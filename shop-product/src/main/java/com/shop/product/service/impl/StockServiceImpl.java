@@ -1,5 +1,9 @@
 package com.shop.product.service.impl;
 
+import com.alibaba.csp.sentinel.annotation.SentinelResource;
+import com.alibaba.csp.sentinel.slots.block.BlockException;
+import com.shop.common.exception.BusinessException;
+import com.shop.common.result.ErrorCode;
 import com.shop.product.service.StockService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -116,6 +120,11 @@ public class StockServiceImpl implements StockService {
      * 在Redis中原子性地完成：检查库存 → 扣减库存 → 记录订单号（幂等）
      * Lua脚本在Redis中是原子执行的，不会被其他命令打断，所以不会超卖。
      * </p>
+     * <p>
+     * RL-02 阶段接入 Sentinel 方法级限流：
+     * - blockHandler：QPS 超过阈值时触发，抛出"库存服务繁忙"提示
+     * - fallback：业务异常时触发，记录日志并抛出"系统繁忙"提示
+     * </p>
      *
      * @param skuId    SKU ID
      * @param quantity 扣减数量
@@ -123,6 +132,7 @@ public class StockServiceImpl implements StockService {
      * @return true扣减成功，false库存不足或已扣减过
      */
     @Override
+    @SentinelResource(value = "stock:deduct", blockHandler = "deductStockBlockHandler", fallback = "deductStockFallback")
     public boolean deductStock(Long skuId, Integer quantity, String orderNo) {
         String stockKey = STOCK_KEY_PREFIX + skuId;
         String deductRecordKey = DEDUCT_RECORD_KEY_PREFIX + skuId;
@@ -142,6 +152,50 @@ public class StockServiceImpl implements StockService {
 
         log.warn("Redis扣减库存失败（库存不足或重复扣减）: skuId={}, quantity={}, orderNo={}", skuId, quantity, orderNo);
         return false;
+    }
+
+    /**
+     * 库存扣减的限流兜底方法（Sentinel blockHandler）
+     * <p>
+     * 当 stock:deduct 资源的 QPS 超过限流规则阈值时，Sentinel 会调用这个方法而不是原方法。
+     * 方法签名要求：与原方法相同的参数列表 + 末尾追加 BlockException 参数，返回类型相同。
+     * </p>
+     * <p>
+     * 小白理解：限流兜底就像超市收银台排队太长时，保安拦住新来的顾客说"请稍后再来"，
+     * 不让他们继续往里挤，避免收银台崩溃。
+     * </p>
+     *
+     * @param skuId    SKU ID（原方法参数）
+     * @param quantity 扣减数量（原方法参数）
+     * @param orderNo  订单号（原方法参数）
+     * @param ex       Sentinel 抛出的限流异常（包含限流类型等信息）
+     * @return 不会真正返回，直接抛异常让上游感知
+     */
+    public boolean deductStockBlockHandler(Long skuId, Integer quantity, String orderNo, BlockException ex) {
+        log.warn("库存扣减被 Sentinel 限流，skuId={}, orderNo={}, 限流类型={}", skuId, orderNo, ex.getClass().getSimpleName());
+        throw new BusinessException(ErrorCode.TOO_MANY_REQUESTS.getCode(), "库存服务繁忙，请稍后重试");
+    }
+
+    /**
+     * 库存扣减的降级兜底方法（Sentinel fallback）
+     * <p>
+     * 当 stock:deduct 方法执行过程中抛出业务异常时，Sentinel 会调用这个方法。
+     * 比如Redis连接异常、Lua脚本执行失败等情况。
+     * </p>
+     * <p>
+     * 小白理解：降级兜底就像收银台突然停电了，保安引导顾客去其他收银台或改天再来，
+     * 不能让顾客一直等着。
+     * </p>
+     *
+     * @param skuId    SKU ID（原方法参数）
+     * @param quantity 扣减数量（原方法参数）
+     * @param orderNo  订单号（原方法参数）
+     * @param ex       原方法抛出的异常
+     * @return 不会真正返回，记录日志后抛异常让上游感知
+     */
+    public boolean deductStockFallback(Long skuId, Integer quantity, String orderNo, Throwable ex) {
+        log.error("库存扣减降级，skuId={}, orderNo={}", skuId, orderNo, ex);
+        throw new BusinessException(ErrorCode.INTERNAL_ERROR.getCode(), "系统繁忙，请稍后重试");
     }
 
     /**

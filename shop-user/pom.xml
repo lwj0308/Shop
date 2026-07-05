@@ -50,6 +50,12 @@
             <artifactId>spring-cloud-starter-loadbalancer</artifactId>
         </dependency>
 
+        <!-- Sentinel：熔断限流框架，Feign熔断降级依赖（RL-03 引入） -->
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-sentinel</artifactId>
+        </dependency>
+
         <!-- MyBatis-Plus：不用写XML就能操作数据库 -->
         <dependency>
             <groupId>com.baomidou</groupId>

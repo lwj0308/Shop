@@ -1,5 +1,7 @@
 package com.shop.seckill.service.impl;
 
+import com.alibaba.csp.sentinel.annotation.SentinelResource;
+import com.alibaba.csp.sentinel.slots.block.BlockException;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.shop.common.exception.BusinessException;
@@ -69,9 +71,13 @@ public class SeckillActivityServiceImpl implements SeckillActivityService {
      * <p>
      * 插入数据库后把库存总数预热到 Redis，作为抢购时的扣减来源。
      * </p>
+     * <p>
+     * RL-02 阶段接入 Sentinel 方法级限流，保护秒杀活动创建接口不被频繁调用。
+     * </p>
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
+    @SentinelResource(value = "seckill:activity:create", blockHandler = "createSeckillActivityBlockHandler", fallback = "createSeckillActivityFallback")
     public Long createSeckillActivity(Long merchantId, SeckillCreateDTO dto) {
         // 校验秒杀参数（金额、库存、限购、时间窗口）
         validateSeckillParam(dto);
@@ -116,9 +122,13 @@ public class SeckillActivityServiceImpl implements SeckillActivityService {
      * <p>
      * 下架后状态置为 3（已下架），并清理 Redis 库存缓存，避免用户继续抢购已下架的活动。
      * </p>
+     * <p>
+     * RL-02 阶段接入 Sentinel 方法级限流，保护秒杀活动下架接口不被频繁调用。
+     * </p>
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
+    @SentinelResource(value = "seckill:activity:offline", blockHandler = "offlineSeckillActivityBlockHandler", fallback = "offlineSeckillActivityFallback")
     public void offlineSeckillActivity(Long merchantId, Long seckillId) {
         SeckillActivity activity = seckillActivityMapper.selectById(seckillId);
         if (activity == null) {
@@ -260,5 +270,77 @@ public class SeckillActivityServiceImpl implements SeckillActivityService {
             vo.setProgress(soldCount * 100 / totalCount);
         }
         return vo;
+    }
+
+    // ==================== Sentinel 限流/降级兜底方法（RL-02 引入）====================
+
+    /**
+     * 创建秒杀活动的限流兜底方法（Sentinel blockHandler）
+     * <p>
+     * 当 seckill:activity:create 资源的 QPS 超过限流规则阈值时触发。
+     * </p>
+     *
+     * @param merchantId 商家ID（原方法参数）
+     * @param dto        创建秒杀活动参数（原方法参数）
+     * @param ex         Sentinel 抛出的限流异常
+     * @return 不会真正返回，直接抛异常让前端感知
+     */
+    public Long createSeckillActivityBlockHandler(Long merchantId, SeckillCreateDTO dto, BlockException ex) {
+        log.warn("创建秒杀活动被 Sentinel 限流，merchantId={}, 限流类型={}",
+                merchantId, ex.getClass().getSimpleName());
+        throw new BusinessException(ErrorCode.OPERATION_FAIL.getCode(), "操作太频繁，请稍后重试");
+    }
+
+    /**
+     * 创建秒杀活动的降级兜底方法（Sentinel fallback）
+     * <p>
+     * 当 seckill:activity:create 方法执行过程中抛出异常时触发。
+     * </p>
+     *
+     * @param merchantId 商家ID（原方法参数）
+     * @param dto        创建秒杀活动参数（原方法参数）
+     * @param ex         原方法抛出的异常
+     * @return 不会真正返回，记录日志后抛异常让前端感知
+     */
+    public Long createSeckillActivityFallback(Long merchantId, SeckillCreateDTO dto, Throwable ex) {
+        log.error("创建秒杀活动降级，merchantId={}", merchantId, ex);
+        if (ex instanceof BusinessException) {
+            throw (BusinessException) ex;
+        }
+        throw new BusinessException(ErrorCode.OPERATION_FAIL.getCode(), "系统繁忙，请稍后重试");
+    }
+
+    /**
+     * 下架秒杀活动的限流兜底方法（Sentinel blockHandler）
+     * <p>
+     * 当 seckill:activity:offline 资源的 QPS 超过限流规则阈值时触发。
+     * </p>
+     *
+     * @param merchantId 商家ID（原方法参数）
+     * @param seckillId  秒杀活动ID（原方法参数）
+     * @param ex         Sentinel 抛出的限流异常
+     */
+    public void offlineSeckillActivityBlockHandler(Long merchantId, Long seckillId, BlockException ex) {
+        log.warn("下架秒杀活动被 Sentinel 限流，merchantId={}, seckillId={}, 限流类型={}",
+                merchantId, seckillId, ex.getClass().getSimpleName());
+        throw new BusinessException(ErrorCode.OPERATION_FAIL.getCode(), "操作太频繁，请稍后重试");
+    }
+
+    /**
+     * 下架秒杀活动的降级兜底方法（Sentinel fallback）
+     * <p>
+     * 当 seckill:activity:offline 方法执行过程中抛出异常时触发。
+     * </p>
+     *
+     * @param merchantId 商家ID（原方法参数）
+     * @param seckillId  秒杀活动ID（原方法参数）
+     * @param ex         原方法抛出的异常
+     */
+    public void offlineSeckillActivityFallback(Long merchantId, Long seckillId, Throwable ex) {
+        log.error("下架秒杀活动降级，merchantId={}, seckillId={}", merchantId, seckillId, ex);
+        if (ex instanceof BusinessException) {
+            throw (BusinessException) ex;
+        }
+        throw new BusinessException(ErrorCode.OPERATION_FAIL.getCode(), "系统繁忙，请稍后重试");
     }
 }

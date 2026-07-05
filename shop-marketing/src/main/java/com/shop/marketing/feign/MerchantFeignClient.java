@@ -1,6 +1,7 @@
 package com.shop.marketing.feign;
 
 import com.shop.common.result.Result;
+import com.shop.marketing.feign.fallback.MerchantFeignClientFallbackFactory;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -18,7 +19,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
  * 用起来就像调本地方法一样简单。
  * </p>
  */
-@FeignClient(name = "shop-merchant")
+@FeignClient(name = "shop-merchant", fallbackFactory = MerchantFeignClientFallbackFactory.class)
 public interface MerchantFeignClient {
 
     /**

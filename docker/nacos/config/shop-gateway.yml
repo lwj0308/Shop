@@ -41,39 +41,59 @@ gateway:
   # 跨域配置
   cors:
     allowed-origins: http://localhost:3000,http://localhost:8080
-  # 限流配置（Redis + Lua 滑动窗口实现，详见 RateLimitFilter）
+  # 限流配置（Redis + Lua 双算法实现，详见 RateLimitFilter）
+  # 算法选型：
+  #   - sliding-window（ZSet 精确滑动窗口）：低频高精度场景，如认证 5 QPS、评论 3 QPS
+  #   - token-bucket（令牌桶）：高频接口，如秒杀、下单、商品浏览，允许合理突发
   rate-limit:
     # 限流总开关：true=启用，false=关闭（调试时可临时关闭）
     enabled: true
     # 默认IP级别QPS：每个IP每秒允许的最大请求数
+    # 对 sliding-window = 每秒最大请求数；对 token-bucket = 令牌生成速率
     default-ip-qps: 50
     # 默认接口级别QPS：每个接口每秒允许的最大请求数
     default-path-qps: 200
+    # 默认限流算法：token-bucket（高频场景多，默认令牌桶）
+    default-algorithm: token-bucket
+    # 默认令牌桶容量（仅 token-bucket 算法生效，突发上限）
+    default-capacity: 100
     # 自定义限流规则（按路径匹配，匹配到的优先使用规则中的QPS）
+    # 排在前面的规则优先匹配，没匹配到的使用默认值
     rules:
-      # 认证接口：限制严格，防止密码爆破和短信轰炸
+      # 认证接口：低频高精度，用 ZSet 滑动窗口，防止密码爆破和短信轰炸
       - path-pattern: /api/user/auth/**
+        algorithm: sliding-window
         ip-qps: 5
         path-qps: 50
       - path-pattern: /api/merchant/auth/**
+        algorithm: sliding-window
         ip-qps: 5
         path-qps: 50
       - path-pattern: /api/admin/auth/**
+        algorithm: sliding-window
         ip-qps: 5
         path-qps: 50
-      # 秒杀接口：IP限制严格（防刷单），接口总限制宽松（允许高并发）
+      # 秒杀接口：令牌桶，IP 速率 3 令牌/秒（防刷单），桶容量 5（允许短时突发）
+      # 接口维度 1000 令牌/秒，桶容量 1000（允许高并发）
       - path-pattern: /api/seckill/grab/**
+        algorithm: token-bucket
         ip-qps: 3
         path-qps: 1000
-      # 下单支付接口：限制适中，防止恶意下单占用库存
+        capacity: 5
+      # 下单支付接口：令牌桶，允许短时突发（如双击提交）
       - path-pattern: /api/order/**
+        algorithm: token-bucket
         ip-qps: 10
         path-qps: 100
+        capacity: 20
       - path-pattern: /api/payment/**
+        algorithm: token-bucket
         ip-qps: 10
         path-qps: 100
-      # 评论提交接口：限制严格，防止刷评
+        capacity: 20
+      # 评论提交接口：低频高精度，用 ZSet 滑动窗口，防止刷评
       - path-pattern: /api/product/comment/create
+        algorithm: sliding-window
         ip-qps: 3
         path-qps: 50
 

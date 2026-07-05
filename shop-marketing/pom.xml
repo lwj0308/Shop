@@ -43,6 +43,12 @@
             <artifactId>spring-cloud-starter-loadbalancer</artifactId>
         </dependency>
 
+        <!-- Sentinel：熔断限流框架，Feign熔断降级依赖（RL-03 引入） -->
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-sentinel</artifactId>
+        </dependency>
+
         <!-- Nacos配置中心 -->
         <dependency>
             <groupId>com.alibaba.cloud</groupId>

@@ -1,4 +1,4 @@
-﻿server:
+server:
   port: 8845
 
 spring:
@@ -18,6 +18,15 @@ spring:
         group: DEFAULT_GROUP
       discovery:
         namespace: ${NACOS_NAMESPACE:dev}
+    # Sentinel 配置（RL-03 引入）
+    # transport.dashboard：Sentinel Dashboard 地址，RL-04 部署后启用，未部署时不影响限流
+    # transport.port：Sentinel 客户端与 Dashboard 通信的端口，默认 8719，冲突时自动+1
+    # eager：true 表示服务启动时就初始化 Sentinel
+    sentinel:
+      transport:
+        dashboard: ${SENTINEL_DASHBOARD:localhost:8858}
+        port: ${SENTINEL_PORT:8719}
+      eager: true
   # 数据源配置（HikariCP连接池，Spring Boot默认自带）
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -71,3 +80,8 @@ sa-token:
   is-log: false
   # Token前缀（前端提交Token时要带上这个前缀，比如"Bearer xxx"）
   token-prefix: Bearer
+
+# Feign 整合 Sentinel：开启后 Feign 调用失败会走 fallbackFactory 降级逻辑（RL-03 引入）
+feign:
+  sentinel:
+    enabled: true

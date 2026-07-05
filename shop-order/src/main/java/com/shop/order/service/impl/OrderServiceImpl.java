@@ -1,5 +1,7 @@
 package com.shop.order.service.impl;
 
+import com.alibaba.csp.sentinel.annotation.SentinelResource;
+import com.alibaba.csp.sentinel.slots.block.BlockException;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -162,6 +164,7 @@ public class OrderServiceImpl implements OrderService {
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
+    @SentinelResource(value = "order:create", blockHandler = "createOrderBlockHandler", fallback = "createOrderFallback")
     public OrderDetailVO createOrder(Long userId, OrderCreateDTO dto) {
         log.info("开始创建订单: userId={}, items={}", userId, dto.getItems());
 
@@ -1044,5 +1047,53 @@ public class OrderServiceImpl implements OrderService {
         }
 
         return vo;
+    }
+
+    // ==================== Sentinel 限流/降级兜底方法（RL-02 引入）====================
+
+    /**
+     * 创建订单的限流兜底方法（Sentinel blockHandler）
+     * <p>
+     * 当 order:create 资源的 QPS 超过限流规则阈值时触发。
+     * 方法签名要求：与原方法相同的参数列表 + 末尾追加 BlockException，返回类型相同。
+     * </p>
+     * <p>
+     * 小白理解：下单接口被限流就像双十一凌晨下单时系统提示"系统繁忙"，
+     * 不让继续下单，避免订单系统被压垮。
+     * </p>
+     *
+     * @param userId 用户ID（原方法参数）
+     * @param dto    创建订单参数（原方法参数）
+     * @param ex     Sentinel 抛出的限流异常
+     * @return 不会真正返回，直接抛异常让前端感知
+     */
+    public OrderDetailVO createOrderBlockHandler(Long userId, OrderCreateDTO dto, BlockException ex) {
+        log.warn("创建订单被 Sentinel 限流，userId={}, 限流类型={}", userId, ex.getClass().getSimpleName());
+        throw new BusinessException(ErrorCode.ORDER_CREATE_FAIL.getCode(), "订单系统繁忙，请稍后重试");
+    }
+
+    /**
+     * 创建订单的降级兜底方法（Sentinel fallback）
+     * <p>
+     * 当 order:create 方法执行过程中抛出业务异常时触发。
+     * 比如Feign调用失败、Redis连接异常等情况。
+     * </p>
+     * <p>
+     * 小白理解：降级兜底就像下单过程中突然断网了，系统提示"系统繁忙"，
+     * 而不是让用户一直等着或看到一堆错误信息。
+     * </p>
+     *
+     * @param userId 用户ID（原方法参数）
+     * @param dto    创建订单参数（原方法参数）
+     * @param ex     原方法抛出的异常
+     * @return 不会真正返回，记录日志后抛异常让前端感知
+     */
+    public OrderDetailVO createOrderFallback(Long userId, OrderCreateDTO dto, Throwable ex) {
+        log.error("创建订单降级，userId={}", userId, ex);
+        // 如果已经是 BusinessException，直接抛出，避免包装
+        if (ex instanceof BusinessException) {
+            throw (BusinessException) ex;
+        }
+        throw new BusinessException(ErrorCode.ORDER_CREATE_FAIL.getCode(), "系统繁忙，请稍后重试");
     }
 }

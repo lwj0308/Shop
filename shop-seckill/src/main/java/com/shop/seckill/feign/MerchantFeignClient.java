@@ -1,6 +1,7 @@
 package com.shop.seckill.feign;
 
 import com.shop.common.result.Result;
+import com.shop.seckill.feign.fallback.MerchantFeignClientFallbackFactory;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -16,7 +17,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
  * 而是通过 Feign "打电话" 给 shop-merchant 服务查询商家信息。
  * </p>
  */
-@FeignClient(name = "shop-merchant")
+@FeignClient(name = "shop-merchant", fallbackFactory = MerchantFeignClientFallbackFactory.class)
 public interface MerchantFeignClient {
 
     /**

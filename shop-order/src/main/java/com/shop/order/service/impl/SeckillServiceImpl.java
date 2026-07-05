@@ -1,5 +1,7 @@
 package com.shop.order.service.impl;
 
+import com.alibaba.csp.sentinel.annotation.SentinelResource;
+import com.alibaba.csp.sentinel.slots.block.BlockException;
 import com.shop.common.exception.BusinessException;
 import com.shop.common.result.ErrorCode;
 import com.shop.common.result.Result;
@@ -107,6 +109,7 @@ public class SeckillServiceImpl implements SeckillService {
      * @return 抢购结果提示
      */
     @Override
+    @SentinelResource(value = "seckill:grab", blockHandler = "executeSeckillBlockHandler", fallback = "executeSeckillFallback")
     public Result<String> executeSeckill(Long userId, Long seckillId) {
         log.info("开始执行秒杀: userId={}, seckillId={}", userId, seckillId);
 
@@ -246,5 +249,55 @@ public class SeckillServiceImpl implements SeckillService {
             // 回退失败只能记录日志，后续可通过定时任务补偿
             log.error("秒杀Redis库存回退失败，需要人工处理: seckillId={}", seckillId, e);
         }
+    }
+
+    // ==================== Sentinel 限流/降级兜底方法（RL-02 引入）====================
+
+    /**
+     * 秒杀抢购的限流兜底方法（Sentinel blockHandler）
+     * <p>
+     * 当 seckill:grab 资源的 QPS 超过限流规则阈值时触发。
+     * 秒杀场景下限流比直接拒绝更友好，告诉用户"抢购人数过多"而不是报错。
+     * </p>
+     * <p>
+     * 小白理解：秒杀限流就像超市促销时门口限流，告诉排队的顾客"人太多了稍等一下"，
+     * 而不是让所有人都挤进去导致踩踏。
+     * </p>
+     *
+     * @param userId    用户ID（原方法参数）
+     * @param seckillId 秒杀活动ID（原方法参数）
+     * @param ex        Sentinel 抛出的限流异常
+     * @return 友好的限流提示
+     */
+    public Result<String> executeSeckillBlockHandler(Long userId, Long seckillId, BlockException ex) {
+        log.warn("秒杀抢购被 Sentinel 限流，userId={}, seckillId={}, 限流类型={}",
+                userId, seckillId, ex.getClass().getSimpleName());
+        return Result.fail(ErrorCode.OPERATION_FAIL.getCode(), "当前抢购人数过多，请稍后再试");
+    }
+
+    /**
+     * 秒杀抢购的降级兜底方法（Sentinel fallback）
+     * <p>
+     * 当 seckill:grab 方法执行过程中抛出异常时触发。
+     * 比如Redis连接异常、Feign调用失败等情况。
+     * </p>
+     * <p>
+     * 小白理解：降级兜底就像秒杀过程中系统突然出故障，给用户一个友好提示，
+     * 而不是让用户看到一堆错误堆栈。
+     * </p>
+     *
+     * @param userId    用户ID（原方法参数）
+     * @param seckillId 秒杀活动ID（原方法参数）
+     * @param ex        原方法抛出的异常
+     * @return 友好的降级提示
+     */
+    public Result<String> executeSeckillFallback(Long userId, Long seckillId, Throwable ex) {
+        log.error("秒杀抢购降级，userId={}, seckillId={}", userId, seckillId, ex);
+        // 如果已经是 BusinessException，直接返回对应错误信息
+        if (ex instanceof BusinessException) {
+            BusinessException be = (BusinessException) ex;
+            return Result.fail(be.getCode(), be.getMessage());
+        }
+        return Result.fail(ErrorCode.OPERATION_FAIL.getCode(), "系统繁忙，请稍后重试");
     }
 }

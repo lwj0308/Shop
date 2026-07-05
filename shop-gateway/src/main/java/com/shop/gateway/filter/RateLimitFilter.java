@@ -2,8 +2,8 @@ package com.shop.gateway.filter;
 
 import com.shop.gateway.config.RateLimitProperties;
 import com.shop.gateway.util.ResponseUtil;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
@@ -19,12 +19,15 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * 请求限流过滤器（Redis + Lua 滑动窗口实现）
+ * 请求限流过滤器（Redis + Lua 双算法实现）
  * <p>
- * 使用Redis的Sorted Set + Lua脚本实现滑动窗口限流，相比内存版的优势：
- * 1. 多实例共享：多个Gateway实例共享同一份限流计数（内存版只能单机限流）
- * 2. 准确性高：滑动窗口算法避免固定窗口的"临界点"突发流量问题
- * 3. 原子性强：Lua脚本在Redis单线程内执行，天然防止并发问题
+ * RL-01 阶段升级为双算法架构，按接口特征选择最优算法：
+ * 1. ZSet 精确滑动窗口（sliding-window）：低频高精度场景，如认证、评论
+ *    - 每个请求存一条 ZSET 记录，毫秒级精度
+ *    - 内存占用高，不适合高频接口（50+ QPS）
+ * 2. 令牌桶（token-bucket）：高频接口，如秒杀、下单、商品浏览
+ *    - 只存 tokens + last_refill 两个字段，内存 O(1)
+ *    - 允许合理突发（桶容量 = 突发上限）
  * </p>
  * <p>
  * 限流维度（两个维度同时检查，任一超限即拒绝）：
@@ -33,10 +36,11 @@ import java.util.UUID;
  * </p>
  * <p>
  * 分级限流（通过RateLimitProperties配置）：
- * - 默认：IP 50 QPS，接口 200 QPS
- * - 认证接口（/api/user/auth/**）：IP 5 QPS（防爆破）
- * - 秒杀接口（/api/seckill/**）：IP 3 QPS（防刷单）
- * - 下单支付（/api/order/**）：IP 10 QPS
+ * - 默认：令牌桶，IP 50 QPS，接口 200 QPS
+ * - 认证接口（/api/user/auth/**）：ZSet 滑动窗口，IP 5 QPS（防爆破）
+ * - 秒杀接口（/api/seckill/grab/**）：令牌桶，IP 3 QPS（防刷单，桶容量 5）
+ * - 下单支付（/api/order/**）：令牌桶，IP 10 QPS（桶容量 20，允许短时突发）
+ * - 评论提交（/api/product/comment/create）：ZSet 滑动窗口，IP 3 QPS
  * </p>
  * <p>
  * 降级策略：Redis不可用时放行请求（限流是弱依赖，不能因为Redis挂了导致全站不可用）。
@@ -48,15 +52,16 @@ import java.util.UUID;
  * - 内存限流就像每个小区保安自己记车牌，但多几个门就乱套了
  * - Redis限流就像把车牌记录放到统一中心，所有保安共享数据
  * - Lua脚本就像给保安一份"操作手册"，告诉他怎么查、怎么记，一步到位不会出错
+ * - 双算法就像小区保安有两套工具：高峰时段用速通门（令牌桶，快速但允许爆发），
+ *   低峰时段用登记本（滑动窗口，精确但慢）
  * - 降级策略就是：万一中心系统坏了，保安就先放行，不能因为系统坏了把所有人都拦外面
  * </p>
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class RateLimitFilter implements GlobalFilter, Ordered {
 
-    /** 限流窗口大小（毫秒）：1秒一个窗口 */
+    /** 限流窗口大小（毫秒）：1秒一个窗口，仅 sliding-window 算法使用 */
     private static final long WINDOW_SIZE_MS = 1000L;
 
     /** Redis Key 前缀：IP级别 */
@@ -65,11 +70,20 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
     /** Redis Key 前缀：接口级别 */
     private static final String PATH_KEY_PREFIX = "rate_limit:path:";
 
+    /** 算法常量：ZSet 精确滑动窗口 */
+    private static final String ALGORITHM_SLIDING_WINDOW = "sliding-window";
+
+    /** 算法常量：令牌桶 */
+    private static final String ALGORITHM_TOKEN_BUCKET = "token-bucket";
+
     /** 响应式Redis操作模板（WebFlux环境下必须用Reactive版本，不能用阻塞的StringRedisTemplate） */
     private final ReactiveStringRedisTemplate redisTemplate;
 
-    /** 限流Lua脚本（由RateLimitScriptConfig注入） */
+    /** 滑动窗口限流Lua脚本（由RateLimitScriptConfig注入） */
     private final RedisScript<Long> rateLimitScript;
+
+    /** 令牌桶限流Lua脚本（由RateLimitScriptConfig注入，通过 @Qualifier 按名称区分） */
+    private final RedisScript<Long> tokenBucketScript;
 
     /** 限流配置（从Nacos读取，支持动态刷新） */
     private final RateLimitProperties properties;
@@ -78,12 +92,29 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     /**
+     * 构造函数：通过 @Qualifier 按名称注入两个不同的 Lua 脚本 Bean
+     * <p>
+     * Spring 默认按类型注入，但这里有两个 RedisScript&lt;Long&gt; 类型的 Bean
+     * （rateLimitScript 和 tokenBucketScript），必须用 @Qualifier 按名称区分。
+     * </p>
+     */
+    public RateLimitFilter(ReactiveStringRedisTemplate redisTemplate,
+                            @Qualifier("rateLimitScript") RedisScript<Long> rateLimitScript,
+                            @Qualifier("tokenBucketScript") RedisScript<Long> tokenBucketScript,
+                            RateLimitProperties properties) {
+        this.redisTemplate = redisTemplate;
+        this.rateLimitScript = rateLimitScript;
+        this.tokenBucketScript = tokenBucketScript;
+        this.properties = properties;
+    }
+
+    /**
      * 限流过滤器的核心方法
      * <p>
      * 执行流程：
      * 1. 检查限流总开关 → 关闭则直接放行
      * 2. 获取客户端IP和请求路径
-     * 3. 匹配限流规则，确定QPS限制值
+     * 3. 匹配限流规则，确定算法和限流参数
      * 4. IP级别限流检查 → 超限：返回429
      * 5. 接口级别限流检查 → 超限：返回429
      * 6. 通过限流检查，放行
@@ -110,12 +141,16 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
         String clientIp = getClientIp(request);
         String path = request.getURI().getPath();
 
-        // 第2步：根据路径匹配限流规则，确定QPS限制值
+        // 第2步：根据路径匹配限流规则，确定算法和限流参数
         RateLimitProperties.Rule matchedRule = matchRule(path);
-        long ipQps = matchedRule != null ? matchedRule.getIpQps() : properties.getDefaultIpQps();
-        long pathQps = matchedRule != null ? matchedRule.getPathQps() : properties.getDefaultPathQps();
+        String algorithm = resolveAlgorithm(matchedRule);
+        long ipQps = matchedRule != null && matchedRule.getIpQps() > 0
+                ? matchedRule.getIpQps() : properties.getDefaultIpQps();
+        long pathQps = matchedRule != null && matchedRule.getPathQps() > 0
+                ? matchedRule.getPathQps() : properties.getDefaultPathQps();
+        long capacity = resolveCapacity(matchedRule, ipQps, pathQps);
 
-        // 生成唯一请求ID（用于ZADD的member，避免同一毫秒的请求被去重）
+        // 滑动窗口需要唯一请求ID（ZADD 的 member，避免同毫秒请求被去重）
         String requestId = UUID.randomUUID().toString();
         long now = System.currentTimeMillis();
 
@@ -124,20 +159,22 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
         // - IP限流失败：写429响应后用 .then(Mono.<Boolean>empty()) 转成 Mono<Boolean>
         // - IP限流通过：返回 checkLimit(...) 的 Mono<Boolean>
         // 这样两个分支都是 Mono<Boolean>，类型一致。
-        return checkLimit(IP_KEY_PREFIX + clientIp, now, ipQps, requestId)
+        return checkLimit(IP_KEY_PREFIX + clientIp, algorithm, now, ipQps, capacity, requestId)
                 .flatMap(ipAllowed -> {
                     if (!ipAllowed) {
-                        log.warn("IP限流触发，IP：{}，路径：{}，限制：{} QPS", clientIp, path, ipQps);
+                        log.warn("IP限流触发，IP：{}，路径：{}，算法：{}，限制：{}",
+                                clientIp, path, algorithm, ipQps);
                         // 写完429响应后返回空Mono（Boolean类型），保持类型一致
                         return ResponseUtil.writeRateLimitResponse(exchange, "请求太频繁，请稍后再试")
                                 .then(Mono.<Boolean>empty());
                     }
                     // 第4步：IP检查通过，继续检查接口级别
-                    return checkLimit(PATH_KEY_PREFIX + path, now, pathQps, requestId);
+                    return checkLimit(PATH_KEY_PREFIX + path, algorithm, now, pathQps, capacity, requestId);
                 })
                 .flatMap(pathAllowed -> {
                     if (!pathAllowed) {
-                        log.warn("接口限流触发，IP：{}，路径：{}，限制：{} QPS", clientIp, path, pathQps);
+                        log.warn("接口限流触发，IP：{}，路径：{}，算法：{}，限制：{}",
+                                clientIp, path, algorithm, pathQps);
                         return ResponseUtil.writeRateLimitResponse(exchange, "当前访问人数较多，请稍后再试");
                     }
                     // 通过限流检查，放行
@@ -151,36 +188,98 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
     }
 
     /**
-     * 调用Lua脚本检查是否超限
+     * 调用Lua脚本检查是否超限（按算法类型分发）
      * <p>
-     * 把限流逻辑封装成一次Redis调用（Lua脚本保证原子性）：
-     * 1. 移除窗口外的旧记录
-     * 2. 统计当前窗口内的请求数
-     * 3. 未超限则添加本次请求，返回1；超限则返回0
+     * 根据 algorithm 选择不同的 Lua 脚本：
+     * - sliding-window：调用 rateLimitScript，传 4 个参数（now, window, limit, uid）
+     * - token-bucket：调用 tokenBucketScript，传 3 个参数（now, rate, capacity）
      * </p>
      *
      * @param redisKey  Redis Key（如 rate_limit:ip:192.168.1.1）
+     * @param algorithm 限流算法：sliding-window 或 token-bucket
      * @param now       当前时间戳（毫秒）
-     * @param limit     最大请求数（QPS）
-     * @param requestId 唯一请求ID（ZADD的member）
+     * @param limit     限流值（sliding-window=QPS, token-bucket=rate 令牌/秒）
+     * @param capacity  令牌桶容量（仅 token-bucket 用）
+     * @param requestId 唯一请求ID（仅 sliding-window 用，ZADD 的 member）
      * @return Mono<Boolean> true=放行，false=被限流
      */
-    private Mono<Boolean> checkLimit(String redisKey, long now, long limit, String requestId) {
+    private Mono<Boolean> checkLimit(String redisKey, String algorithm, long now,
+                                      long limit, long capacity, String requestId) {
         List<String> keys = List.of(redisKey);
-        Object[] args = new Object[]{
-                String.valueOf(now),          // ARGV[1]：当前时间戳
-                String.valueOf(WINDOW_SIZE_MS), // ARGV[2]：窗口大小
-                String.valueOf(limit),         // ARGV[3]：最大请求数
-                requestId                       // ARGV[4]：唯一请求ID
-        };
+        Object[] args;
+        RedisScript<Long> script;
+
+        if (ALGORITHM_TOKEN_BUCKET.equals(algorithm)) {
+            // 令牌桶：参数 = 当前时间戳, 速率 rate, 桶容量 capacity
+            args = new Object[]{
+                    String.valueOf(now),         // ARGV[1]：当前时间戳
+                    String.valueOf(limit),        // ARGV[2]：令牌生成速率（令牌/秒）
+                    String.valueOf(capacity)      // ARGV[3]：桶容量
+            };
+            script = tokenBucketScript;
+        } else {
+            // 滑动窗口（默认）：参数 = 当前时间戳, 窗口大小, 最大请求数, 唯一请求ID
+            args = new Object[]{
+                    String.valueOf(now),          // ARGV[1]：当前时间戳
+                    String.valueOf(WINDOW_SIZE_MS), // ARGV[2]：窗口大小
+                    String.valueOf(limit),         // ARGV[3]：最大请求数
+                    requestId                       // ARGV[4]：唯一请求ID
+            };
+            script = rateLimitScript;
+        }
 
         // 执行Lua脚本，返回Long（1=放行，0=限流）
         // next()是因为execute返回Flux<Long>，我们只需要第一个元素
-        return redisTemplate.execute(rateLimitScript, keys, args)
+        return redisTemplate.execute(script, keys, args)
                 .next()
                 .map(result -> result != null && result == 1L)
                 // 如果Redis返回null或异常，降级放行
                 .defaultIfEmpty(true);
+    }
+
+    /**
+     * 解析当前请求使用的限流算法
+     * <p>
+     * 优先级：规则配置的 algorithm > 默认算法
+     * 兜底：未识别的算法值统一回退到 token-bucket（高频场景多，且更安全）
+     * </p>
+     *
+     * @param rule 匹配到的限流规则，可为 null
+     * @return 算法常量（sliding-window 或 token-bucket）
+     */
+    private String resolveAlgorithm(RateLimitProperties.Rule rule) {
+        String algorithm = rule != null && rule.getAlgorithm() != null && !rule.getAlgorithm().isEmpty()
+                ? rule.getAlgorithm() : properties.getDefaultAlgorithm();
+        // 未识别的算法值兜底为 token-bucket
+        if (!ALGORITHM_SLIDING_WINDOW.equals(algorithm) && !ALGORITHM_TOKEN_BUCKET.equals(algorithm)) {
+            algorithm = ALGORITHM_TOKEN_BUCKET;
+        }
+        return algorithm;
+    }
+
+    /**
+     * 解析令牌桶容量
+     * <p>
+     * 仅 token-bucket 算法使用，优先级：规则 capacity > 默认 capacity > ipQps/pathQps 取较小者的2倍
+     * 桶容量一般设为速率的 2 倍，允许短时突发
+     * </p>
+     *
+     * @param rule    匹配到的限流规则，可为 null
+     * @param ipQps   IP 维度速率
+     * @param pathQps 接口维度速率
+     * @return 令牌桶容量
+     */
+    private long resolveCapacity(RateLimitProperties.Rule rule, long ipQps, long pathQps) {
+        if (rule != null && rule.getCapacity() != null && rule.getCapacity() > 0) {
+            return rule.getCapacity();
+        }
+        // 默认容量 = IP 和接口速率的较小者的 2 倍（取较小者保证两个维度容量一致）
+        // 这样配置更直观：rate=3, capacity 默认 6，允许瞬时 6 个请求
+        long smaller = Math.min(ipQps, pathQps);
+        if (smaller > 0) {
+            return smaller * 2;
+        }
+        return properties.getDefaultCapacity();
     }
 
     /**
