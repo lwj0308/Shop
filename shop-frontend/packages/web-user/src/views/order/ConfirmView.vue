@@ -186,7 +186,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { useCart } from '@shop/shared'
+import { useCart, useDebounce } from '@shop/shared'
 import { getAddressList, createOrder, getUsableCoupons } from '@shop/shared'
 import { formatPriceWithSymbol } from '@shop/shared'
 import type { AddressInfo, UserCouponInfo } from '@shop/shared'
@@ -196,8 +196,8 @@ const { cartList, fetchCartList } = useCart()
 
 /** 是否正在加载页面数据 */
 const loading = ref(true)
-/** 是否正在提交订单（防止重复点击） */
-const submitting = ref(false)
+/** RL-08：提交订单按钮防抖（替代原来的 submitting 简单布尔值） */
+const { loading: submitting, run: runSubmit } = useDebounce(1000)
 /** 是否显示地址选择弹窗 */
 const showAddressDialog = ref(false)
 /** 是否显示优惠券选择弹窗 */
@@ -292,11 +292,15 @@ const getCouponDesc = (coupon: UserCouponInfo): string => {
 }
 
 /**
- * 提交订单
+ * 提交订单（RL-08 改造：使用 useDebounce 防抖）
  * 这是下单的核心流程：
  * 1. 校验是否选择了收货地址
  * 2. 调用后端创建订单接口，传入地址ID、购物车项ID列表和优惠券ID
  * 3. 创建成功后，跳转到收银台页面
+ * <p>
+ * 防抖说明：runSubmit 会自动管理 submitting 状态，
+ * 请求完成后延迟 1 秒才解除 loading，防止用户快速连续点击导致重复下单
+ * </p>
  */
 const handleSubmit = async () => {
   if (!currentAddress.value) {
@@ -304,27 +308,26 @@ const handleSubmit = async () => {
     return
   }
 
-  submitting.value = true
-  try {
-    // 创建订单，传入收货地址ID、购物车项ID列表和可选的优惠券ID
-    const cartItemIds = checkedItems.value.map(item => item.id)
-    const orderRes = await createOrder({
-      addressId: currentAddress.value.id,
-      cartItemIds,
-      userCouponId: selectedCoupon.value?.id,
-    })
+  await runSubmit(async () => {
+    try {
+      // 创建订单，传入收货地址ID、购物车项ID列表和可选的优惠券ID
+      const cartItemIds = checkedItems.value.map(item => item.id)
+      const orderRes = await createOrder({
+        addressId: currentAddress.value.id,
+        cartItemIds,
+        userCouponId: selectedCoupon.value?.id,
+      })
 
-    // 跳转到收银台页面
-    const orderNo = orderRes.data.orderNo
-    ElMessage.success('下单成功，正在跳转收银台...')
+      // 跳转到收银台页面
+      const orderNo = orderRes.data.orderNo
+      ElMessage.success('下单成功，正在跳转收银台...')
 
-    router.push({ name: 'PaymentPay', query: { orderNo } })
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : '下单失败，请重试'
-    ElMessage.error(msg)
-  } finally {
-    submitting.value = false
-  }
+      router.push({ name: 'PaymentPay', query: { orderNo } })
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : '下单失败，请重试'
+      ElMessage.error(msg)
+    }
+  })
 }
 
 /**

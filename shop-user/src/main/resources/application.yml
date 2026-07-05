@@ -1,5 +1,15 @@
 server:
   port: 8845
+  # Tomcat 线程池配置（RL-07 引入）
+  # 小白理解：Tomcat 是处理 HTTP 请求的容器，max-threads 是同时处理请求的线程数，
+  # max-connections 是同时保持的连接数，accept-count 是连接满后排队等待的最大数量。
+  tomcat:
+    # 最大工作线程数（默认200，足够应对大部分场景）
+    max-threads: 200
+    # 最大连接数（默认8192，允许同时保持的TCP连接数）
+    max-connections: 8192
+    # 接收队列长度（连接数超max-connections后，最多再排100个等待）
+    accept-count: 100
 
 spring:
   application:
@@ -44,6 +54,27 @@ spring:
       idle-timeout: 600000
       # 连接最大存活时间（毫秒）
       max-lifetime: 1800000
+
+  # Redis 配置（RL-07 补充 Lettuce 连接池）
+  # 小白理解：Redis 连接池就像停车场，max-active 是车位总数，max-idle 是长期保留的车位，
+  # min-idle 是最低保留车位。请求来了从池子里拿连接，用完归还，避免每次都新建连接。
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      database: 0
+      timeout: 5000
+      # Lettuce 连接池配置（需要 commons-pool2 依赖，已在 pom.xml 引入）
+      lettuce:
+        pool:
+          # 连接池最大活跃连接数（同时最多16个连接）
+          max-active: 16
+          # 最大空闲连接数（8个连接闲置保留）
+          max-idle: 8
+          # 最小空闲连接数（始终保留2个连接待命）
+          min-idle: 2
+          # 获取连接最大等待时间（毫秒）
+          max-wait: 5000ms
 
 # MyBatis-Plus 配置
 mybatis-plus:

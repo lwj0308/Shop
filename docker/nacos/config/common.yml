@@ -24,12 +24,27 @@ spring:
       connection-timeout: 30000
 
   # Redis公共配置（缓存和会话存储）
+  # RL-07：补充 Lettuce 连接池配置，防止高并发下连接耗尽
+  # 小白理解：Redis 连接池就像停车场，max-active 是车位总数，max-idle 是长期保留的车位，
+  # min-idle 是最低保留车位。请求来了从池子里拿连接，用完归还，避免每次都新建连接。
   data:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
       database: 0
       timeout: 5000
+      # Lettuce 连接池配置（RL-07 引入）
+      # 注意：需要引入 commons-pool2 依赖，否则配置不生效
+      lettuce:
+        pool:
+          # 连接池最大活跃连接数（同时最多16个连接，够大部分场景用）
+          max-active: 16
+          # 最大空闲连接数（8个连接闲置保留，超出会被回收）
+          max-idle: 8
+          # 最小空闲连接数（始终保留2个连接待命，避免冷启动延迟）
+          min-idle: 2
+          # 获取连接最大等待时间（毫秒），等5秒还拿不到就报错
+          max-wait: 5000ms
 
 # MyBatis-Plus公共配置（ORM框架，用来操作数据库）
 mybatis-plus:

@@ -4,5 +4,6 @@
  */
 export { useAuth } from './useAuth'
 export { useCart } from './useCart'
+export { useDebounce } from './useDebounce'
 export { useLoading } from './useLoading'
 export { usePagination } from './usePagination'

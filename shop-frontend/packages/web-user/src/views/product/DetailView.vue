@@ -116,10 +116,10 @@
           <div class="detail-actions">
             <button
               class="btn-cart"
-              :disabled="!selectedSku"
+              :disabled="!selectedSku || cartLoading"
               @click="handleAddToCart"
             >
-              加入购物车
+              {{ cartLoading ? '添加中...' : '加入购物车' }}
             </button>
             <button
               class="btn-buy"
@@ -308,7 +308,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Star, Share, Check } from '@element-plus/icons-vue'
 import { getProductDetail, getCommentList, getRelatedProducts } from '@shop/shared'
-import { useCart } from '@shop/shared'
+import { useCart, useDebounce } from '@shop/shared'
 import { isAuthenticated, formatDate, commentScoreTypeOptions } from '@shop/shared'
 import { addFavorite } from '@shop/shared'
 // 注意：CommentScoreType 是 enum（值），不能用 import type 导入
@@ -331,6 +331,9 @@ const selectedSpecs = reactive<Record<string, string>>({})
 const quantity = ref(1)
 /** 当前选中的图片索引 */
 const currentImageIndex = ref(0)
+
+/** RL-08：加入购物车按钮防抖（1秒冷却，防止快速连续点击） */
+const { loading: cartLoading, run: runAddToCart } = useDebounce(1000)
 
 // ==================== 相关推荐 ====================
 /** 相关推荐商品列表（同分类商品，按销量降序） */
@@ -486,24 +489,27 @@ const selectSpec = (specName: string, value: string) => {
 }
 
 /**
- * 执行加入购物车操作（已登录状态下调用）
+ * 执行加入购物车操作（已登录状态下调用）（RL-08 改造：使用 useDebounce 防抖）
  * @returns 是否成功
  */
-const doAddToCart = async (): Promise<boolean> => {
+const doAddToCart = async (): Promise<boolean | undefined> => {
   if (!selectedSku.value || !product.value) return false
-  try {
-    await addToCart(product.value.id, selectedSku.value.id, quantity.value)
-    ElMessage.success('已加入购物车')
-    return true
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : '加入购物车失败'
-    ElMessage.error(msg)
-    return false
-  }
+
+  return runAddToCart(async () => {
+    try {
+      await addToCart(product.value!.id, selectedSku.value!.id, quantity.value)
+      ElMessage.success('已加入购物车')
+      return true
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : '加入购物车失败'
+      ElMessage.error(msg)
+      return false
+    }
+  })
 }
 
 /**
- * 加入购物车
+ * 加入购物车（RL-08 改造：防抖保护）
  * 未登录时弹出登录弹窗，登录成功后自动执行加购
  */
 const handleAddToCart = async () => {

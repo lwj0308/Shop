@@ -1,5 +1,10 @@
 server:
   port: 8849
+  # Tomcat 线程池配置（RL-07 引入）
+  tomcat:
+    max-threads: 200
+    max-connections: 8192
+    accept-count: 100
 
 spring:
   application:
@@ -61,6 +66,18 @@ spring:
             group-id: SENTINEL_GROUP
             data-id: ${spring.application.name}-degrade-rules.json
             rule-type: degrade
+        # 系统自适应限流规则数据源（RL-15 引入）
+        # 小白理解：前面 flow/degrade 都是针对单个接口的限流；
+        # system 是"系统级兜底"，监控 CPU 使用率、系统负载、响应时间、QPS、线程数
+        # 当系统压力过大时（比如 CPU > 75%），自动收紧所有限流规则，防止整个系统崩溃。
+        # SentinelSystemRuleConfig.java 中的硬编码规则作为兜底，Nacos 配置可动态覆盖。
+        system:
+          nacos:
+            server-addr: ${NACOS_SERVER:localhost:8976}
+            namespace: ${NACOS_NAMESPACE:dev}
+            group-id: SENTINEL_GROUP
+            data-id: ${spring.application.name}-system-rules.json
+            rule-type: system
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:4306}/shop_order?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
@@ -72,6 +89,20 @@ spring:
       connection-timeout: 30000
       idle-timeout: 600000
       max-lifetime: 1800000
+
+  # Redis 配置（RL-07 补充 Lettuce 连接池）
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      database: 0
+      timeout: 5000
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+          min-idle: 2
+          max-wait: 5000ms
 
 # RocketMQ配置
 rocketmq:

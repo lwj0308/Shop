@@ -1,5 +1,10 @@
 server:
   port: 8848
+  # Tomcat 线程池配置（RL-07 引入）
+  tomcat:
+    max-threads: 200
+    max-connections: 8192
+    accept-count: 100
 
 spring:
   application:
@@ -38,6 +43,20 @@ spring:
       connection-timeout: 30000
       idle-timeout: 600000
       max-lifetime: 1800000
+
+  # Redis 配置（RL-07 补充 Lettuce 连接池）
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      database: 0
+      timeout: 5000
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+          min-idle: 2
+          max-wait: 5000ms
 
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml

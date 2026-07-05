@@ -180,6 +180,7 @@ import {
   executeSeckill,
   getSeckillQueueStatus,
   isAuthenticated,
+  useDebounce,
 } from '@shop/shared'
 import type { SeckillInfo } from '@shop/shared'
 import { SeckillStatus } from '@shop/shared'
@@ -198,8 +199,8 @@ const loading = ref(true)
 /** 错误信息（加载失败时展示） */
 const errorMsg = ref('')
 
-/** 是否正在提交抢购（用于按钮 loading 状态，防止重复点击） */
-const submitting = ref(false)
+/** RL-08：抢购按钮防抖（替代原来的 submitting 简单布尔值） */
+const { loading: submitting, run: runSeckill, reset: resetSubmitting } = useDebounce(1000)
 
 // ==================== 排队相关状态（RL-13 引入）====================
 
@@ -321,44 +322,48 @@ const loadData = async () => {
 }
 
 /**
- * 执行秒杀抢购（已登录状态下调用）（RL-13 改造：处理排队响应）
+ * 执行秒杀抢购（已登录状态下调用）（RL-13 改造：处理排队响应，RL-08 改造：防抖）
  * 成功（code=200）→ 提示并跳转订单列表
  * 排队中（code=202）→ 进入排队轮询，等轮到时自动重试
  * 失败 → 展示错误信息（如"库存不足"、"超过限购"）
+ * <p>
+ * 防抖说明：runSeckill 自动管理 submitting 状态，请求完成后延迟 1 秒才解除。
+ * 排队场景用 resetSubmitting() 立即解除，让按钮显示"排队中"而非"抢购中"。
+ * </p>
  * @returns 是否成功
  */
-const doSeckill = async (): Promise<boolean> => {
+const doSeckill = async (): Promise<boolean | undefined> => {
   if (!seckill.value) return false
-  if (submitting.value) return false
-  submitting.value = true
-  try {
-    const res = await executeSeckill(seckill.value.id)
-    // 检查响应码：200=成功，202=排队中
-    if (res.code === 202) {
-      // 被限流，进入排队
-      queueNo.value = res.data || ''
-      queueRetryCount = 0
-      isQueuing.value = true
-      submitting.value = false
-      ElMessage.info('抢购人数较多，已为您排队，请耐心等待')
-      // 立即查一次排队位置，然后启动轮询
-      await pollQueueStatus()
-      startQueuePolling()
+
+  return runSeckill(async () => {
+    try {
+      const res = await executeSeckill(seckill.value!.id)
+      // 检查响应码：200=成功，202=排队中
+      if (res.code === 202) {
+        // 被限流，进入排队
+        queueNo.value = res.data || ''
+        queueRetryCount = 0
+        isQueuing.value = true
+        // 排队场景：立即解除 loading，让按钮显示"排队中"
+        resetSubmitting()
+        ElMessage.info('抢购人数较多，已为您排队，请耐心等待')
+        // 立即查一次排队位置，然后启动轮询
+        await pollQueueStatus()
+        startQueuePolling()
+        return false
+      }
+      // code=200，抢购成功
+      ElMessage.success('抢购成功，正在创建订单')
+      // 跳转到订单列表页查看已创建的订单
+      router.push({ name: 'OrderList' })
+      return true
+    } catch (error) {
+      // 展示具体错误信息：库存不足、超过限购、活动已结束等
+      const msg = error instanceof Error ? error.message : '抢购失败，请稍后重试'
+      ElMessage.error(msg)
       return false
     }
-    // code=200，抢购成功
-    ElMessage.success('抢购成功，正在创建订单')
-    // 跳转到订单列表页查看已创建的订单
-    router.push({ name: 'OrderList' })
-    return true
-  } catch (error) {
-    // 展示具体错误信息：库存不足、超过限购、活动已结束等
-    const msg = error instanceof Error ? error.message : '抢购失败，请稍后重试'
-    ElMessage.error(msg)
-    return false
-  } finally {
-    submitting.value = false
-  }
+  })
 }
 
 /**
