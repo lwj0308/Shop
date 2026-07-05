@@ -23,6 +23,29 @@ spring:
         dashboard: ${SENTINEL_DASHBOARD:localhost:8858}
         port: ${SENTINEL_PORT:8719}
       eager: true
+      # Sentinel 数据源 Nacos 持久化（RL-05 引入）
+      # 小白理解：以前限流规则写在代码里（SentinelRuleConfig.java），改规则要重新打包部署；
+      # 现在规则存在 Nacos 配置中心，改规则不用重启服务，Nacos 修改后自动推送到服务生效。
+      # flow：限流规则（QPS 超限就拒绝请求）
+      # degrade：熔断降级规则（异常率/慢调用超阈值就熔断）
+      # data-id 使用 ${spring.application.name} 占位符，每个服务读取自己的规则文件
+      datasource:
+        # 限流规则数据源
+        flow:
+          nacos:
+            server-addr: ${NACOS_SERVER:localhost:8976}
+            namespace: ${NACOS_NAMESPACE:dev}
+            group-id: SENTINEL_GROUP
+            data-id: ${spring.application.name}-flow-rules.json
+            rule-type: flow
+        # 熔断降级规则数据源（当前为空，后续 RL-06 配置）
+        degrade:
+          nacos:
+            server-addr: ${NACOS_SERVER:localhost:8976}
+            namespace: ${NACOS_NAMESPACE:dev}
+            group-id: SENTINEL_GROUP
+            data-id: ${spring.application.name}-degrade-rules.json
+            rule-type: degrade
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:4306}/shop_seckill?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true

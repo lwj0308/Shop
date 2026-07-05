@@ -1,0 +1,15 @@
+[
+  {
+    "resource": "product:detail",
+    "grade": 1,
+    "paramIdx": 0,
+    "count": 500,
+    "paramFlowItemList": [
+      {
+        "object": "10086",
+        "classType": "java.lang.Long",
+        "count": 2000
+      }
+    ]
+  }
+]

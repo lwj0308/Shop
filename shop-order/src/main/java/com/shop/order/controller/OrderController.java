@@ -73,14 +73,26 @@ public class OrderController {
      * 需要传入收货地址ID、商品列表和备注。
      * 支持幂等Token防止重复提交。
      * </p>
+     * <p>
+     * RL-14：新增 X-Idempotent-Key 请求头作为幂等键，前端请求拦截器自动注入。
+     * 限流拒绝（Gateway 429）时不会进入这里，幂等键未消耗，客户端可用相同 key 重试。
+     * 限流通过后进入此方法，幂等键会被 Redis SETNX 占用，重复提交直接拒绝。
+     * </p>
      *
-     * @param dto 创建订单参数
+     * @param dto           创建订单参数
+     * @param idempotentKey 幂等键（从请求头 X-Idempotent-Key 读取，前端自动生成）
      * @return 订单详情
      */
     @PostMapping
     @Operation(summary = "创建订单", description = "提交订单，包含商品列表和收货地址，支持幂等Token防重复提交")
-    public Result<OrderDetailVO> createOrder(@Validated @RequestBody OrderCreateDTO dto) {
+    public Result<OrderDetailVO> createOrder(
+            @Validated @RequestBody OrderCreateDTO dto,
+            @RequestHeader(value = "X-Idempotent-Key", required = false) String idempotentKey) {
         Long userId = StpUtil.getLoginIdAsLong();
+        // RL-14：优先使用请求头中的幂等键，回退到 DTO 中的 idempotentToken（兼容旧版前端）
+        if (idempotentKey != null && !idempotentKey.isEmpty()) {
+            dto.setIdempotentToken(idempotentKey);
+        }
         OrderDetailVO orderDetail = orderService.createOrder(userId, dto);
         return Result.success("下单成功", orderDetail);
     }

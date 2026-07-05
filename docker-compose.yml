@@ -275,6 +275,32 @@ services:
       elasticsearch:
         condition: service_healthy
 
+  # ==============================
+  # Sentinel Dashboard - 限流熔断可视化管理界面
+  # 说明：监控 shop-product / shop-order / shop-seckill 等服务的限流熔断状态
+  # 访问地址：http://localhost:8858  账号/密码：sentinel/sentinel
+  # 小白理解：Sentinel Dashboard 就像"交通监控中心"，
+  # 可以看到每个路口（接口）的车流量（QPS）和拥堵情况（限流次数）
+  # ==============================
+  sentinel-dashboard:
+    image: bladex/sentinel-dashboard:1.8.9
+    container_name: shop-sentinel-dashboard
+    restart: unless-stopped
+    ports:
+      - "8858:8858"
+    environment:
+      # Dashboard 监听端口和服务端地址
+      JAVA_OPTS: "-Dserver.port=8858 -Dcsp.sentinel.dashboard.server=localhost:8858"
+      TZ: Asia/Shanghai
+    networks:
+      - shop-network
+    healthcheck:
+      # 健康检查：检查 Dashboard HTTP 端口是否可访问
+      test: ["CMD-SHELL", "curl -f http://localhost:8858/ || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
 # ==============================
 # 自定义网络
 # 说明：所有服务在同一个网络中，可以通过容器名互相访问

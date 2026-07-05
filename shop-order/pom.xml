@@ -44,6 +44,14 @@
             <artifactId>spring-cloud-starter-alibaba-sentinel</artifactId>
         </dependency>
 
+        <!-- Sentinel 数据源 Nacos：把限流规则持久化到Nacos，服务重启不丢失（RL-05 引入） -->
+        <!-- 小白理解：以前限流规则写在代码里（硬编码），改规则要重新部署；
+             现在规则存在Nacos配置中心，改规则不用重启服务，Dashboard修改后自动同步 -->
+        <dependency>
+            <groupId>com.alibaba.csp</groupId>
+            <artifactId>sentinel-datasource-nacos</artifactId>
+        </dependency>
+
         <!-- MyBatis-Plus -->
         <dependency>
             <groupId>com.baomidou</groupId>

@@ -56,10 +56,10 @@ public class SaTokenConfig implements WebMvcConfigurer {
         registry.addInterceptor(new SaInterceptor(handle -> StpUtil.checkLogin()))
                 .addPathPatterns("/**") // 拦截所有接口
                 .excludePathPatterns(
-                        "/auth/register",    // 注册接口不需要登录
-                        "/auth/login",       // 登录接口不需要登录
-                        "/auth/refresh",     // 刷新Token接口不需要登录
-                        "/auth/wx-login",    // 微信登录接口不需要登录
+                        "/user/auth/register",    // 注册接口不需要登录
+                        "/user/auth/login",       // 登录接口不需要登录
+                        "/user/auth/refresh",     // 刷新Token接口不需要登录
+                        "/user/auth/wx-login",    // 微信登录接口不需要登录
                         "/user/notification/inner/**", // 消息通知内部接口，供其他微服务Feign调用
                         "/user/coupon/inner/**",       // 用户优惠券内部接口，供shop-order Feign调用
                         "/user/inner/**",             // 用户内部接口，供shop-product评价服务Feign调用：批量查询用户信息

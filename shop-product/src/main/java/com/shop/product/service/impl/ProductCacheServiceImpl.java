@@ -3,7 +3,14 @@ package com.shop.product.service.impl;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.shop.common.exception.BusinessException;
+import com.shop.common.model.PageRequest;
+import com.shop.common.model.PageResult;
 import com.shop.common.result.ErrorCode;
 import com.shop.model.product.entity.*;
 import com.shop.model.product.vo.ProductDetailVO;
@@ -74,8 +81,23 @@ public class ProductCacheServiceImpl implements ProductCacheService {
     /** 商品详情Redis缓存key前缀 */
     private static final String PRODUCT_DETAIL_CACHE_KEY = "product:detail:";
 
+    /** 商品列表Redis缓存key前缀（RL-13 引入） */
+    private static final String PRODUCT_LIST_CACHE_KEY = "product:list:";
+
+    /** 商品列表缓存过期时间（分钟），5分钟后自动失效 */
+    private static final long LIST_CACHE_EXPIRE_MINUTES = 5;
+
     /** 延迟双删的延迟时间（毫秒），500ms足够覆盖大部分并发场景 */
     private static final long DELAY_DOUBLE_DELETE_MS = 500;
+
+    /**
+     * JSON序列化工具（RL-13 引入，用于商品列表缓存序列化）
+     * 直接new而不通过Spring注入，避免某些Spring Boot版本下ObjectMapper Bean未自动配置的问题。
+     * 注册JavaTimeModule支持LocalDateTime序列化。
+     */
+    private final ObjectMapper objectMapper = new ObjectMapper()
+            .registerModule(new JavaTimeModule())
+            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
     /**
      * Caffeine本地缓存
@@ -129,6 +151,30 @@ public class ProductCacheServiceImpl implements ProductCacheService {
     }
 
     /**
+     * 只查缓存不查数据库（RL-06 引入，供降级使用）
+     * <p>
+     * 当数据库异常时，Sentinel fallback 会调用这个方法，
+     * 返回缓存中的旧数据，而不是抛出 500 错误。
+     * </p>
+     */
+    @Override
+    public ProductDetailVO getCachedProductDetail(Long productId) {
+        // 1. 先查Caffeine本地缓存
+        ProductDetailVO detail = localCache.getIfPresent(productId);
+        if (detail != null) {
+            log.info("降级时Caffeine本地缓存命中: productId={}", productId);
+            return detail;
+        }
+
+        // 2. 再查Redis分布式缓存（虽然当前未实现JSON缓存，保留接口供后续扩展）
+        // TODO: 后续实现Redis JSON缓存后，这里可以查Redis
+
+        // 3. 缓存都没有，返回null（调用方需处理null情况）
+        log.warn("降级时缓存未命中，返回null: productId={}", productId);
+        return null;
+    }
+
+    /**
      * 删除商品详情缓存
      * <p>
      * 同时删除Caffeine本地缓存和Redis缓存，确保下次查询从数据库重新加载。
@@ -170,6 +216,76 @@ public class ProductCacheServiceImpl implements ProductCacheService {
                 log.warn("延迟双删被中断: productId={}", productId);
             }
         });
+    }
+
+    /**
+     * 缓存商品列表结果（RL-13 引入）
+     * <p>
+     * 把商品列表查询结果序列化成JSON存到Redis，5分钟后自动过期。
+     * 缓存key根据 categoryId + pageNum + pageSize 生成，不同参数组合缓存各自的结果。
+     * </p>
+     *
+     * @param categoryId    分类ID（可为null）
+     * @param pageRequest   分页参数
+     * @param pageResult    查询结果
+     */
+    @Override
+    public void cacheProductList(Long categoryId, PageRequest pageRequest, PageResult<ProductVO> pageResult) {
+        try {
+            String key = buildListCacheKey(categoryId, pageRequest);
+            String json = objectMapper.writeValueAsString(pageResult);
+            stringRedisTemplate.opsForValue().set(key, json, LIST_CACHE_EXPIRE_MINUTES, TimeUnit.MINUTES);
+            log.debug("商品列表已缓存: key={}", key);
+        } catch (JsonProcessingException e) {
+            // 序列化失败只记录日志，不影响正常流程（缓存是弱依赖）
+            log.warn("商品列表缓存失败: categoryId={}, pageNum={}", categoryId, pageRequest.getPageNum(), e);
+        }
+    }
+
+    /**
+     * 只查缓存中的商品列表（RL-13 引入）
+     * <p>
+     * 当商品列表接口被限流时调用，从Redis读取之前缓存的列表数据。
+     * 缓存未命中返回 null，调用方需处理 null 的情况。
+     * </p>
+     *
+     * @param categoryId   分类ID（可为null）
+     * @param pageRequest  分页参数
+     * @return 缓存的商品列表，缓存未命中返回 null
+     */
+    @Override
+    public PageResult<ProductVO> getCachedProductList(Long categoryId, PageRequest pageRequest) {
+        try {
+            String key = buildListCacheKey(categoryId, pageRequest);
+            String json = stringRedisTemplate.opsForValue().get(key);
+            if (json == null) {
+                log.info("商品列表缓存未命中: categoryId={}, pageNum={}", categoryId, pageRequest.getPageNum());
+                return null;
+            }
+            // 反序列化成 PageResult<ProductVO>
+            PageResult<ProductVO> result = objectMapper.readValue(json, new TypeReference<PageResult<ProductVO>>() {});
+            log.info("商品列表缓存命中: categoryId={}, pageNum={}", categoryId, pageRequest.getPageNum());
+            return result;
+        } catch (Exception e) {
+            log.warn("读取商品列表缓存失败: categoryId={}, pageNum={}", categoryId, pageRequest.getPageNum(), e);
+            return null;
+        }
+    }
+
+    /**
+     * 构建商品列表缓存key
+     * <p>
+     * key格式：product:list:{categoryId}:{pageNum}:{pageSize}
+     * categoryId为null时用"all"代替，保证key唯一性。
+     * </p>
+     *
+     * @param categoryId   分类ID（可为null）
+     * @param pageRequest  分页参数
+     * @return Redis缓存key
+     */
+    private String buildListCacheKey(Long categoryId, PageRequest pageRequest) {
+        String categoryPart = categoryId != null ? String.valueOf(categoryId) : "all";
+        return PRODUCT_LIST_CACHE_KEY + categoryPart + ":" + pageRequest.getPageNum() + ":" + pageRequest.getPageSize();
     }
 
     // ==================== 私有方法 ====================

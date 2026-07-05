@@ -9,6 +9,7 @@ import com.shop.model.seckill.dto.SeckillOrderDTO;
 import com.shop.model.seckill.entity.SeckillActivity;
 import com.shop.model.seckill.enums.SeckillStatusEnum;
 import com.shop.order.feign.SeckillFeignClient;
+import com.shop.order.service.QueueService;
 import com.shop.order.service.SeckillService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +22,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 秒杀服务实现类
@@ -53,6 +55,9 @@ public class SeckillServiceImpl implements SeckillService {
     /** RocketMQ消息模板，用于发送异步下单消息 */
     private final RocketMQTemplate rocketMQTemplate;
 
+    /** 排队队列服务（RL-13 引入），限流时把用户放入排队队列 */
+    private final QueueService queueService;
+
     /** 秒杀订单MQ Topic：用户抢购成功后往这个Topic发消息，消费者收到后异步创建订单 */
     private static final String TOPIC_SECKILL_ORDER = "topic_seckill_order";
 
@@ -61,6 +66,19 @@ public class SeckillServiceImpl implements SeckillService {
 
     /** Redis用户已购数量key前缀：seckill:user:{seckillId}:{userId} 存的是这个用户在这个活动买了几个 */
     private static final String USER_BOUGHT_KEY_PREFIX = "seckill:user:";
+
+    /**
+     * RL-14：用户抢购请求级幂等锁 key 前缀
+     * <p>
+     * key 格式：seckill:grab:lock:{seckillId}:{userId}
+     * 作用：防止同一用户在极短时间内连续点击"抢购"按钮，导致重复发送 MQ 消息。
+     * 注意：这个锁和"限购"不同——限购是"总共能买几个"，这个锁是"短时间内只能点一次"。
+     * </p>
+     */
+    private static final String SECKILL_GRAB_LOCK_PREFIX = "seckill:grab:lock:";
+
+    /** RL-14：抢购幂等锁的 TTL（秒），5 秒内同一用户同一活动只能抢一次 */
+    private static final long SECKILL_GRAB_LOCK_TTL = 5;
 
     /**
      * Lua脚本：原子扣减秒杀库存
@@ -99,9 +117,15 @@ public class SeckillServiceImpl implements SeckillService {
      * <p>
      * 完整流程：
      * 1. 查询秒杀活动信息并校验（活动存在、状态进行中、在时间窗口内）
-     * 2. 执行Lua脚本原子扣减Redis秒杀库存
-     * 3. 库存扣减成功后发送MQ消息异步创建秒杀订单
-     * 4. 返回"抢购成功，正在创建订单"
+     * 2. RL-14：用户抢购请求级幂等校验（防止同一用户 5 秒内连续点击）
+     * 3. 执行Lua脚本原子扣减Redis秒杀库存
+     * 4. 库存扣减成功后发送MQ消息异步创建秒杀订单
+     * 5. 返回"抢购成功，正在创建订单"
+     * </p>
+     * <p>
+     * RL-14 限流联动说明：
+     * - Sentinel 限流触发 blockHandler 时不会进入这里，幂等锁未消耗，客户端可重试。
+     * - 只有真正进入方法体才会占用幂等锁，保证"限流拒绝可重试，业务通过防重复"。
      * </p>
      *
      * @param userId    用户ID
@@ -116,7 +140,19 @@ public class SeckillServiceImpl implements SeckillService {
         // ========== 1. 查询秒杀活动信息并校验 ==========
         SeckillActivity activity = getAndCheckActivity(seckillId);
 
-        // ========== 2. 执行Lua脚本原子扣减Redis秒杀库存 ==========
+        // ========== 2. RL-14：用户抢购请求级幂等校验 ==========
+        // 小白讲解：这一步防止用户在 5 秒内连续点"抢购"按钮，避免重复发送 MQ 消息
+        // 和"限购"不同：限购是"总共能买几个"，这个锁是"短时间内只能点一次"
+        String grabLockKey = SECKILL_GRAB_LOCK_PREFIX + seckillId + ":" + userId;
+        Boolean grabLocked = stringRedisTemplate.opsForValue()
+                .setIfAbsent(grabLockKey, "1", SECKILL_GRAB_LOCK_TTL, TimeUnit.SECONDS);
+        if (Boolean.FALSE.equals(grabLocked)) {
+            // 锁已存在，说明 5 秒内已经点过一次了
+            log.info("秒杀被幂等锁拦截: userId={}, seckillId={}", userId, seckillId);
+            return Result.fail(ErrorCode.OPERATION_FAIL.getCode(), "操作太频繁，请稍后重试");
+        }
+
+        // ========== 3. 执行Lua脚本原子扣减Redis秒杀库存 ==========
         // 小白讲解：这一步是秒杀的核心，用Lua脚本一次性完成"查库存+扣库存+记已购"，防止超卖
         Long result = executeLuaScript(seckillId, userId, activity.getLimitCount());
 
@@ -254,25 +290,32 @@ public class SeckillServiceImpl implements SeckillService {
     // ==================== Sentinel 限流/降级兜底方法（RL-02 引入）====================
 
     /**
-     * 秒杀抢购的限流兜底方法（Sentinel blockHandler）
+     * 秒杀抢购的限流兜底方法（Sentinel blockHandler）（RL-13 改造）
      * <p>
      * 当 seckill:grab 资源的 QPS 超过限流规则阈值时触发。
-     * 秒杀场景下限流比直接拒绝更友好，告诉用户"抢购人数过多"而不是报错。
+     * 改造前：直接返回失败提示"当前抢购人数过多，请稍后再试"
+     * 改造后：把用户放入排队队列，返回 202 + 排队号，前端轮询查询排队进度
      * </p>
      * <p>
-     * 小白理解：秒杀限流就像超市促销时门口限流，告诉排队的顾客"人太多了稍等一下"，
-     * 而不是让所有人都挤进去导致踩踏。
+     * 小白理解：秒杀限流就像超市促销时门口限流，以前是直接关门不让进，
+     * 现在是发个排队号让你等着，等里面的人出来了再叫你进去。
      * </p>
      *
      * @param userId    用户ID（原方法参数）
      * @param seckillId 秒杀活动ID（原方法参数）
      * @param ex        Sentinel 抛出的限流异常
-     * @return 友好的限流提示
+     * @return 202 接受响应，data 是排队号
      */
     public Result<String> executeSeckillBlockHandler(Long userId, Long seckillId, BlockException ex) {
-        log.warn("秒杀抢购被 Sentinel 限流，userId={}, seckillId={}, 限流类型={}",
+        log.warn("秒杀抢购被 Sentinel 限流，进入排队: userId={}, seckillId={}, 限流类型={}",
                 userId, seckillId, ex.getClass().getSimpleName());
-        return Result.fail(ErrorCode.OPERATION_FAIL.getCode(), "当前抢购人数过多，请稍后再试");
+        // 把用户放入排队队列，拿到排队号
+        String queueNo = queueService.enqueue(seckillId, userId);
+        int position = queueService.getQueuePosition(seckillId, queueNo);
+        log.info("用户已加入排队队列: userId={}, seckillId={}, queueNo={}, 当前位置={}",
+                userId, seckillId, queueNo, position);
+        // 返回 202（已接受，正在排队），排队号给前端用来轮询
+        return Result.accepted("排队中，请稍候", queueNo);
     }
 
     /**

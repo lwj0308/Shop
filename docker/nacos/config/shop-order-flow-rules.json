@@ -1,0 +1,20 @@
+[
+  {
+    "resource": "order:create",
+    "limitApp": "default",
+    "grade": 1,
+    "count": 100,
+    "strategy": 0,
+    "controlBehavior": 0,
+    "clusterMode": false
+  },
+  {
+    "resource": "seckill:grab",
+    "limitApp": "default",
+    "grade": 1,
+    "count": 2,
+    "strategy": 0,
+    "controlBehavior": 0,
+    "clusterMode": false
+  }
+]

@@ -120,10 +120,30 @@
               <span class="loading-dot"></span>
               抢购中...
             </span>
+            <span v-else-if="isQueuing" class="btn-loading">
+              <span class="loading-dot"></span>
+              <span class="loading-dot"></span>
+              <span class="loading-dot"></span>
+              排队中...
+            </span>
             <span v-else-if="isEnded">活动已结束</span>
             <span v-else-if="seckill.availableCount <= 0">已抢光</span>
             <span v-else>立即抢购</span>
           </button>
+
+          <!-- 排队状态提示（RL-13 引入） -->
+          <div v-if="isQueuing" class="queue-status">
+            <div class="queue-status-header">
+              <el-icon class="queue-icon"><Warning /></el-icon>
+              <span class="queue-title">正在排队中，请耐心等待</span>
+            </div>
+            <div class="queue-info">
+              <span class="queue-position">
+                当前位置：<strong>{{ queuePosition }}</strong> / {{ queueTotal }}
+              </span>
+              <span class="queue-tip">系统将自动为您重试抢购</span>
+            </div>
+          </div>
 
           <!-- 服务承诺 -->
           <div class="service-tags">
@@ -158,6 +178,7 @@ import { Goods, Warning, Check } from '@element-plus/icons-vue'
 import {
   getPublicSeckillDetail,
   executeSeckill,
+  getSeckillQueueStatus,
   isAuthenticated,
 } from '@shop/shared'
 import type { SeckillInfo } from '@shop/shared'
@@ -179,6 +200,29 @@ const errorMsg = ref('')
 
 /** 是否正在提交抢购（用于按钮 loading 状态，防止重复点击） */
 const submitting = ref(false)
+
+// ==================== 排队相关状态（RL-13 引入）====================
+
+/** 是否正在排队中 */
+const isQueuing = ref(false)
+
+/** 排队号 */
+const queueNo = ref('')
+
+/** 当前排队位置（1-based，1表示排第1位） */
+const queuePosition = ref(0)
+
+/** 队列总人数 */
+const queueTotal = ref(0)
+
+/** 排队轮询定时器ID */
+let queueTimer: ReturnType<typeof setInterval> | null = null
+
+/** 排队重试次数（超过10次放弃） */
+let queueRetryCount = 0
+
+/** 排队最大重试次数 */
+const MAX_QUEUE_RETRY = 10
 
 /**
  * 倒计时显示数据
@@ -215,11 +259,12 @@ const isEnded = computed(() => {
 
 /**
  * 按钮是否可点击
- * 活动未结束 + 库存大于0 + 不在提交中
+ * 活动未结束 + 库存大于0 + 不在提交中 + 不在排队中
  */
 const canBuy = computed(() => {
   if (!seckill.value) return false
   if (submitting.value) return false
+  if (isQueuing.value) return false
   if (isEnded.value) return false
   return seckill.value.availableCount > 0
 })
@@ -276,8 +321,9 @@ const loadData = async () => {
 }
 
 /**
- * 执行秒杀抢购（已登录状态下调用）
- * 成功 → 提示并跳转订单列表
+ * 执行秒杀抢购（已登录状态下调用）（RL-13 改造：处理排队响应）
+ * 成功（code=200）→ 提示并跳转订单列表
+ * 排队中（code=202）→ 进入排队轮询，等轮到时自动重试
  * 失败 → 展示错误信息（如"库存不足"、"超过限购"）
  * @returns 是否成功
  */
@@ -286,7 +332,21 @@ const doSeckill = async (): Promise<boolean> => {
   if (submitting.value) return false
   submitting.value = true
   try {
-    await executeSeckill(seckill.value.id)
+    const res = await executeSeckill(seckill.value.id)
+    // 检查响应码：200=成功，202=排队中
+    if (res.code === 202) {
+      // 被限流，进入排队
+      queueNo.value = res.data || ''
+      queueRetryCount = 0
+      isQueuing.value = true
+      submitting.value = false
+      ElMessage.info('抢购人数较多，已为您排队，请耐心等待')
+      // 立即查一次排队位置，然后启动轮询
+      await pollQueueStatus()
+      startQueuePolling()
+      return false
+    }
+    // code=200，抢购成功
     ElMessage.success('抢购成功，正在创建订单')
     // 跳转到订单列表页查看已创建的订单
     router.push({ name: 'OrderList' })
@@ -298,6 +358,62 @@ const doSeckill = async (): Promise<boolean> => {
     return false
   } finally {
     submitting.value = false
+  }
+}
+
+/**
+ * 查询排队位置（RL-13 引入）
+ * 调用后端接口获取当前位置和队列总人数
+ */
+const pollQueueStatus = async () => {
+  if (!seckill.value || !queueNo.value) return
+  try {
+    const res = await getSeckillQueueStatus(seckill.value.id, queueNo.value)
+    queuePosition.value = res.data.position
+    queueTotal.value = res.data.total
+  } catch (error) {
+    // 查询失败不中断轮询，下次再试
+    console.warn('查询排队位置失败', error)
+  }
+}
+
+/**
+ * 启动排队轮询定时器（RL-13 引入）
+ * 每2秒查一次排队位置，当位置<=2或位置=0时自动重试抢购
+ */
+const startQueuePolling = () => {
+  // 先清理之前的定时器（防止重复启动）
+  stopQueuePolling()
+  queueTimer = setInterval(async () => {
+    await pollQueueStatus()
+    queueRetryCount++
+
+    // 超过最大重试次数，放弃排队
+    if (queueRetryCount >= MAX_QUEUE_RETRY) {
+      stopQueuePolling()
+      isQueuing.value = false
+      ElMessage.warning('排队超时，请稍后重试')
+      return
+    }
+
+    // 位置=0 表示不在队列中（可能已过期），或者位置<=2 表示快轮到了，自动重试
+    if (queuePosition.value === 0 || queuePosition.value <= 2) {
+      stopQueuePolling()
+      isQueuing.value = false
+      // 自动重试抢购
+      await doSeckill()
+    }
+  }, 2000) // 每2秒轮询一次
+}
+
+/**
+ * 停止排队轮询（RL-13 引入）
+ * 清理定时器，重置排队状态
+ */
+const stopQueuePolling = () => {
+  if (queueTimer) {
+    clearInterval(queueTimer)
+    queueTimer = null
   }
 }
 
@@ -369,6 +485,8 @@ onUnmounted(() => {
     clearInterval(countdownTimer)
     countdownTimer = null
   }
+  // RL-13：清理排队轮询定时器
+  stopQueuePolling()
 })
 </script>
 
@@ -761,6 +879,68 @@ onUnmounted(() => {
 .service-item .el-icon {
   color: #ff4d4f;
   font-size: 14px;
+}
+
+/* ==================== 排队状态提示（RL-13 引入）==================== */
+.queue-status {
+  margin-bottom: 24px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #fff7e6 0%, #fff1f0 100%);
+  border: 1px solid #ffd591;
+  border-radius: var(--radius-md);
+}
+
+.queue-status-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.queue-icon {
+  color: #fa8c16;
+  font-size: 18px;
+  animation: queuePulse 1.5s infinite;
+}
+
+.queue-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #d46b08;
+  letter-spacing: 0.02em;
+}
+
+.queue-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: baseline;
+  font-size: 13px;
+  color: #874d00;
+}
+
+.queue-position strong {
+  color: #fa541c;
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 2px;
+}
+
+.queue-tip {
+  color: #ad6800;
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+@keyframes queuePulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.15);
+  }
 }
 
 /* ==================== 活动说明 ==================== */

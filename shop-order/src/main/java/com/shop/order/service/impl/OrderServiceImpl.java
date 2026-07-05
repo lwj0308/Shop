@@ -780,24 +780,38 @@ public class OrderServiceImpl implements OrderService {
     // ==================== 私有方法 ====================
 
     /**
-     * 幂等Token校验
+     * 幂等Token校验（RL-14 增强）
      * <p>
-     * 前端在下单页面加载时先获取一个幂等Token，
-     * 提交订单时带上这个Token，后端校验Token是否有效。
-     * 如果Token已经被使用过（Redis中不存在），说明是重复请求，直接拒绝。
-     * 这样可以防止用户因为网络卡顿而重复点击"提交订单"按钮。
+     * 防止用户因为网络卡顿、连续点击"提交订单"按钮而导致重复下单。
+     * </p>
+     * <p>
+     * RL-14 改造说明：
+     * - 旧逻辑：前端先调用接口获取 Token 存入 Redis，下单时删除 Token，删除成功才算第一次请求。
+     *   缺点是需要额外接口，且 Token 必须先存后删，时序依赖强。
+     * - 新逻辑：前端直接生成幂等键（X-Idempotent-Key 请求头），下单时用 SETNX 占用，
+     *   占用成功说明是第一次请求，已存在则拒绝。TTL 24 小时，覆盖订单创建全流程。
+     * </p>
+     * <p>
+     * 限流联动说明：
+     * - Gateway 限流返回 429 时不会进入这里，幂等键未消耗，客户端可用相同 key 重试。
+     * - Sentinel 限流（blockHandler）触发排队时也不会消耗幂等键（blockHandler 在方法外层拦截）。
+     * - 只有真正进入 createOrder 方法体才会消耗幂等键，保证"限流拒绝可重试，业务通过防重复"。
      * </p>
      *
-     * @param token 幂等Token，前端传过来的
+     * @param token 幂等键，来自请求头 X-Idempotent-Key 或 DTO.idempotentToken
      */
     private void checkIdempotentToken(String token) {
         if (token == null || token.isEmpty()) {
-            // 没有传Token时不强制校验（兼容旧版前端）
+            // 没有传幂等键时不强制校验（兼容旧版前端，后续可改为强制）
             return;
         }
-        // 尝试删除Token，删除成功说明是第一次请求，删除失败说明是重复请求
-        Boolean deleted = stringRedisTemplate.delete(IDEMPOTENT_TOKEN_PREFIX + token);
-        if (deleted == null || !deleted) {
+        // RL-14：用 SETNX 占用幂等键，TTL 24 小时
+        // setIfAbsent = "如果 key 不存在才设置"，返回 true 说明是第一次请求
+        Boolean isNew = stringRedisTemplate.opsForValue()
+                .setIfAbsent(IDEMPOTENT_TOKEN_PREFIX + token, "1", IDEMPOTENT_TOKEN_EXPIRE, TimeUnit.SECONDS);
+        if (Boolean.FALSE.equals(isNew)) {
+            // key 已存在，说明是重复请求
+            log.warn("重复提交订单被幂等校验拦截: token={}", token);
             throw new BusinessException(ErrorCode.ORDER_CREATE_FAIL.getCode(), "请勿重复提交订单");
         }
     }

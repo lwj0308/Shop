@@ -92,8 +92,21 @@ export function getPublicSeckillDetail(seckillId: number) {
  * 用户秒杀抢购
  * 调用 shop-order 的秒杀接口，执行 Redis Lua 脚本扣减库存
  * 成功后返回"抢购成功，正在创建订单"，订单异步创建
+ * 被限流时返回 code=202 + 排队号（RL-13 改造），前端需处理 202 响应进入排队轮询
  * @param seckillId 秒杀活动ID
+ * @returns code=200 抢购成功；code=202 排队中（data 是排队号）
  */
 export function executeSeckill(seckillId: number) {
   return post<string>(`/order/seckill/${seckillId}`)
+}
+
+/**
+ * 查询秒杀排队位置（RL-13 引入）
+ * 前端收到 202 响应后，用排队号轮询这个接口查询当前位置
+ * @param seckillId 秒杀活动ID
+ * @param queueNo   排队号（executeSeckill 返回的 202 响应中的 data）
+ * @returns 排队状态：{ position: 当前位置(1-based, 0表示不在队列中), total: 队列总人数 }
+ */
+export function getSeckillQueueStatus(seckillId: number, queueNo: string) {
+  return get<{ position: number; total: number }>(`/order/seckill/queue/${seckillId}/${queueNo}`)
 }

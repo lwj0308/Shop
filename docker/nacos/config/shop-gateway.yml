@@ -75,27 +75,53 @@ gateway:
         path-qps: 50
       # 秒杀接口：令牌桶，IP 速率 3 令牌/秒（防刷单），桶容量 5（允许短时突发）
       # 接口维度 1000 令牌/秒，桶容量 1000（允许高并发）
+      # user-qps=3（RL-10）：登录用户每秒最多3次，防止代理池绕过IP限流
       - path-pattern: /api/seckill/grab/**
         algorithm: token-bucket
         ip-qps: 3
         path-qps: 1000
         capacity: 5
+        user-qps: 3
       # 下单支付接口：令牌桶，允许短时突发（如双击提交）
+      # user-qps=10（RL-10）：登录用户每秒最多10次下单
       - path-pattern: /api/order/**
         algorithm: token-bucket
         ip-qps: 10
         path-qps: 100
         capacity: 20
+        user-qps: 10
       - path-pattern: /api/payment/**
         algorithm: token-bucket
         ip-qps: 10
         path-qps: 100
         capacity: 20
+        user-qps: 10
       # 评论提交接口：低频高精度，用 ZSet 滑动窗口，防止刷评
+      # user-qps=3（RL-10）：登录用户每秒最多3次评论
       - path-pattern: /api/product/comment/create
         algorithm: sliding-window
         ip-qps: 3
         path-qps: 50
+        user-qps: 3
+
+  # ==================== 黑白名单配置（RL-11 引入）====================
+  # 小白理解：
+  # - 黑名单：名单上的IP/用户直接返回403，不允许访问
+  # - 白名单：名单上的IP/用户跳过限流，直接放行
+  # - 自动拉黑：触发限流10次后，自动拉黑1小时
+  blacklist:
+    # IP 黑名单（初始为空，运行时通过 Redis Set 动态管理）
+    ip-blacklist: []
+    # 用户 ID 黑名单
+    user-blacklist: []
+    # IP 白名单（内部服务器、监控探针等可加入）
+    ip-whitelist: []
+    # 用户 ID 白名单（管理员、测试账号等可加入）
+    user-whitelist: []
+    # 自动拉黑阈值：触发限流超过此次数后自动拉黑（0=禁用）
+    auto-block-threshold: 10
+    # 自动拉黑时长（秒），默认1小时
+    auto-block-duration: 3600
 
 # ==================== Sa-Token 配置 ====================
 sa-token:

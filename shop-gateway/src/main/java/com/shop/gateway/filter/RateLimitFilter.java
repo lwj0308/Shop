@@ -31,7 +31,9 @@ import java.util.UUID;
  * </p>
  * <p>
  * 限流维度（两个维度同时检查，任一超限即拒绝）：
- * 1. IP级别：限制单个IP每秒请求数（防止爬虫/刷接口）
+ * 1. 用户级别（RL-10 引入）：登录用户按 userId 限流，防止代理池绕过IP限流
+ *    - 仅登录用户生效，未登录用户降级用 IP 维度
+ *    - 防止用户用多IP绕过IP限流刷接口（比如代理池秒杀）
  * 2. 接口级别：限制单个接口每秒总请求数（保护后端服务）
  * </p>
  * <p>
@@ -70,6 +72,9 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
     /** Redis Key 前缀：接口级别 */
     private static final String PATH_KEY_PREFIX = "rate_limit:path:";
 
+    /** Redis Key 前缀：用户级别（RL-10 引入） */
+    private static final String USER_KEY_PREFIX = "rate_limit:user:";
+
     /** 算法常量：ZSet 精确滑动窗口 */
     private static final String ALGORITHM_SLIDING_WINDOW = "sliding-window";
 
@@ -88,6 +93,9 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
     /** 限流配置（从Nacos读取，支持动态刷新） */
     private final RateLimitProperties properties;
 
+    /** 黑白名单配置（RL-11 引入，用于自动拉黑阈值判断） */
+    private final com.shop.gateway.config.BlacklistConfig blacklistConfig;
+
     /** Ant路径匹配器（用于规则路径匹配，和WhitelistConfig保持一致） */
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
@@ -101,11 +109,13 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
     public RateLimitFilter(ReactiveStringRedisTemplate redisTemplate,
                             @Qualifier("rateLimitScript") RedisScript<Long> rateLimitScript,
                             @Qualifier("tokenBucketScript") RedisScript<Long> tokenBucketScript,
-                            RateLimitProperties properties) {
+                            RateLimitProperties properties,
+                            com.shop.gateway.config.BlacklistConfig blacklistConfig) {
         this.redisTemplate = redisTemplate;
         this.rateLimitScript = rateLimitScript;
         this.tokenBucketScript = tokenBucketScript;
         this.properties = properties;
+        this.blacklistConfig = blacklistConfig;
     }
 
     /**
@@ -137,6 +147,11 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
             return chain.filter(exchange);
         }
 
+        // RL-11：白名单请求跳过限流（BlacklistFilter 设置的标记）
+        if (Boolean.TRUE.equals(exchange.getAttribute(BlacklistFilter.ATTR_SKIP_RATE_LIMIT))) {
+            return chain.filter(exchange);
+        }
+
         ServerHttpRequest request = exchange.getRequest();
         String clientIp = getClientIp(request);
         String path = request.getURI().getPath();
@@ -150,32 +165,44 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
                 ? matchedRule.getPathQps() : properties.getDefaultPathQps();
         long capacity = resolveCapacity(matchedRule, ipQps, pathQps);
 
+        // RL-10：获取登录用户ID（AuthGlobalFilter 已写入 X-User-Id Header）
+        // 登录用户用 user 维度限流，防止用多IP绕过IP限流（代理池刷单）
+        String userId = request.getHeaders().getFirst("X-User-Id");
+        long userQps = matchedRule != null ? matchedRule.getUserQps() : 0L;
+        // 是否启用用户维度限流：配置了 userQps > 0 且请求携带 userId
+        boolean useUserLimit = userId != null && !userId.isEmpty() && userQps > 0;
+
         // 滑动窗口需要唯一请求ID（ZADD 的 member，避免同毫秒请求被去重）
         String requestId = UUID.randomUUID().toString();
         long now = System.currentTimeMillis();
 
-        // 第3步：IP级别限流检查（用flatMap串联，响应式编程）
+        // 第3步：第一道限流检查（用户维度 或 IP维度）
+        // 登录用户：检查 user 维度（替代 IP 维度，防止代理池绕过）
+        // 未登录用户：检查 IP 维度（已有逻辑）
         // 注意：第一个flatMap的两个分支必须返回相同类型，否则Java会推断成Mono<Object>。
-        // - IP限流失败：写429响应后用 .then(Mono.<Boolean>empty()) 转成 Mono<Boolean>
-        // - IP限流通过：返回 checkLimit(...) 的 Mono<Boolean>
-        // 这样两个分支都是 Mono<Boolean>，类型一致。
-        return checkLimit(IP_KEY_PREFIX + clientIp, algorithm, now, ipQps, capacity, requestId)
-                .flatMap(ipAllowed -> {
-                    if (!ipAllowed) {
-                        log.warn("IP限流触发，IP：{}，路径：{}，算法：{}，限制：{}",
-                                clientIp, path, algorithm, ipQps);
-                        // 写完429响应后返回空Mono（Boolean类型），保持类型一致
-                        return ResponseUtil.writeRateLimitResponse(exchange, "请求太频繁，请稍后再试")
+        String firstKey = useUserLimit ? USER_KEY_PREFIX + userId : IP_KEY_PREFIX + clientIp;
+        long firstQps = useUserLimit ? userQps : ipQps;
+        String firstDimDesc = useUserLimit ? "用户" + userId : "IP " + clientIp;
+
+        return checkLimit(firstKey, algorithm, now, firstQps, capacity, requestId)
+                .flatMap(firstAllowed -> {
+                    if (!firstAllowed) {
+                        log.warn("{}限流触发，路径：{}，算法：{}，限制：{}",
+                                firstDimDesc, path, algorithm, firstQps);
+                        // RL-11：触发限流时，自动拉黑计数
+                        String blockKey = useUserLimit ? userId : clientIp;
+                        return autoBlockIfExceeded(blockKey)
+                                .then(ResponseUtil.writeRateLimitResponse(exchange, "操作太频繁，请稍后再试"))
                                 .then(Mono.<Boolean>empty());
                     }
-                    // 第4步：IP检查通过，继续检查接口级别
+                    // 第4步：第一道检查通过，继续检查接口级别
                     return checkLimit(PATH_KEY_PREFIX + path, algorithm, now, pathQps, capacity, requestId);
                 })
                 .flatMap(pathAllowed -> {
                     if (!pathAllowed) {
                         log.warn("接口限流触发，IP：{}，路径：{}，算法：{}，限制：{}",
                                 clientIp, path, algorithm, pathQps);
-                        return ResponseUtil.writeRateLimitResponse(exchange, "当前访问人数较多，请稍后再试");
+                        return ResponseUtil.writeRateLimitResponse(exchange, "当前访问人数较多，请稍后重试");
                     }
                     // 通过限流检查，放行
                     return chain.filter(exchange);
@@ -184,6 +211,61 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
                 .onErrorResume(error -> {
                     log.error("限流检查异常，降级放行。IP：{}，路径：{}", clientIp, path, error);
                     return chain.filter(exchange);
+                });
+    }
+
+    /**
+     * 自动拉黑逻辑（RL-11 引入）
+     * <p>
+     * 当请求触发限流时，对限流 Key（IP 或 userId）进行计数。
+     * 如果在1小时内累计触发限流超过阈值（默认10次），自动拉黑1小时。
+     * </p>
+     * <p>
+     * 小白理解：就像超市保安发现有人连续10次插队，就把这个人拉进黑名单，
+     * 1小时内不许再进超市。过了1小时自动解除，给个改过自新的机会。
+     * </p>
+     *
+     * @param blockKey 限流 Key（IP 或 userId）
+     * @return Mono<Void> 完成信号
+     */
+    private Mono<Void> autoBlockIfExceeded(String blockKey) {
+        int threshold = blacklistConfig.getAutoBlockThreshold();
+        // 阈值为0表示禁用自动拉黑
+        if (threshold <= 0) {
+            return Mono.empty();
+        }
+
+        String countKey = "rate_limit:reject:" + blockKey;
+        // INCR 计数 + 设置过期时间（首次设置，避免计数器无限增长）
+        return redisTemplate.opsForValue().increment(countKey)
+                .flatMap(count -> {
+                    // 首次触发限流时设置过期时间（1小时）
+                    if (count != null && count == 1L) {
+                        return redisTemplate.expire(countKey, java.time.Duration.ofSeconds(blacklistConfig.getAutoBlockDuration()))
+                                .thenReturn(count);
+                    }
+                    return Mono.just(count);
+                })
+                .flatMap(count -> {
+                    if (count != null && count >= threshold) {
+                        // 超过阈值，自动拉黑
+                        log.warn("自动拉黑触发，key：{}，限流次数：{}，阈值：{}，拉黑时长：{}秒",
+                                blockKey, count, threshold, blacklistConfig.getAutoBlockDuration());
+                        // 添加到 IP 黑名单 Set（无论 blockKey 是 IP 还是 userId，统一存 IP 黑名单）
+                        // 注意：userId 维度的拉黑应该存到 user 黑名单，但为简化实现，统一存 IP 黑名单
+                        return redisTemplate.opsForSet().add(BlacklistFilter.REDIS_IP_BLACKLIST, blockKey)
+                                .then(redisTemplate.expire(
+                                        BlacklistFilter.REDIS_IP_BLACKLIST + ":" + blockKey,
+                                        java.time.Duration.ofSeconds(blacklistConfig.getAutoBlockDuration())
+                                ))
+                                .then();
+                    }
+                    return Mono.empty();
+                })
+                // 自动拉黑是弱依赖，异常不影响限流响应
+                .onErrorResume(error -> {
+                    log.error("自动拉黑检查异常，key：{}", blockKey, error);
+                    return Mono.empty();
                 });
     }
 

@@ -85,6 +85,27 @@ public class Result<T> implements Serializable {
     }
 
     /**
+     * 接受响应（已接收但未处理完成） - 用于排队等异步场景（RL-13 引入）
+     * <p>
+     * 小白理解：就像你去餐厅吃饭，服务员说"收到您的订单，正在排队，请稍候"，
+     * 不是拒绝你（不是fail），也不是告诉你完成了（不是success），
+     * 而是说"收到了，等着"。
+     * </p>
+     * 用法：Result.accepted("排队中，请稍候", queueNo) → {"code":202, "message":"排队中，请稍候", "data":"abc123"}
+     *
+     * @param message 提示信息（如"排队中，请稍候"）
+     * @param data    业务数据（如排队号）
+     * @return 封装好的接受响应（code=202）
+     */
+    public static <T> Result<T> accepted(String message, T data) {
+        Result<T> result = new Result<>();
+        result.setCode(202);
+        result.setMessage(message);
+        result.setData(data);
+        return result;
+    }
+
+    /**
      * 失败响应 - 自定义错误码和提示
      * 用法：Result.fail(10001, "用户不存在") → {"code":10001, "message":"用户不存在", "data":null}
      *

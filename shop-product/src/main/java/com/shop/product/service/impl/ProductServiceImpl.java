@@ -333,11 +333,85 @@ public class ProductServiceImpl implements ProductService {
      * 优先从缓存获取，缓存没有再查数据库。
      * 使用Redis + Caffeine二级缓存，大部分请求在本地缓存就能命中。
      * </p>
+     * <p>
+     * RL-06 引入 Sentinel 降级（fallback）：当数据库异常（如DB挂掉、连接超时）时，
+     * 自动调用 detailFallback 方法返回缓存中的旧数据，而不是抛出500错误。
+     * 用户体验：有旧数据看 > 看到500错误页面。
+     * </p>
+     * <p>
+     * RL-12 引入热点参数限流（blockHandler）：爆款商品访问量过大时，
+     * 单个商品 QPS 超过阈值（默认500，爆款2000）会触发限流，
+     * 自动调用 detailBlockHandler 返回缓存数据，防止单点打垮整个商品服务。
+     * </p>
+     * <p>
+     * 小白理解 blockHandler vs fallback：
+     * - blockHandler 处理"流量过大"被拒绝的情况（像游乐场过山车满员了，给你一张下次再来票）
+     * - fallback 处理"系统出错"的情况（像过山车故障了，给你退票或换项目）
+     * 两者互不冲突，Sentinel 会根据异常类型自动选择调用哪个。
+     * </p>
      */
     @Override
+    @com.alibaba.csp.sentinel.annotation.SentinelResource(
+            value = "product:detail",
+            fallback = "detailFallback",
+            blockHandler = "detailBlockHandler"
+    )
     public ProductDetailVO getProductDetail(Long productId) {
         // 优先从缓存获取
         return productCacheService.getProductDetailFromCache(productId);
+    }
+
+    /**
+     * 商品详情热点参数限流处理方法（RL-12 引入）
+     * <p>
+     * 当某个商品的访问量超过热点参数限流规则阈值时（如普通商品 500 QPS，爆款 2000 QPS），
+     * Sentinel 会抛出 ParamFlowException（BlockException 的子类），
+     * 自动调用这个方法返回缓存数据，而不是直接拒绝请求。
+     * </p>
+     * <p>
+     * 小白理解：就像某款爆款球鞋被疯抢，专柜人太多挤不下，
+     * 这时候保安（Sentinel）会拦住新来的人，但不是让他们空手走，
+     * 而是给他们看商品图册（缓存数据），虽然不能试穿但至少能看到商品信息。
+     * </p>
+     *
+     * @param productId 商品ID（和原方法参数一致）
+     * @param ex        Sentinel 限流异常（BlockException，自动注入）
+     * @return 缓存中的商品详情，缓存未命中时抛出业务异常
+     */
+    public ProductDetailVO detailBlockHandler(Long productId, com.alibaba.csp.sentinel.slots.block.BlockException ex) {
+        log.warn("商品详情热点参数限流，返回缓存数据，productId={}, 限流类型={}", productId, ex.getClass().getSimpleName());
+        ProductDetailVO cached = productCacheService.getCachedProductDetail(productId);
+        if (cached != null) {
+            return cached;
+        }
+        // 缓存也没有，只能抛出业务异常，返回友好提示
+        throw new BusinessException(ErrorCode.OPERATION_FAIL.getCode(), "当前商品访问人数过多，请稍后再试");
+    }
+
+    /**
+     * 商品详情降级方法（RL-06 引入）
+     * <p>
+     * 当 getProductDetail 抛出异常（如数据库连接失败、查询超时）时，
+     * Sentinel 会自动调用这个方法，返回缓存中的旧数据。
+     * </p>
+     * <p>
+     * 小白理解：就像超市突然停电了，收银台不能扫码了，
+     * 这时候店员会拿出手写的价格表（缓存旧数据）继续工作，
+     * 虽然可能不是最新价格，但至少能服务顾客，比关门强。
+     * </p>
+     *
+     * @param productId 商品ID
+     * @param ex        原始异常（Sentinel 自动注入，用于记录日志）
+     * @return 缓存中的商品详情，缓存未命中时抛出业务异常
+     */
+    public ProductDetailVO detailFallback(Long productId, Throwable ex) {
+        log.warn("商品详情降级，尝试返回缓存数据，productId={}", productId, ex);
+        ProductDetailVO cached = productCacheService.getCachedProductDetail(productId);
+        if (cached != null) {
+            return cached;
+        }
+        // 缓存也没有，只能抛出业务异常，返回友好提示
+        throw new BusinessException(ErrorCode.INTERNAL_ERROR);
     }
 
     /**
@@ -346,8 +420,16 @@ public class ProductServiceImpl implements ProductService {
      * 如果传了categoryId，会递归查出该分类及其所有子分类下的商品。
      * 比如点击"手机"父分类，能查到挂在"智能手机"子分类下的商品。
      * </p>
+     * <p>
+     * RL-13 改造：添加 @SentinelResource 注解，被限流时走 blockHandler 返回缓存数据。
+     * 正常查询时把结果写入Redis缓存，供限流时兜底使用。
+     * </p>
      */
     @Override
+    @com.alibaba.csp.sentinel.annotation.SentinelResource(
+            value = "product:list",
+            blockHandler = "getProductListBlockHandler"
+    )
     public PageResult<ProductVO> getProductList(Long categoryId, PageRequest pageRequest) {
         Page<Product> page = new Page<>(pageRequest.getPageNum(), pageRequest.getPageSize());
 
@@ -411,7 +493,42 @@ public class ProductServiceImpl implements ProductService {
         PageResult<ProductVO> pageResult = new PageResult<>();
         pageResult.setRecords(voList);
         pageResult.setPagination(result.getTotal(), pageRequest.getPageNum(), pageRequest.getPageSize());
+
+        // RL-13：正常查询时把结果写入Redis缓存，供限流时兜底使用（弱依赖，失败不影响主流程）
+        productCacheService.cacheProductList(categoryId, pageRequest, pageResult);
+
         return pageResult;
+    }
+
+    /**
+     * 商品列表限流兜底方法（Sentinel blockHandler，RL-13 引入）
+     * <p>
+     * 当 product:list 资源的 QPS 超过限流阈值时触发。
+     * 尝试从Redis缓存读取之前的列表数据，缓存未命中则返回空列表 + 友好提示。
+     * </p>
+     * <p>
+     * 小白理解：商品列表接口被限流了，不能查数据库，那就把之前查过的数据给用户看，
+     * 虽然可能不是最新的，但总比报错白屏好（有数据看 > 500错误页面）。
+     * </p>
+     *
+     * @param categoryId   分类ID（原方法参数，可为null）
+     * @param pageRequest  分页参数（原方法参数）
+     * @param ex           Sentinel 抛出的限流异常
+     * @return 缓存的商品列表，或空列表
+     */
+    public PageResult<ProductVO> getProductListBlockHandler(Long categoryId, PageRequest pageRequest,
+                                                             com.alibaba.csp.sentinel.slots.block.BlockException ex) {
+        log.warn("商品列表被 Sentinel 限流，返回缓存数据: categoryId={}, pageNum={}, 限流类型={}",
+                categoryId, pageRequest.getPageNum(), ex.getClass().getSimpleName());
+        // 尝试从缓存读取
+        PageResult<ProductVO> cached = productCacheService.getCachedProductList(categoryId, pageRequest);
+        if (cached != null) {
+            log.info("商品列表限流兜底：缓存命中，返回缓存数据");
+            return cached;
+        }
+        // 缓存未命中，返回空结果（前端会显示"暂无商品"，但不会白屏报错）
+        log.warn("商品列表限流兜底：缓存未命中，返回空结果");
+        return PageResult.empty();
     }
 
     /**
