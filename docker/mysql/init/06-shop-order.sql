@@ -16,10 +16,10 @@ CREATE TABLE IF NOT EXISTS `order_info` (
     `id` BIGINT NOT NULL COMMENT '订单ID',
     `order_no` VARCHAR(32) NOT NULL COMMENT '订单号（雪花算法生成）',
     `user_id` BIGINT NOT NULL COMMENT '用户ID',
-    `shop_id` BIGINT NOT NULL COMMENT '店铺ID',
+    `merchant_id` BIGINT NOT NULL COMMENT '商家ID',
     `total_amount` DECIMAL(12,2) NOT NULL COMMENT '订单总金额',
     `pay_amount` DECIMAL(12,2) NOT NULL COMMENT '实付金额',
-    `freight` DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT '运费',
+    `freight_amount` DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT '运费',
     `discount_amount` DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT '优惠总金额（满减+优惠券）',
     `promotion_discount` DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT '满减优惠金额',
     `order_type` TINYINT NOT NULL DEFAULT 1 COMMENT '订单类型：1普通订单 2秒杀订单',
@@ -29,14 +29,17 @@ CREATE TABLE IF NOT EXISTS `order_info` (
     `pay_time` DATETIME DEFAULT NULL COMMENT '支付时间',
     `delivery_time` DATETIME DEFAULT NULL COMMENT '发货时间',
     `receive_time` DATETIME DEFAULT NULL COMMENT '收货时间',
-    `close_time` DATETIME DEFAULT NULL COMMENT '关闭时间',
+    `finish_time` DATETIME DEFAULT NULL COMMENT '完成时间（订单变为已完成的时间）',
+    `cancel_time` DATETIME DEFAULT NULL COMMENT '取消时间',
+    `remark` VARCHAR(200) DEFAULT NULL COMMENT '订单备注（用户下单时填写）',
+    `cancel_reason` VARCHAR(200) DEFAULT NULL COMMENT '取消原因',
     `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     `deleted` TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_order_no` (`order_no`),
     KEY `idx_user_id` (`user_id`),
-    KEY `idx_shop_id` (`shop_id`)
+    KEY `idx_merchant_id` (`merchant_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='订单主表';
 
 -- 订单明细表
@@ -44,13 +47,15 @@ CREATE TABLE IF NOT EXISTS `order_info` (
 CREATE TABLE IF NOT EXISTS `order_item` (
     `id` BIGINT NOT NULL COMMENT '订单明细ID',
     `order_id` BIGINT NOT NULL COMMENT '订单ID',
+    `order_no` VARCHAR(32) NOT NULL COMMENT '订单号（冗余，方便查询不用join order_info表）',
     `product_id` BIGINT NOT NULL COMMENT '商品ID（SPU）',
     `sku_id` BIGINT NOT NULL COMMENT 'SKU ID',
     `product_name` VARCHAR(200) NOT NULL COMMENT '商品名称（快照）',
     `sku_spec` VARCHAR(200) DEFAULT NULL COMMENT '规格信息（快照）',
     `price` DECIMAL(10,2) NOT NULL COMMENT '商品单价（快照）',
     `quantity` INT NOT NULL COMMENT '购买数量',
-    `image` VARCHAR(255) DEFAULT NULL COMMENT '商品图片（快照）',
+    `subtotal` DECIMAL(12,2) NOT NULL COMMENT '小计金额（单价×数量）',
+    `product_image` VARCHAR(255) DEFAULT NULL COMMENT '商品图片快照（下单时主图URL）',
     PRIMARY KEY (`id`),
     KEY `idx_order_id` (`order_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='订单明细';
