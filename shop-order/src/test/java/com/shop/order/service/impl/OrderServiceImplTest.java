@@ -393,25 +393,6 @@ class OrderServiceImplTest {
         }
 
         @Test
-        @DisplayName("幂等Token校验失败（重复提交） → 抛出ORDER_CREATE_FAIL异常")
-        void createOrder_idempotentTokenFail_throwsException() {
-            // 场景：用户网络卡顿重复点击"提交订单"，第二次提交时幂等Token已被消费
-            OrderCreateDTO dto = buildCreateDTO();
-            dto.setIdempotentToken("duplicate-token");
-
-            // mock Redis delete 返回 false（Token 已被删除，说明是重复请求）
-            when(stringRedisTemplate.delete("order:idempotent:duplicate-token")).thenReturn(false);
-
-            // 验证：抛出 BusinessException，错误码是 ORDER_CREATE_FAIL
-            assertThatThrownBy(() -> orderService.createOrder(USER_ID, dto))
-                    .isInstanceOf(BusinessException.class)
-                    .hasFieldOrPropertyWithValue("code", ErrorCode.ORDER_CREATE_FAIL.getCode());
-
-            // 验证：幂等校验失败后不应该继续执行下单逻辑
-            verify(stringRedisTemplate, never()).opsForValue();
-        }
-
-        @Test
         @DisplayName("商品信息获取失败 → 抛出ORDER_CREATE_FAIL异常")
         void createOrder_skuInfoFail_throwsException() {
             // 场景：商品服务不可用或返回失败，无法获取SKU信息

@@ -63,5 +63,17 @@
             <artifactId>spring-cloud-starter-openfeign</artifactId>
             <scope>provided</scope>
         </dependency>
+
+        <!-- Spring Boot AOP：幂等切面等AOP功能支持（Spring Boot 4.0重命名为aspectj） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aspectj</artifactId>
+        </dependency>
+
+        <!-- Spring Boot Data Redis：幂等SETNX原子操作依赖Redis -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
     </dependencies>
 </project>

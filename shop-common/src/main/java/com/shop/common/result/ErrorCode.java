@@ -52,6 +52,8 @@ public enum ErrorCode {
     DATA_NOT_FOUND(10005, "数据不存在"),
     /** 操作失败：通用操作失败提示 */
     OPERATION_FAIL(10006, "操作失败"),
+    /** 重复请求：幂等校验拦截，同一操作在有效期内不可重复提交 */
+    REPEAT_REQUEST(10007, "请勿重复操作"),
     /** 服务器内部错误：代码出bug了 */
     INTERNAL_ERROR(500, "服务器内部错误"),
 

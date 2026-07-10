@@ -2,6 +2,7 @@ package com.shop.product.controller;
 
 import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.dev33.satoken.stp.StpUtil;
+import com.shop.common.annotation.Idempotent;
 import com.shop.common.model.PageRequest;
 import com.shop.common.model.PageResult;
 import com.shop.common.result.Result;
@@ -51,6 +52,7 @@ public class CommentController {
      */
     @PostMapping
     @SaCheckLogin
+    @Idempotent(prefix = "idempotent:product:comment:", expire = 60, message = "请勿重复评价")
     @Operation(summary = "添加评价", description = "用户购买商品后发表评价，需要登录，校验订单归属+防重复")
     public Result<Void> addComment(@Validated @RequestBody CommentDTO dto) {
         Long userId = StpUtil.getLoginIdAsLong();

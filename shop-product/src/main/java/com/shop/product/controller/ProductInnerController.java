@@ -1,5 +1,6 @@
 package com.shop.product.controller;
 
+import com.shop.common.annotation.Idempotent;
 import com.shop.common.result.Result;
 import com.shop.model.product.dto.StockDeductItemDTO;
 import com.shop.model.product.vo.ProductSkuVO;
@@ -85,7 +86,8 @@ public class ProductInnerController {
      * @return 是否全部成功
      */
     @PostMapping("/skus/deduct-batch")
-    @Operation(summary = "批量扣减库存", description = "一次扣减多个SKU库存，内部带补偿回退")
+    @Idempotent(key = "#orderNo", prefix = "idempotent:product:deduct:", expire = 300, message = "请勿重复扣减库存")
+    @Operation(summary = "批量扣减库存", description = "一次扣减多个SKU库存，内部带补偿回退，@Idempotent防Feign重试")
     public Result<Void> batchDeductStock(
             @RequestBody List<StockDeductItemDTO> items,
             @Parameter(description = "订单号，用于幂等去重") @RequestParam String orderNo) {

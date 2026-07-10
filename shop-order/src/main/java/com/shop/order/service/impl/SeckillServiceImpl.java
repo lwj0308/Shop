@@ -68,14 +68,15 @@ public class SeckillServiceImpl implements SeckillService {
     private static final String USER_BOUGHT_KEY_PREFIX = "seckill:user:";
 
     /**
-     * RL-14：用户抢购请求级幂等锁 key 前缀
+     * 用户抢购请求级幂等锁 key 前缀
      * <p>
-     * key 格式：seckill:grab:lock:{seckillId}:{userId}
+     * key 格式：idempotent:seckill:grab:{seckillId}:{userId}
      * 作用：防止同一用户在极短时间内连续点击"抢购"按钮，导致重复发送 MQ 消息。
      * 注意：这个锁和"限购"不同——限购是"总共能买几个"，这个锁是"短时间内只能点一次"。
+     * 命名遵循统一幂等 key 规范：idempotent:{服务名}:{业务标识}:{幂等键}
      * </p>
      */
-    private static final String SECKILL_GRAB_LOCK_PREFIX = "seckill:grab:lock:";
+    private static final String SECKILL_GRAB_LOCK_PREFIX = "idempotent:seckill:grab:";
 
     /** RL-14：抢购幂等锁的 TTL（秒），5 秒内同一用户同一活动只能抢一次 */
     private static final long SECKILL_GRAB_LOCK_TTL = 5;

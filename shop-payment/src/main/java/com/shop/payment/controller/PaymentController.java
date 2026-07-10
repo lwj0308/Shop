@@ -1,6 +1,7 @@
 package com.shop.payment.controller;
 
 import cn.dev33.satoken.stp.StpUtil;
+import com.shop.common.annotation.Idempotent;
 import com.shop.common.result.Result;
 import com.shop.model.payment.dto.PayCallbackDTO;
 import com.shop.model.payment.dto.PayCreateDTO;
@@ -54,7 +55,8 @@ public class PaymentController {
      * @return 支付信息（含支付单号）
      */
     @PostMapping("/create")
-    @Operation(summary = "创建支付", description = "根据订单创建支付记录，返回支付单号")
+    @Idempotent(prefix = "idempotent:payment:create:", expire = 300, message = "请勿重复创建支付单")
+    @Operation(summary = "创建支付", description = "根据订单创建支付记录，返回支付单号，@Idempotent防重复创建")
     public Result<PaymentVO> createPayment(@Validated @RequestBody PayCreateDTO dto) {
         Long userId = StpUtil.getLoginIdAsLong();
         PaymentVO paymentVO = paymentService.createPayment(userId, dto);
@@ -95,7 +97,8 @@ public class PaymentController {
      * @return 支付结果
      */
     @PostMapping("/callback")
-    @Operation(summary = "支付回调", description = "第三方支付平台回调统一入口，三重幂等保障")
+    @Idempotent(key = "#dto.paymentNo", prefix = "idempotent:payment:callback:", expire = 600, message = "请勿重复回调")
+    @Operation(summary = "支付回调", description = "第三方支付平台回调统一入口，@Idempotent注解+分布式锁+状态校验+唯一索引四重保障")
     public Result<PayResultVO> handleCallback(@Validated @RequestBody PayCallbackDTO dto) {
         PayResultVO result = paymentService.handleCallback(dto);
         return Result.success(result);
@@ -129,7 +132,8 @@ public class PaymentController {
      * @return 操作结果
      */
     @PostMapping("/refund")
-    @Operation(summary = "退款", description = "申请退款，退款金额不能超过实付金额")
+    @Idempotent(key = "#paymentId", prefix = "idempotent:payment:refund:", expire = 300, message = "请勿重复退款")
+    @Operation(summary = "退款", description = "申请退款，退款金额不能超过实付金额，@Idempotent防重复退款")
     public Result<Void> refund(@RequestParam @NotNull(message = "支付记录ID不能为空") Long paymentId,
                                 @RequestParam @NotNull(message = "退款金额不能为空")
                                 @DecimalMin(value = "0.01", message = "退款金额必须大于0") BigDecimal amount) {

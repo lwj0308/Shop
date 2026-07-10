@@ -1,5 +1,6 @@
 package com.shop.user.controller;
 
+import com.shop.common.annotation.Idempotent;
 import com.shop.common.model.PageResult;
 import com.shop.common.result.Result;
 import com.shop.model.coupon.dto.CouponUseDTO;
@@ -51,7 +52,8 @@ public class UserCouponController {
      * @param couponId 优惠券模板ID
      */
     @PostMapping("/receive/{couponId}")
-    @Operation(summary = "领取优惠券", description = "用户领取指定优惠券")
+    @Idempotent(key = "#couponId", prefix = "idempotent:coupon:receive:", expire = 60, message = "请勿重复领取")
+    @Operation(summary = "领取优惠券", description = "用户领取指定优惠券，@Idempotent防重复领取")
     public Result<Void> receiveCoupon(@PathVariable Long couponId) {
         Long userId = UserContext.getUserId();
         userCouponService.receiveCoupon(userId, couponId);
@@ -114,7 +116,8 @@ public class UserCouponController {
      * @return 优惠金额
      */
     @PostMapping("/inner/use")
-    @Operation(summary = "内部-核销优惠券", description = "下单时核销优惠券，返回优惠金额")
+    @Idempotent(key = "#dto.orderNo", prefix = "idempotent:coupon:use:", expire = 300, message = "请勿重复核销")
+    @Operation(summary = "内部-核销优惠券", description = "下单时核销优惠券，返回优惠金额，@Idempotent防Feign重试重复核销")
     public Result<BigDecimal> useCoupon(@RequestBody CouponUseDTO dto) {
         BigDecimal discount = userCouponService.useCoupon(dto);
         return Result.success(discount);
@@ -127,7 +130,8 @@ public class UserCouponController {
      * @param orderNo 订单号
      */
     @PostMapping("/inner/rollback")
-    @Operation(summary = "内部-回退优惠券", description = "取消订单时回退优惠券")
+    @Idempotent(key = "#orderNo", prefix = "idempotent:coupon:rollback:", expire = 300, message = "请勿重复回退")
+    @Operation(summary = "内部-回退优惠券", description = "取消订单时回退优惠券，@Idempotent防Feign重试重复回退")
     public Result<Void> rollbackCoupon(@RequestParam String orderNo) {
         userCouponService.rollbackCoupon(orderNo);
         return Result.success(null);

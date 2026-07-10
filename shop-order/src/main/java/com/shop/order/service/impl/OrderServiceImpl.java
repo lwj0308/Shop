@@ -122,12 +122,6 @@ public class OrderServiceImpl implements OrderService {
     /** 下单锁超时时间（秒）：防止死锁，30秒后自动释放 */
     private static final long LOCK_ORDER_CREATE_TIMEOUT = 30;
 
-    /** 幂等Token key前缀：order:idempotent:{token} */
-    private static final String IDEMPOTENT_TOKEN_PREFIX = "order:idempotent:";
-
-    /** 幂等Token有效期（秒）：5分钟内有效 */
-    private static final long IDEMPOTENT_TOKEN_EXPIRE = 300;
-
     /** 操作人类型：1用户 2商家 3系统 */
     private static final int OPERATOR_TYPE_USER = 1;
     private static final int OPERATOR_TYPE_SYSTEM = 3;
@@ -168,11 +162,9 @@ public class OrderServiceImpl implements OrderService {
     public OrderDetailVO createOrder(Long userId, OrderCreateDTO dto) {
         log.info("开始创建订单: userId={}, items={}", userId, dto.getItems());
 
-        // ========== 1. 幂等校验：如果前端传了幂等Token，校验是否重复请求 ==========
-        checkIdempotentToken(dto.getIdempotentToken());
-
-        // ========== 2. 分布式锁：防止同一用户同时创建多个订单 ==========
-        // 锁的key是 order:create:{userId}，同一用户同一时刻只能有一个下单请求
+        // ========== 1. 分布式锁：防止同一用户同时创建多个订单 ==========
+        // 幂等校验已由 Controller 层 @Idempotent 注解完成（Redis SETNX，TTL 300s）
+        // 这里用分布式锁防止同一用户并发下单（锁的粒度是 userId，和幂等的粒度不同）
         String lockKey = LOCK_ORDER_CREATE + userId;
         Boolean locked = stringRedisTemplate.opsForValue()
                 .setIfAbsent(lockKey, String.valueOf(System.currentTimeMillis()),
@@ -778,43 +770,6 @@ public class OrderServiceImpl implements OrderService {
     }
 
     // ==================== 私有方法 ====================
-
-    /**
-     * 幂等Token校验（RL-14 增强）
-     * <p>
-     * 防止用户因为网络卡顿、连续点击"提交订单"按钮而导致重复下单。
-     * </p>
-     * <p>
-     * RL-14 改造说明：
-     * - 旧逻辑：前端先调用接口获取 Token 存入 Redis，下单时删除 Token，删除成功才算第一次请求。
-     *   缺点是需要额外接口，且 Token 必须先存后删，时序依赖强。
-     * - 新逻辑：前端直接生成幂等键（X-Idempotent-Key 请求头），下单时用 SETNX 占用，
-     *   占用成功说明是第一次请求，已存在则拒绝。TTL 24 小时，覆盖订单创建全流程。
-     * </p>
-     * <p>
-     * 限流联动说明：
-     * - Gateway 限流返回 429 时不会进入这里，幂等键未消耗，客户端可用相同 key 重试。
-     * - Sentinel 限流（blockHandler）触发排队时也不会消耗幂等键（blockHandler 在方法外层拦截）。
-     * - 只有真正进入 createOrder 方法体才会消耗幂等键，保证"限流拒绝可重试，业务通过防重复"。
-     * </p>
-     *
-     * @param token 幂等键，来自请求头 X-Idempotent-Key 或 DTO.idempotentToken
-     */
-    private void checkIdempotentToken(String token) {
-        if (token == null || token.isEmpty()) {
-            // 没有传幂等键时不强制校验（兼容旧版前端，后续可改为强制）
-            return;
-        }
-        // RL-14：用 SETNX 占用幂等键，TTL 24 小时
-        // setIfAbsent = "如果 key 不存在才设置"，返回 true 说明是第一次请求
-        Boolean isNew = stringRedisTemplate.opsForValue()
-                .setIfAbsent(IDEMPOTENT_TOKEN_PREFIX + token, "1", IDEMPOTENT_TOKEN_EXPIRE, TimeUnit.SECONDS);
-        if (Boolean.FALSE.equals(isNew)) {
-            // key 已存在，说明是重复请求
-            log.warn("重复提交订单被幂等校验拦截: token={}", token);
-            throw new BusinessException(ErrorCode.ORDER_CREATE_FAIL.getCode(), "请勿重复提交订单");
-        }
-    }
 
     /**
      * 发送超时自动取消的延时消息

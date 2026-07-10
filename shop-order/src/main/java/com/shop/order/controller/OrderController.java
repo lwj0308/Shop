@@ -3,6 +3,7 @@ package com.shop.order.controller;
 import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.shop.common.annotation.Idempotent;
 import com.shop.common.model.PageRequest;
 import com.shop.common.model.PageResult;
 import com.shop.common.result.Result;
@@ -71,28 +72,22 @@ public class OrderController {
      * <p>
      * 用户点击"提交订单"按钮时调用这个接口。
      * 需要传入收货地址ID、商品列表和备注。
-     * 支持幂等Token防止重复提交。
      * </p>
      * <p>
-     * RL-14：新增 X-Idempotent-Key 请求头作为幂等键，前端请求拦截器自动注入。
+     * 幂等保障：通过 @Idempotent 注解自动从请求头 X-Idempotent-Key 提取幂等键，
+     * Redis SETNX 占用，TTL 300秒。前端请求拦截器自动注入幂等键，无需业务代码关心。
      * 限流拒绝（Gateway 429）时不会进入这里，幂等键未消耗，客户端可用相同 key 重试。
      * 限流通过后进入此方法，幂等键会被 Redis SETNX 占用，重复提交直接拒绝。
      * </p>
      *
-     * @param dto           创建订单参数
-     * @param idempotentKey 幂等键（从请求头 X-Idempotent-Key 读取，前端自动生成）
+     * @param dto 创建订单参数
      * @return 订单详情
      */
     @PostMapping
-    @Operation(summary = "创建订单", description = "提交订单，包含商品列表和收货地址，支持幂等Token防重复提交")
-    public Result<OrderDetailVO> createOrder(
-            @Validated @RequestBody OrderCreateDTO dto,
-            @RequestHeader(value = "X-Idempotent-Key", required = false) String idempotentKey) {
+    @Idempotent(prefix = "idempotent:order:create:", expire = 300, message = "请勿重复提交订单")
+    @Operation(summary = "创建订单", description = "提交订单，包含商品列表和收货地址，@Idempotent注解自动防重复提交")
+    public Result<OrderDetailVO> createOrder(@Validated @RequestBody OrderCreateDTO dto) {
         Long userId = StpUtil.getLoginIdAsLong();
-        // RL-14：优先使用请求头中的幂等键，回退到 DTO 中的 idempotentToken（兼容旧版前端）
-        if (idempotentKey != null && !idempotentKey.isEmpty()) {
-            dto.setIdempotentToken(idempotentKey);
-        }
         OrderDetailVO orderDetail = orderService.createOrder(userId, dto);
         return Result.success("下单成功", orderDetail);
     }
@@ -108,6 +103,7 @@ public class OrderController {
      * @return 操作结果
      */
     @PutMapping("/{id}/cancel")
+    @Idempotent(key = "#id", prefix = "idempotent:order:cancel:", expire = 60, message = "请勿重复取消订单")
     @Operation(summary = "取消订单", description = "取消待付款的订单，需要填写取消原因")
     public Result<Void> cancelOrder(@PathVariable Long id, @Validated @RequestBody OrderCancelDTO dto) {
         Long userId = StpUtil.getLoginIdAsLong();
@@ -156,6 +152,7 @@ public class OrderController {
      * @return 操作结果
      */
     @PutMapping("/{id}/confirm")
+    @Idempotent(key = "#id", prefix = "idempotent:order:confirm:", expire = 60, message = "请勿重复确认收货")
     @Operation(summary = "确认收货", description = "确认收到商品，订单状态变为已收货")
     public Result<Void> confirmReceive(@PathVariable Long id) {
         Long userId = StpUtil.getLoginIdAsLong();
@@ -281,6 +278,7 @@ public class OrderController {
      * @return 操作结果
      */
     @PutMapping("/admin/{id}/deliver")
+    @Idempotent(key = "#id", prefix = "idempotent:order:deliver:", expire = 60, message = "请勿重复发货")
     public Result<Void> adminDeliverOrder(
             @PathVariable Long id,
             @RequestParam String logisticsNo,
