@@ -36,13 +36,13 @@ const service: AxiosInstance = axios.create({
  * </p>
  * <p>
  * 组成规则：业务类型_用户ID_时间戳_随机串
- * - 业务类型：order/seckill 等，方便后端分类
+ * - 业务类型：order/payment/comment 等，方便后端分类
  * - 用户ID：从 Token 里解析，登录后才有
  * - 时间戳：保证不同请求键不同
  * - 随机串：防止同一毫秒内的并发请求撞键
  * </p>
  *
- * @param businessType 业务类型，比如 'order'、'seckill'
+ * @param businessType 业务类型，比如 'order'、'payment'
  * @returns 幂等键字符串
  */
 export function generateIdempotentKey(businessType: string = 'default'): string {
@@ -60,6 +60,43 @@ export function generateIdempotentKey(businessType: string = 'default'): string 
   const timestamp = Date.now()
   const random = Math.random().toString(36).slice(2, 10)
   return `${businessType}_${userId}_${timestamp}_${random}`
+}
+
+/**
+ * 需要 frontend 注入 X-Idempotent-Key 的接口白名单（Header 策略）
+ * <p>
+ * 后端 @Idempotent 注解有两种 key 策略：
+ * 1. Header 策略：注解无 key 属性，从 X-Idempotent-Key Header 获取 → 前端必须传
+ * 2. SpEL 策略：注解有 key="#id" 属性，从业务参数提取 → 前端不能传（否则覆盖 SpEL）
+ * </p>
+ * <p>
+ * Header 优先级最高：如果前端对 SpEL 策略接口传了 Header，会覆盖 SpEL 键，
+ * 导致每次请求 key 不同（随机值），失去资源级幂等效果。
+ * 因此仅对 Header 策略接口注入，其余接口由后端 SpEL 或状态机保障。
+ * </p>
+ */
+const IDEMPOTENT_HEADER_URLS: Array<{ method: string; pattern: RegExp; businessType: string }> = [
+  { method: 'post', pattern: /^\/order$/, businessType: 'order' },              // 创建订单
+  { method: 'post', pattern: /^\/payment\/create/, businessType: 'payment' },   // 创建支付
+  { method: 'post', pattern: /^\/product\/comment$/, businessType: 'comment' }, // 创建评价
+]
+
+/**
+ * 判断请求是否需要注入 X-Idempotent-Key（Header 策略白名单匹配）
+ * @param method HTTP 方法
+ * @param url 请求 URL
+ * @returns 匹配则返回业务类型（用于生成幂等键），不匹配返回 null
+ */
+function matchIdempotentHeader(method: string, url: string): string | null {
+  const lowerMethod = (method || '').toLowerCase()
+  // 去掉 query string，只匹配 path 部分
+  const path = (url || '').split('?')[0]
+  for (const rule of IDEMPOTENT_HEADER_URLS) {
+    if (rule.method === lowerMethod && rule.pattern.test(path)) {
+      return rule.businessType
+    }
+  }
+  return null
 }
 
 /** 是否正在刷新Token的标记，防止多个请求同时刷新 */
@@ -165,7 +202,7 @@ function sanitizeData<T>(data: T): T {
  * 请求拦截器
  * 在每个请求发出之前，自动把Token塞到请求头里
  * 同时添加AbortController用于请求取消
- * RL-14：对POST/PUT写请求自动注入 X-Idempotent-Key 幂等键
+ * RL-14：仅对 Header 策略接口（白名单）注入 X-Idempotent-Key 幂等键
  */
 service.interceptors.request.use(
   (config) => {
@@ -183,17 +220,18 @@ service.interceptors.request.use(
       config.data = sanitizeData(config.data)
     }
 
-    // RL-14：写请求（POST/PUT/PATCH）自动携带幂等键
-    // 后端在需要幂等校验的接口（如下单、秒杀）读取 X-Idempotent-Key 进行防重复校验
-    // 如果业务代码已手动设置过该 header，则不覆盖（尊重业务方意图）
-    if (['post', 'put', 'patch'].includes(config.method || '') && config.headers) {
+    // RL-14：仅对 Header 策略接口注入 X-Idempotent-Key 幂等键
+    // 后端 @Idempotent 注解有两种策略：
+    //   Header 策略（无 key 属性）→ 前端传 X-Idempotent-Key，后端从 Header 取
+    //   SpEL 策略（有 key="#id"）→ 前端不传 Header，后端从业务参数取
+    // 如果对 SpEL 策略接口传了 Header，会覆盖 SpEL 键，导致每次请求 key 不同，失去资源级幂等
+    // 因此仅对白名单（Header 策略）接口注入，其余接口由后端 SpEL 或状态机保障
+    const method = config.method || ''
+    const url = config.url || ''
+    const businessType = matchIdempotentHeader(method, url)
+    if (businessType && config.headers) {
       const existingKey = (config.headers as Record<string, string>)['X-Idempotent-Key']
       if (!existingKey) {
-        // 根据 url 推断业务类型，方便后端日志分类
-        const url = config.url || 'default'
-        let businessType = 'default'
-        if (url.includes('/order')) businessType = 'order'
-        else if (url.includes('/seckill')) businessType = 'seckill'
         ;(config.headers as Record<string, string>)['X-Idempotent-Key'] = generateIdempotentKey(businessType)
       }
     }
