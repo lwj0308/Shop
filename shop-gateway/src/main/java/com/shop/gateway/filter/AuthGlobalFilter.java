@@ -57,7 +57,16 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
             HEADER_USER_ID,
             HEADER_USER_ROLE,
             "X-User-Name",
-            "X-User-Permissions"
+            "X-User-Permissions",
+            // 仅由 shop-merchant 的 Feign 拦截器在内部调用时注入（服务端从 Sa-Token Session 反查得到），
+            // 网关既不写入也必须剥离：/api/product/** 直连 shop-product，
+            // 而 ProductController.getShopId() 会无条件信任该头做商品归属校验，
+            // 不剥离则登录用户可携带任意 X-Shop-Id 越权操作他人店铺的商品。
+            "X-Shop-Id",
+            // 仅由 FeignInnerKeyConfig 在内部调用时附加，InnerApiInterceptor 校验它。
+            // /inner/** 会随 /api/{service}/** 前缀路由被外部访问到，必须在边缘剥离，
+            // 避免外部请求自带内部密钥绕过校验。
+            "X-Inner-Key"
     );
 
     /** Token续期阈值：剩余有效期小于总时长的1/3时自动续期 */

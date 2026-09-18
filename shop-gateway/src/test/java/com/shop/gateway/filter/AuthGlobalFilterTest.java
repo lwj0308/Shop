@@ -124,6 +124,29 @@ class AuthGlobalFilterTest {
         }
 
         @Test
+        @DisplayName("白名单请求也应清除仅供内部使用的 X-Shop-Id / X-Inner-Key，防止越权与绕过内部鉴权")
+        void whitelistPath_shouldStripInternalOnlyHeaders() {
+            when(whitelistConfig.getWhitelist()).thenReturn(List.of("/api/user/login"));
+            // 这两个Header只由内部Feign调用注入（X-Shop-Id来自shop-merchant服务端反查，
+            // X-Inner-Key来自FeignInnerKeyConfig），网关从不写入，因此外部传入必须剥掉
+            MockServerWebExchange exchange = MockServerWebExchange.from(
+                    MockServerHttpRequest.get("/api/user/login")
+                            .header("X-Shop-Id", "9999")
+                            .header("X-Inner-Key", "guessed-key")
+                            .build());
+
+            StepVerifier.create(filter.filter(exchange, chain))
+                    .expectComplete()
+                    .verify();
+
+            ArgumentCaptor<ServerWebExchange> captor = ArgumentCaptor.forClass(ServerWebExchange.class);
+            verify(chain).filter(captor.capture());
+            HttpHeaders headers = captor.getValue().getRequest().getHeaders();
+            assertThat(headers.getFirst("X-Shop-Id")).isNull();
+            assertThat(headers.getFirst("X-Inner-Key")).isNull();
+        }
+
+        @Test
         @DisplayName("白名单支持Ant通配符，如 /api/user/auth/** 匹配 /api/user/auth/login")
         void whitelistPath_shouldSupportAntPattern() {
             when(whitelistConfig.getWhitelist()).thenReturn(List.of("/api/user/auth/**"));
