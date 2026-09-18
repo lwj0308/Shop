@@ -40,7 +40,10 @@ dist/
 docker/mysql/data/
 docker/redis/data/
 docker/elasticsearch/data/
-docker/rocketmq/store/
+# Broker 容器会把索引数据写到 broker/store/（abort、checkpoint、config/*.json 等），
+# 每次启停容器都会变动，属于运行时数据；仅保留 .gitkeep 占位。
+docker/rocketmq/broker/store/*
+!docker/rocketmq/broker/store/.gitkeep
 docker/minio/data/
 
 # ========================
@@ -52,16 +55,56 @@ Thumbs.db
 *.seed
 
 # ========================
-# 环境配置（敏感信息不入库）
+# 环境配置（敏感信息不入库，参考 .env.example）
 # ========================
+.env
 .env.local
 .env.production
+
+# 调试时从浏览器/接口导出的会话凭证与响应快照
+cookies.txt
+test-detail.json
 
 # ========================
 # 日志
 # ========================
 logs/
 *.log
+
+# ========================
+# 测试产物（运行时生成，不入库）
+# ========================
+# 后端 JaCoCo 覆盖率报告（运行 mvn test 后生成）
+**/target/site/jacoco/
+**/target/site/jacoco-aggregate/
+**/jacoco.exec
+# 后端 Surefire 测试报告
+**/target/surefire-reports/
+# 聚合覆盖率模块
+shop-coverage/
+
+# 前端 Vitest 覆盖率报告
+**/coverage/
+
+# Playwright E2E 测试报告和测试结果（每次运行都会重新生成）
+shop-frontend/playwright-report/
+shop-frontend/test-results/
+
+# JMeter 性能测试结果（HTML 报告 + .jtl 原始数据，每次压测重新生成）
+perf/results/
+*.jtl
+# JMeter 运行时临时文件（压测过程中生成的图表数据）
+temp/
+
+# 安全测试扫描报告（每次扫描重新生成）
+perf/security/results/
+
+# 测试运行时生成的临时 token 文件（含登录凭证，不入库）
+perf/data/tokens.csv
+perf/data/order-tokens.csv
+perf/data/test-login.json
+# 测试输出文件（调试时手动重定向的输出）
+test_output.txt
 
 # ========================
 # Trae 规则（个人配置不入库）
