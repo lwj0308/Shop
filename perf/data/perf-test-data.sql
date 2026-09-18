@@ -39,7 +39,7 @@ INSERT IGNORE INTO `product` (
   `id`, `category_id`, `brand_id`, `shop_id`, `name`, `subtitle`, `main_image`,
   `images`, `detail`, `status`, `sales`, `view_count`, `create_time`, `update_time`, `deleted`
 ) VALUES (
-  10086, 1, 1, 2001, '【热点测试商品】旗舰智能手机 Pro Max',
+  10086, 1, 1, 3001, '【热点测试商品】旗舰智能手机 Pro Max',
   '性能测试专用热点商品，用于验证 Sentinel 热点参数限流和 Caffeine 本地缓存降级',
   'https://dummyimage.com/600x600/333/fff&text=HotProduct',
   '["https://dummyimage.com/600x600/333/fff&text=HotProduct"]',
