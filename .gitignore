@@ -64,6 +64,8 @@ Thumbs.db
 # 调试时从浏览器/接口导出的会话凭证与响应快照
 cookies.txt
 test-detail.json
+# git commit -F 用的临时提交信息草稿
+commit-msg.txt
 
 # ========================
 # 日志
