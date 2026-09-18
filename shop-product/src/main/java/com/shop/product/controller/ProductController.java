@@ -4,6 +4,7 @@ import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.shop.common.exception.BusinessException;
 import com.shop.common.model.PageRequest;
 import com.shop.common.model.PageResult;
 import com.shop.common.result.ErrorCode;
@@ -400,14 +401,15 @@ public class ProductController {
     /**
      * 获取当前店铺ID
      * <p>
-     * 从请求头获取Gateway传递的X-Shop-Id，
-     * 如果没有则从Sa-Token中获取用户ID作为兜底。
+     * 只认 X-Shop-Id：它由 shop-merchant 的 Feign 拦截器从 Sa-Token Session 里的
+     * shopId 注入（商家登录时写入），且网关会在边缘剥离外部自带的同名头，
+     * 因此这个头只可能来自可信内部链路。
      * </p>
      *
      * @return 店铺ID
+     * @throws BusinessException 缺少店铺上下文时抛出
      */
     private Long getShopId() {
-        // 尝试从Header获取（Gateway传递）
         jakarta.servlet.http.HttpServletRequest request =
                 ((org.springframework.web.context.request.ServletRequestAttributes)
                         org.springframework.web.context.request.RequestContextHolder.getRequestAttributes())
@@ -416,7 +418,10 @@ public class ProductController {
         if (shopIdStr != null && !shopIdStr.isEmpty()) {
             return Long.parseLong(shopIdStr);
         }
-        // 兜底：从Sa-Token获取用户ID
-        return StpUtil.getLoginIdAsLong();
+        // 绝不回退成登录ID：商家 loginId 是 merchantId、管理员是 adminUserId，
+        // 与 shopId 分属不同 ID 空间，写进 product.shop_id 只会得到归属校验永远
+        // 不匹配的孤儿数据。也不能返回 null——ProductServiceImpl.getOwnedProduct
+        // 把 shopId == null 当作"跳过归属校验"，返回 null 等于静默关掉越权防护。
+        throw new BusinessException(ErrorCode.FORBIDDEN.getCode(), "缺少店铺上下文，请通过商家端入口操作");
     }
 }
