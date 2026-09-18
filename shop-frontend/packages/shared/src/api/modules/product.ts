@@ -42,11 +42,6 @@ export function getHotKeywords() {
   return get<string[]>('/product/hot-keywords')
 }
 
-/** 搜索建议（用户输入时实时返回建议词） */
-export function getSuggest(keyword: string) {
-  return get<string[]>('/product/suggest', { keyword })
-}
-
 /** 商家 - 获取自己的商品列表（含下架商品） */
 export function getMerchantProductList(params: PageParams & { status?: number }) {
   return get<PageResult<ProductInfo>>('/merchant/product/list', params)

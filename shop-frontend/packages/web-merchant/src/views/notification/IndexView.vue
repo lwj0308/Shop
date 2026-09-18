@@ -28,7 +28,7 @@
       <el-table v-loading="loading" :data="tableData" stripe>
         <el-table-column label="类型" width="100">
           <template #default="{ row }">
-            <el-tag :type="tagType(row.type)" size="small">{{ row.typeDesc || getTypeText(row.type) }}</el-tag>
+            <el-tag :type="notificationTypeTagMap[row.type] || 'info'" size="small">{{ row.typeDesc || notificationTypeTextMap[row.type] || '通知' }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="标题" prop="title" min-width="180" />
@@ -80,6 +80,8 @@ import {
 import {
   notificationTypeOptions,
   notificationTypeTextMap,
+  notificationTypeTagMap,
+  formatDateTimeShort as formatTime,
   type NotificationInfo,
 } from '@shop/shared'
 
@@ -153,30 +155,6 @@ async function handleReadAll() {
   } catch (error: any) {
     ElMessage.error(error.message || '操作失败')
   }
-}
-
-/** 获取通知类型中文描述 */
-function getTypeText(type: number): string {
-  return notificationTypeTextMap[type] || '通知'
-}
-
-/** 获取标签颜色 */
-function tagType(type: number): string {
-  const map: Record<number, string> = {
-    1: 'primary',
-    2: 'success',
-    3: 'warning',
-    4: 'info',
-    5: 'success',
-    6: 'info',
-  }
-  return map[type] || 'info'
-}
-
-/** 格式化时间 */
-function formatTime(time: string): string {
-  if (!time) return ''
-  return time.replace('T', ' ').substring(0, 16)
 }
 
 /**

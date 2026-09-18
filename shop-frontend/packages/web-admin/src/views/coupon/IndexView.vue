@@ -215,6 +215,7 @@ import {
   couponStatusTextMap,
   couponTypeTagMap,
   couponStatusTagMap,
+  formatDateTimeShort as formatTime,
   type CouponInfo,
   type CouponCreateParams,
 } from '@shop/shared'
@@ -461,12 +462,6 @@ function formatAmountThreshold(row: CouponInfo): string {
     return `立减${row.amount}元`
   }
   return '-'
-}
-
-/** 格式化时间：去掉 T 符号，只保留到分钟 */
-function formatTime(time: string): string {
-  if (!time) return ''
-  return time.replace('T', ' ').substring(0, 16)
 }
 
 /**

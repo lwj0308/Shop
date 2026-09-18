@@ -245,6 +245,7 @@ import {
   seckillStatusOptions,
   seckillStatusTextMap,
   seckillStatusTagMap,
+  formatDateTimeShort as formatTime,
   type SeckillInfo,
   type SeckillCreateParams,
 } from '@shop/shared'
@@ -458,12 +459,6 @@ function calcStockPercent(available: number, total: number): number {
   const percent = Math.round((sold / total) * 100)
   // 防止边界值超出 0-100
   return Math.max(0, Math.min(100, percent))
-}
-
-/** 格式化时间：去掉 T 分隔符，截取到分钟（如 2026-06-25 10:00） */
-function formatTime(time: string): string {
-  if (!time) return ''
-  return time.replace('T', ' ').substring(0, 16)
 }
 
 /** 打开创建对话框：重置表单为默认值 */

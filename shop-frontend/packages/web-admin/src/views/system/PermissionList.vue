@@ -19,7 +19,7 @@
         <el-table-column label="权限名称" prop="name" min-width="200" />
         <el-table-column label="类型" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.type === 1 ? '' : row.type === 2 ? 'success' : 'warning'" size="small">
+            <el-tag :type="typeTagMap[row.type] ?? 'warning'" size="small">
               {{ typeMap[row.type] || '未知' }}
             </el-tag>
           </template>
@@ -100,6 +100,8 @@ import type { FormInstance, FormRules } from 'element-plus'
 import { getPermissionTree, createPermission, updatePermission, deletePermission } from '@shop/shared/api/modules/admin'
 
 const typeMap: Record<number, string> = { 1: '目录', 2: '菜单', 3: '按钮' }
+/** 权限类型对应的标签颜色 */
+const typeTagMap: Record<number, string> = { 1: '', 2: 'success', 3: 'warning' }
 
 const loading = ref(false)
 const permissionTree = ref<any[]>([])

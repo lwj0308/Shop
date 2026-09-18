@@ -196,6 +196,7 @@ import {
   seckillStatusOptions,
   seckillStatusTextMap,
   seckillStatusTagMap,
+  formatDateTimeShort as formatTime,
   type SeckillInfo,
   type SeckillCreateParams,
 } from '@shop/shared'
@@ -463,12 +464,6 @@ function calcProgressStatus(row: SeckillInfo): '' | 'success' | 'warning' | 'exc
 function formatPrice(price: number): string {
   if (price === null || price === undefined) return '0.00'
   return price.toFixed(2)
-}
-
-/** 格式化时间：去掉 T 符号，只保留到分钟 */
-function formatTime(time: string): string {
-  if (!time) return ''
-  return time.replace('T', ' ').substring(0, 16)
 }
 
 /**

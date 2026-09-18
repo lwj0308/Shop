@@ -198,7 +198,6 @@ const statusDesc = computed(() => {
     case ORDER_STATUS.SHIPPING:
       return '您的包裹正在运输中，请耐心等待'
     case ORDER_STATUS.RECEIVED:
-      return '订单已完成，感谢您的购买'
     case ORDER_STATUS.COMPLETED:
       return '订单已完成，感谢您的购买'
     case ORDER_STATUS.REFUNDING:

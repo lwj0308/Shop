@@ -138,14 +138,12 @@ const merchantStore = useMerchantStore()
 const unreadCount = ref(0)
 
 /**
- * 监听路由变化（调试用）
- * 当用户点击菜单切换页面时，打印当前路由路径，确认路由切换是否被检测到
- * 同时刷新未读通知数量（用于在通知页操作后回到其他页时同步徽章）
+ * 监听路由变化
+ * 当用户点击菜单切换页面时刷新未读通知数量（用于在通知页操作后回到其他页时同步徽章）
  */
 watch(
   () => route.fullPath,
-  (newPath, oldPath) => {
-    console.log('[AdminLayout] 路由变化:', oldPath, '->', newPath)
+  () => {
     fetchUnreadCount()
   },
 )

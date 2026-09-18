@@ -172,6 +172,7 @@ import { getHotKeywords } from '@shop/shared'
 import { getUserUnreadCount } from '@shop/shared'
 import AuthModal from '@/components/AuthModal.vue'
 import { useAuthModalStore } from '@/stores/authModal'
+import { withAuth } from '@/utils/authGuard'
 
 const router = useRouter()
 const route = useRoute()
@@ -267,52 +268,21 @@ const searchByWord = (word: string) => {
  * 跳转到购物车页面
  * 未登录时弹出登录弹窗，登录成功后跳转购物车页
  */
-const goToCart = () => {
-  if (!isAuthenticated()) {
-    authModalStore.openAuthModal({
-      description: '登录后查看购物车',
-      execute: () => {
-        router.push('/cart')
-      },
-    })
-    return
-  }
-  router.push('/cart')
-}
+const goToCart = () => withAuth('登录后查看购物车', () => { router.push('/cart') })
 
 /**
  * 跳转到个人中心
  * 未登录时弹出登录弹窗，登录成功后跳转个人中心
  */
-const goToUserCenter = () => {
-  if (!isAuthenticated()) {
-    authModalStore.openAuthModal({
-      description: '登录后访问个人中心',
-      execute: () => {
-        router.push('/user/center')
-      },
-    })
-    return
-  }
-  router.push('/user/center')
-}
+const goToUserCenter = () =>
+  withAuth('登录后访问个人中心', () => { router.push('/user/center') })
 
 /**
  * 跳转到消息通知页
  * 未登录时弹出登录弹窗，登录成功后跳转通知页
  */
-const goToNotification = () => {
-  if (!isAuthenticated()) {
-    authModalStore.openAuthModal({
-      description: '登录后查看消息通知',
-      execute: () => {
-        router.push('/notification')
-      },
-    })
-    return
-  }
-  router.push('/notification')
-}
+const goToNotification = () =>
+  withAuth('登录后查看消息通知', () => { router.push('/notification') })
 
 /**
  * 获取未读通知数量

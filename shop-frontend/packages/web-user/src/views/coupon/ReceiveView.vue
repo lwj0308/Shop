@@ -77,6 +77,7 @@ import {
   CouponType,
   type CouponInfo,
 } from '@shop/shared'
+import { formatAmount, formatDiscount, formatDate, thresholdText } from '@/utils/couponFormat'
 
 /** 优惠券列表 */
 const list = ref<CouponInfo[]>([])
@@ -118,27 +119,10 @@ async function handleReceive(coupon: CouponInfo) {
 }
 
 /**
- * 格式化金额
- */
-function formatAmount(amount: number): string {
-  return Number(amount).toFixed(2).replace(/\.?0+$/, '')
-}
-
-/**
- * 格式化折扣率（0.85 → 8.5）
- */
-function formatDiscount(amount: number): string {
-  return (Number(amount) * 10).toFixed(1).replace(/\.0$/, '')
-}
-
-/**
  * 获取门槛文案
  */
 function getThresholdText(item: CouponInfo): string {
-  if (item.type === CouponType.FULL_REDUCTION) {
-    return `满${formatAmount(item.threshold)}元可用`
-  }
-  return '无门槛'
+  return thresholdText(item.type, item.threshold)
 }
 
 /**
@@ -167,14 +151,6 @@ function canReceive(item: CouponInfo): boolean {
 function getReceiveBtnText(item: CouponInfo): string {
   if (!canReceive(item)) return '已领完'
   return '立即领取'
-}
-
-/**
- * 格式化日期
- */
-function formatDate(dateStr: string): string {
-  if (!dateStr) return ''
-  return dateStr.replace('T', ' ').substring(0, 10)
 }
 
 onMounted(() => {

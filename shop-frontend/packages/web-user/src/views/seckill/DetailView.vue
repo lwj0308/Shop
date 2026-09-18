@@ -179,16 +179,15 @@ import {
   getPublicSeckillDetail,
   executeSeckill,
   getSeckillQueueStatus,
-  isAuthenticated,
   useDebounce,
+  formatDateTimeShort as formatTime,
 } from '@shop/shared'
 import type { SeckillInfo } from '@shop/shared'
 import { SeckillStatus } from '@shop/shared'
-import { useAuthModalStore } from '@/stores/authModal'
+import { withAuth } from '@/utils/authGuard'
 
 const route = useRoute()
 const router = useRouter()
-const authModalStore = useAuthModalStore()
 
 /** 秒杀活动详情数据 */
 const seckill = ref<SeckillInfo | null>(null)
@@ -430,18 +429,10 @@ const stopQueuePolling = () => {
 const handleSeckill = () => {
   if (!seckill.value) return
   if (!canBuy.value) return
-  if (!isAuthenticated()) {
-    // 未登录：弹出登录弹窗，登录成功后自动执行抢购
-    authModalStore.openAuthModal({
-      description: '登录后参与秒杀抢购',
-      execute: async () => {
-        await doSeckill()
-      },
-    })
-    return
-  }
-  // 已登录：直接执行抢购
-  void doSeckill()
+  // 未登录：弹出登录弹窗，登录成功后自动执行抢购；已登录：直接抢购
+  withAuth('登录后参与秒杀抢购', async () => {
+    await doSeckill()
+  })
 }
 
 /**
@@ -465,15 +456,6 @@ const calcSoldPercent = (item: SeckillInfo | null): number => {
 const formatPrice = (price: number | undefined): string => {
   if (price == null) return '0'
   return price.toFixed(2).replace(/\.00$/, '')
-}
-
-/**
- * 格式化时间：去掉 T 分隔符，截取到分钟
- * 如 2026-06-25T10:00:00 → 2026-06-25 10:00
- */
-const formatTime = (time: string): string => {
-  if (!time) return ''
-  return time.replace('T', ' ').substring(0, 16)
 }
 
 onMounted(() => {

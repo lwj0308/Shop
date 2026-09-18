@@ -50,11 +50,3 @@ export function getStorage<T>(key: string): T | null {
 export function removeStorage(key: string): void {
   localStorage.removeItem(key)
 }
-
-/**
- * 清空localStorage中所有数据
- * 退出登录时可以调用，清除所有本地缓存
- */
-export function clearStorage(): void {
-  localStorage.clear()
-}

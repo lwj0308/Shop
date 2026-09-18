@@ -174,6 +174,7 @@ import {
   promotionStatusTagMap,
   promotionScopeTypeTextMap,
   promotionScopeTypeTagMap,
+  formatDateTimeShort as formatTime,
   type PromotionInfo,
   type PromotionCreateParams,
 } from '@shop/shared'
@@ -395,12 +396,6 @@ function parseProductIds(text: string): number[] {
     .filter((s) => s.length > 0)
     .map((s) => Number(s))
     .filter((n) => !Number.isNaN(n) && n > 0)
-}
-
-/** 格式化时间：去掉 T 符号，只保留到分钟 */
-function formatTime(time: string): string {
-  if (!time) return ''
-  return time.replace('T', ' ').substring(0, 16)
 }
 
 /**

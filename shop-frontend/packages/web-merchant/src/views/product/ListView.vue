@@ -183,7 +183,6 @@ const resetFilter = () => {
  * 加载商品列表
  */
 const loadProducts = async () => {
-  console.log('[商品列表] 开始加载')
   loading.value = true
   try {
     const res = await getMerchantProductList({
@@ -191,7 +190,6 @@ const loadProducts = async () => {
       pageSize: pageSize.value,
       status: statusFilter.value,
     })
-    console.log('[商品列表] 加载成功, records=', res.data.records)
     productList.value = res.data.records
     total.value = res.data.total
   } catch (err) {

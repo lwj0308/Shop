@@ -24,8 +24,8 @@
         <el-table-column label="原因" prop="reason" min-width="150" show-overflow-tooltip />
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.status === 0 ? 'warning' : row.status === 1 ? 'success' : 'danger'" size="small">
-              {{ ['待审核', '已同意', '已拒绝'][row.status] }}
+            <el-tag :type="statusTypeMap[row.status] ?? 'danger'" size="small">
+              {{ statusTextMap[row.status] }}
             </el-tag>
           </template>
         </el-table-column>
@@ -53,6 +53,11 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getManageRefundList, auditManageRefund } from '@shop/shared/api/modules/admin'
+
+/** 退款状态对应的标签颜色 */
+const statusTypeMap: Record<number, string> = { 0: 'warning', 1: 'success', 2: 'danger' }
+/** 退款状态对应的中文文字 */
+const statusTextMap: Record<number, string> = { 0: '待审核', 1: '已同意', 2: '已拒绝' }
 
 const loading = ref(false)
 const tableData = ref<any[]>([])

@@ -229,6 +229,7 @@ import {
   promotionScopeTypeOptions,
   promotionScopeTypeTextMap,
   promotionScopeTypeTagMap,
+  formatDateTimeShort as formatTime,
   type PromotionInfo,
   type PromotionCreateParams,
 } from '@shop/shared'
@@ -396,12 +397,6 @@ async function loadData() {
   } finally {
     loading.value = false
   }
-}
-
-/** 格式化时间：去掉 T 分隔符，截取到分钟（如 2026-06-25 10:00） */
-function formatTime(time: string): string {
-  if (!time) return ''
-  return time.replace('T', ' ').substring(0, 16)
 }
 
 /** 打开创建对话框：重置表单为默认值 */

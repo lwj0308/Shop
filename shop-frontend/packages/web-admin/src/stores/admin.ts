@@ -125,10 +125,6 @@ export const useAdminStore = defineStore('admin', () => {
   async function loadDynamicRoutes() {
     // 当前阶段使用静态路由，直接标记为已加载
     // TODO: 后续实现动态路由
-    // const menuList = await getMenuList()
-    // const routes = transformMenuToRoutes(menuList)
-    // routes.forEach(route => router.addRoute(route))
-    // router.addRoute({ path: '/:pathMatch(.*)*', redirect: '/404' })
     dynamicRoutesLoaded.value = true
   }
 

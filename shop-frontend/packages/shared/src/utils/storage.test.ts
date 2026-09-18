@@ -1,7 +1,7 @@
 /**
  * storage.ts localStorage封装测试
  * <p>
- * 验证 setStorage/getStorage/removeStorage/clearStorage 四个函数，
+ * 验证 setStorage/getStorage/removeStorage 三个函数，
  * 重点测试过期机制和JSON解析容错。
  * </p>
  */
@@ -9,12 +9,7 @@
 // 上面这行告诉 Vitest：这个测试文件需要在 happy-dom 模拟的浏览器环境运行，
 // 因为 storage.ts 用到了 localStorage（只有浏览器环境才有）
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import {
-  setStorage,
-  getStorage,
-  removeStorage,
-  clearStorage,
-} from './storage'
+import { setStorage, getStorage, removeStorage } from './storage'
 
 // 每个测试前清空 localStorage
 beforeEach(() => {
@@ -128,17 +123,5 @@ describe('removeStorage 删除数据', () => {
 
   it('删除不存在的key不应报错', () => {
     expect(() => removeStorage('not-exist')).not.toThrow()
-  })
-})
-
-describe('clearStorage 清空所有数据', () => {
-  it('应清空所有存储的数据', () => {
-    setStorage('a', '1')
-    setStorage('b', '2')
-    setStorage('c', '3')
-    clearStorage()
-    expect(getStorage('a')).toBeNull()
-    expect(getStorage('b')).toBeNull()
-    expect(getStorage('c')).toBeNull()
   })
 })

@@ -153,6 +153,7 @@ import {
   adminReplyComment,
   CommentScoreType,
   commentScoreTypeOptions,
+  formatDateTimeShort as formatTime,
   type CommentInfo,
 } from '@shop/shared'
 
@@ -295,12 +296,6 @@ async function handleDelete(row: CommentInfo) {
   } catch (error: unknown) {
     ElMessage.error(getErrorMessage(error) || '删除失败')
   }
-}
-
-/** 格式化时间：去掉 T 符号，只保留到分钟 */
-function formatTime(time: string): string {
-  if (!time) return ''
-  return time.replace('T', ' ').substring(0, 16)
 }
 
 /** 从 catch 捕获的 error 中提取后端返回的错误消息 */

@@ -184,11 +184,9 @@ router.beforeEach(async (to, _from, next) => {
 
   // 检查入驻状态：0-审核中 1-已通过 2-已拒绝
   const merchantStatus = merchantStore.merchantInfo?.status
-  console.log('[路由守卫] to.path=', to.path, 'merchantStatus=', merchantStatus, 'merchantInfo=', merchantStore.merchantInfo)
 
   // 未入驻（审核中或已拒绝）且不在入驻页 → 跳转入驻页
   if (merchantStatus !== 1 && to.name !== 'MerchantApply') {
-    console.log('[路由守卫] 未入驻，跳转到 /apply')
     next({ name: 'MerchantApply' })
     return
   }
@@ -199,7 +197,6 @@ router.beforeEach(async (to, _from, next) => {
     return
   }
 
-  console.log('[路由守卫] 放行')
   next()
 })
 

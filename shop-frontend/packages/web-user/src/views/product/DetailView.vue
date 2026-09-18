@@ -309,17 +309,16 @@ import { ElMessage } from 'element-plus'
 import { Star, Share, Check } from '@element-plus/icons-vue'
 import { getProductDetail, getCommentList, getRelatedProducts } from '@shop/shared'
 import { useCart, useDebounce } from '@shop/shared'
-import { isAuthenticated, formatDate, commentScoreTypeOptions } from '@shop/shared'
+import { formatDate, commentScoreTypeOptions } from '@shop/shared'
 import { addFavorite } from '@shop/shared'
 // 注意：CommentScoreType 是 enum（值），不能用 import type 导入
 import { CommentScoreType } from '@shop/shared'
 import type { ProductInfo, ProductSku, CommentInfo } from '@shop/shared'
-import { useAuthModalStore } from '@/stores/authModal'
+import { withAuth } from '@/utils/authGuard'
 
 const route = useRoute()
 const router = useRouter()
 const { addToCart } = useCart()
-const authModalStore = useAuthModalStore()
 
 /** 商品信息 */
 const product = ref<ProductInfo | null>(null)
@@ -512,23 +511,15 @@ const doAddToCart = async (): Promise<boolean | undefined> => {
  * 加入购物车（RL-08 改造：防抖保护）
  * 未登录时弹出登录弹窗，登录成功后自动执行加购
  */
-const handleAddToCart = async () => {
+const handleAddToCart = () => {
   if (!selectedSku.value) {
     ElMessage.warning('请先选择商品规格')
     return
   }
-  if (!isAuthenticated()) {
-    // 未登录：弹出登录弹窗，登录成功后自动加购
-    authModalStore.openAuthModal({
-      description: '登录后加入购物车',
-      execute: async () => {
-        await doAddToCart()
-      },
-    })
-    return
-  }
-  // 已登录：直接加购
-  await doAddToCart()
+  // 未登录：弹出登录弹窗，登录成功后自动加购；已登录：直接加购
+  withAuth('登录后加入购物车', async () => {
+    await doAddToCart()
+  })
 }
 
 /**
@@ -540,17 +531,10 @@ const handleBuyNow = () => {
     ElMessage.warning('请先选择商品规格')
     return
   }
-  if (!isAuthenticated()) {
-    // 未登录：弹出登录弹窗，登录成功后跳转确认订单页
-    authModalStore.openAuthModal({
-      description: '登录后立即购买',
-      execute: () => {
-        router.push({ name: 'OrderConfirm' })
-      },
-    })
-    return
-  }
-  router.push({ name: 'OrderConfirm' })
+  // 未登录：弹出登录弹窗，登录成功后跳转确认订单页
+  withAuth('登录后立即购买', () => {
+    router.push({ name: 'OrderConfirm' })
+  })
 }
 
 /**
@@ -576,16 +560,9 @@ const doFavorite = async (): Promise<boolean> => {
  * 未登录时弹出登录弹窗，登录后执行真实收藏接口
  */
 const handleFavorite = () => {
-  if (!isAuthenticated()) {
-    authModalStore.openAuthModal({
-      description: '登录后收藏商品',
-      execute: () => {
-        doFavorite()
-      },
-    })
-    return
-  }
-  doFavorite()
+  withAuth('登录后收藏商品', () => {
+    doFavorite()
+  })
 }
 
 /**
@@ -628,16 +605,9 @@ const formatRelatedPrice = (price: number | undefined) => {
  * 未登录时弹出登录弹窗，登录后执行关注
  */
 const handleFollowShop = () => {
-  if (!isAuthenticated()) {
-    authModalStore.openAuthModal({
-      description: '登录后关注店铺',
-      execute: () => {
-        ElMessage.success('已关注店铺')
-      },
-    })
-    return
-  }
-  ElMessage.success('已关注店铺')
+  withAuth('登录后关注店铺', () => {
+    ElMessage.success('已关注店铺')
+  })
 }
 
 /**

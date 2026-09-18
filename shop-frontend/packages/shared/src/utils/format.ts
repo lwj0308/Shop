@@ -54,6 +54,18 @@ export function formatDate(
 }
 
 /**
+ * 格式化日期时间（简短格式，纯字符串截取）
+ * 后端返回 "2026-06-25T10:00:00" 这类 ISO 字串，列表页只展示到分钟
+ * 注意：不做时区换算，只是把 T 换成空格并截断，和原 formatDate 语义不同
+ * @param time - 后端时间字符串，如 "2026-06-25T10:00:00"
+ * @returns 形如 "2026-06-25 10:00" 的字符串，入参为空时返回空串
+ */
+export function formatDateTimeShort(time: string): string {
+  if (!time) return ''
+  return time.replace('T', ' ').substring(0, 16)
+}
+
+/**
  * 格式化手机号
  * 把手机号中间4位用星号替换，保护隐私
  * @param phone - 手机号，如 "13812345678"
@@ -62,42 +74,4 @@ export function formatDate(
 export function formatPhone(phone: string): string {
   if (phone.length !== 11) return phone
   return phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2')
-}
-
-/**
- * 格式化银行卡号
- * 只保留前4位和后4位，中间用星号替换，保护用户财产安全
- * @param cardNo - 银行卡号，如 "6222021234567890123"
- * @returns 脱敏后的银行卡号，如 "6222********0123"
- */
-export function formatBankCard(cardNo: string): string {
-  if (cardNo.length < 8) return cardNo
-  const firstFour = cardNo.slice(0, 4)
-  const lastFour = cardNo.slice(-4)
-  const middleStars = '*'.repeat(cardNo.length - 8)
-  return `${firstFour}${middleStars}${lastFour}`
-}
-
-/**
- * 格式化身份证号
- * 只保留前3位和后4位，中间用星号替换，保护个人隐私
- * @param idCard - 身份证号，如 "110101199001011234"
- * @returns 脱敏后的身份证号，如 "110***********1234"
- */
-export function formatIdCard(idCard: string): string {
-  if (idCard.length < 7) return idCard
-  const firstThree = idCard.slice(0, 3)
-  const lastFour = idCard.slice(-4)
-  const middleStars = '*'.repeat(idCard.length - 7)
-  return `${firstThree}${middleStars}${lastFour}`
-}
-
-/**
- * 格式化数字（千分位分隔）
- * 大数字加上逗号分隔，方便阅读
- * @param num - 数字，如 1234567.89
- * @returns 格式化后的字符串，如 "1,234,567.89"
- */
-export function formatNumber(num: number): string {
-  return num.toLocaleString('zh-CN')
 }

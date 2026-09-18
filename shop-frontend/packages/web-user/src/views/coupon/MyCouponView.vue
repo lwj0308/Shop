@@ -94,6 +94,7 @@ import {
   UserCouponStatus,
   type UserCouponInfo,
 } from '@shop/shared'
+import { formatAmount, formatDiscount, formatDate, thresholdText } from '@/utils/couponFormat'
 
 /** 优惠券列表 */
 const list = ref<UserCouponInfo[]>([])
@@ -157,37 +158,11 @@ function changePage(page: number) {
 }
 
 /**
- * 格式化金额（去掉小数点末尾的0）
- * 例：20.00 → 20，20.50 → 20.5
- */
-function formatAmount(amount: number): string {
-  return Number(amount).toFixed(2).replace(/\.?0+$/, '')
-}
-
-/**
- * 格式化折扣率（0.85 → 8.5）
- */
-function formatDiscount(amount: number): string {
-  return (Number(amount) * 10).toFixed(1).replace(/\.0$/, '')
-}
-
-/**
  * 获取门槛文案
  * 满减：满XX元可用；立减：无门槛；折扣：无门槛
  */
 function getThresholdText(item: UserCouponInfo): string {
-  if (item.couponType === CouponType.FULL_REDUCTION) {
-    return `满${formatAmount(item.threshold)}元可用`
-  }
-  return '无门槛'
-}
-
-/**
- * 格式化日期（只取 yyyy-MM-dd）
- */
-function formatDate(dateStr: string): string {
-  if (!dateStr) return ''
-  return dateStr.replace('T', ' ').substring(0, 10)
+  return thresholdText(item.couponType, item.threshold)
 }
 
 onMounted(() => {

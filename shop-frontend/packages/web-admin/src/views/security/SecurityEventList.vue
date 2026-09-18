@@ -22,7 +22,7 @@
       <el-table v-loading="loading" :data="tableData" stripe>
         <el-table-column label="事件类型" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.eventType === 1 ? 'warning' : row.eventType === 2 ? 'danger' : ''" size="small">
+            <el-tag :type="eventTypeTagMap[row.eventType] ?? ''" size="small">
               {{ eventTypeMap[row.eventType] || '未知' }}
             </el-tag>
           </template>
@@ -73,6 +73,8 @@ import { getSecurityEventList, handleSecurityEvent } from '@shop/shared/api/modu
 
 /** 安全事件类型映射 */
 const eventTypeMap: Record<number, string> = { 1: '登录异常', 2: '越权访问', 3: '暴力破解' }
+/** 安全事件类型对应的标签颜色 */
+const eventTypeTagMap: Record<number, string> = { 1: 'warning', 2: 'danger', 3: '' }
 
 const loading = ref(false)
 const tableData = ref<any[]>([])

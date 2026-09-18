@@ -10,10 +10,8 @@ import {
   formatPrice,
   formatPriceWithSymbol,
   formatDate,
+  formatDateTimeShort,
   formatPhone,
-  formatBankCard,
-  formatIdCard,
-  formatNumber,
 } from './format'
 
 describe('formatPrice 价格格式化（分→元）', () => {
@@ -62,34 +60,12 @@ describe('formatPhone 手机号脱敏', () => {
   })
 })
 
-describe('formatBankCard 银行卡号脱敏', () => {
-  it('16位卡号应只保留前4后4', () => {
-    const result = formatBankCard('6222021234567890')
-    expect(result).toBe('6222********7890')
+describe('formatDateTimeShort 日期时间截取到分钟', () => {
+  it('应把 T 替换为空格并截取到分钟', () => {
+    expect(formatDateTimeShort('2026-06-25T10:00:00')).toBe('2026-06-25 10:00')
   })
 
-  it('不足8位应原样返回', () => {
-    expect(formatBankCard('12345')).toBe('12345')
-  })
-})
-
-describe('formatIdCard 身份证号脱敏', () => {
-  it('18位身份证应只保留前3后4', () => {
-    const result = formatIdCard('110101199001011234')
-    expect(result).toBe('110***********1234')
-  })
-
-  it('不足7位应原样返回', () => {
-    expect(formatIdCard('12345')).toBe('12345')
-  })
-})
-
-describe('formatNumber 数字千分位', () => {
-  it('大数字应加千分位逗号', () => {
-    expect(formatNumber(1234567.89)).toBe('1,234,567.89')
-  })
-
-  it('小数字不加逗号', () => {
-    expect(formatNumber(999)).toBe('999')
+  it('空值应返回空字符串', () => {
+    expect(formatDateTimeShort('')).toBe('')
   })
 })

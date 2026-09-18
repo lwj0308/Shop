@@ -11,7 +11,6 @@ export {
   searchProducts,
   getCategoryTree,
   getHotKeywords,
-  getSuggest,
   getMerchantProductList,
   createProduct,
   updateProduct,

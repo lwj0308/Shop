@@ -54,7 +54,7 @@
 
           <div class="item-content">
             <div class="item-header">
-              <span :class="['type-tag', `type-${item.type}`]">{{ item.typeDesc || getTypeText(item.type) }}</span>
+              <span :class="['type-tag', `type-${item.type}`]">{{ item.typeDesc || notificationTypeTextMap[item.type] || '通知' }}</span>
               <span class="item-time">{{ formatTime(item.createTime) }}</span>
             </div>
             <h4 class="item-title">{{ item.title }}</h4>
@@ -90,6 +90,7 @@ import {
 import {
   notificationTypeOptions,
   notificationTypeTextMap,
+  formatDateTimeShort as formatTime,
   type NotificationInfo,
 } from '@shop/shared'
 
@@ -194,22 +195,6 @@ async function handleReadAll() {
 function changePage(page: number) {
   pageNum.value = page
   loadData()
-}
-
-/**
- * 获取通知类型中文描述
- */
-function getTypeText(type: number): string {
-  return notificationTypeTextMap[type] || '通知'
-}
-
-/**
- * 格式化时间
- */
-function formatTime(time: string): string {
-  if (!time) return ''
-  // 简单格式化：取 yyyy-MM-dd HH:mm 部分
-  return time.replace('T', ' ').substring(0, 16)
 }
 
 onMounted(() => {
