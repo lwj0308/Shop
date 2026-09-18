@@ -1,0 +1,410 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  N-P-05 创建订单性能测试计划
+  <p>
+  测试目标：100 QPS / P99 500ms / 50 并发用户 / 持续 5 分钟
+  测试接口：POST /api/order（创建订单，需要登录 token + 幂等键）
+  </p>
+  <p>
+  小白理解：
+  - 这个测试计划包含两个线程组，按顺序执行（serialize_threadgroups=true）
+  - 第一个线程组（setUp）：50 个用户先登录，拿到 token 后保存到 perf/data/order-tokens.csv
+  - 第二个线程组（普通）：50 个并发用户拿着 token，以 100 QPS 持续 5 分钟创建订单
+  - 用 Constant Throughput Timer 控制每秒发送 100 个请求（100 QPS）
+  - 每个请求都带 X-Idempotent-Key 幂等键，避免重复下单被拒绝
+  - SKU ID=50001 是 iPhone 15 Pro Max，库存充足
+  - 收货地址 ID=90000+用户序号，对应 perf-test-data.sql 中的地址
+  </p>
+  <p>
+  ⚠️ 重要提示（创建订单接口限流）：
+  - 创建订单接口有限流：IP QPS=10, path QPS=100, user QPS=10
+  - 50 并发用户每个用户 QPS=2（100/50），不会触发 user QPS=10 限制
+  - path QPS=100 正好等于目标 QPS，刚好不触发
+  - 但 IP QPS=10 限制会导致问题（50 并发从同一 IP 发请求会被限流）
+  - 运行前建议：临时调高 IP QPS 限制到 100（修改 Sentinel/限流配置）
+  - 否则压测结果会被限流干扰，无法反映真实接口性能
+  </p>
+  <p>
+  幂等键说明：
+  - 格式：order_用户ID_时间戳_随机数（例如 order_2001_1690000000000_5678）
+  - 每次请求都不同，确保服务器不会因为幂等性检查而拒绝请求
+  - 用 JMeter 内置函数 __time(,) 生成时间戳，__Random(1000,9999,) 生成随机数
+  </p>
+  <p>
+  运行方式（在项目根目录执行）：
+  jmeter -n -t perf/jmx/N-P-05-create-order.jmx -l perf/results/N-P-05-result.jtl -e -o perf/results/N-P-05-report
+
+  注意：运行前先删除旧的 token 文件 perf/data/order-tokens.csv（如果存在），避免脏数据
+  </p>
+-->
+<jmeterTestPlan version="1.2" properties="1.2" jmeter="5.6.3">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="N-P-05 创建订单" enabled="true">
+      <stringProp name="TestPlan.comments">目标：100 QPS / P99 500ms / 50 并发 / 5min（注意创建订单接口 IP QPS=10 限流，运行前调高到 100）</stringProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <!-- serialize_threadgroups=true：线程组按顺序执行，先跑 setUp 登录拿 token，再跑创建订单 -->
+      <boolProp name="TestPlan.serialize_threadgroups">true</boolProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="用户定义变量" enabled="true">
+        <collectionProp name="Arguments.arguments">
+          <elementProp name="HOST" elementType="Argument">
+            <stringProp name="Argument.name">HOST</stringProp>
+            <stringProp name="Argument.value">localhost</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="PORT" elementType="Argument">
+            <stringProp name="Argument.name">PORT</stringProp>
+            <stringProp name="Argument.value">8844</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+        </collectionProp>
+      </elementProp>
+      <stringProp name="TestPlan.user_define_classpath"></stringProp>
+    </TestPlan>
+    <hashTree>
+      <!-- ================================================================== -->
+      <!-- 线程组1：setUp 线程组（登录获取 Token）                              -->
+      <!-- ================================================================== -->
+      <!-- 小白理解：setUp 线程组会先于普通线程组执行，这里用来让 50 个用户先登录 -->
+      <!-- 每个用户登录成功后，把 token 和 userId 保存到 perf/data/order-tokens.csv -->
+      <!-- 这样第二个线程组就能从 CSV 文件读取 token 来调用创建订单接口            -->
+      <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="setUp-登录获取Token" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">50</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">5</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration">0</stringProp>
+        <stringProp name="ThreadGroup.delay">0</stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+      </SetupThreadGroup>
+      <hashTree>
+        <!-- CSV Data Set Config：读取测试用户数据（userId,phone 两列） -->
+        <!-- 小白理解：从 perf-users.csv 一行行读取用户数据，每个线程拿到不同的 userId 和 phone -->
+        <!-- ignoreFirstLine=true：忽略首行（标题行 userId,phone） -->
+        <!-- recycle=false：读完不循环（每个用户只登录一次） -->
+        <!-- stopThread=true：读到 EOF 停止线程（保证每个线程拿到不同用户） -->
+        <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="测试用户数据 CSV" enabled="true">
+          <stringProp name="filename">d:\workspace\business\Shop\perf\data\perf-users.csv</stringProp>
+          <stringProp name="fileEncoding">UTF-8</stringProp>
+          <stringProp name="variableNames">userId,phone</stringProp>
+          <boolProp name="ignoreFirstLine">true</boolProp>
+          <stringProp name="delimiter">,</stringProp>
+          <boolProp name="quotedData">false</boolProp>
+          <boolProp name="recycle">false</boolProp>
+          <boolProp name="stopThread">true</boolProp>
+          <stringProp name="shareMode">shareMode.all</stringProp>
+        </CSVDataSet>
+        <hashTree/>
+
+        <!-- HTTP 请求默认值：配置服务器地址和端口 -->
+        <ConfigTestElement guiclass="HttpDefaultsGui" testclass="ConfigTestElement" testname="HTTP 请求默认值" enabled="true">
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="用户定义变量" enabled="true">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">${HOST}</stringProp>
+          <stringProp name="HTTPSampler.port">${PORT}</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path"></stringProp>
+          <stringProp name="HTTPSampler.concurrentPool">6</stringProp>
+        </ConfigTestElement>
+        <hashTree/>
+
+        <!-- HTTP 请求：POST /api/user/auth/login（手机号+密码登录） -->
+        <!-- 小白理解：发一个 POST 请求，Body 里带手机号和密码（密码统一 123456），服务器返回登录结果 -->
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="用户登录请求" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{"phone":"${phone}","password":"123456"}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+          <stringProp name="HTTPSampler.path">/api/user/auth/login</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <!-- 请求头管理器：声明发送和接收的都是 JSON 格式数据 -->
+          <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP 请求头" enabled="true">
+            <collectionProp name="HeaderManager.headers">
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">Content-Type</stringProp>
+                <stringProp name="Header.value">application/json</stringProp>
+              </elementProp>
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">Accept</stringProp>
+                <stringProp name="Header.value">application/json</stringProp>
+              </elementProp>
+            </collectionProp>
+          </HeaderManager>
+          <hashTree/>
+
+          <!-- JSON Extractor：从登录响应里提取 accessToken -->
+          <!-- 小白理解：登录响应 JSON 形如 {"code":200,"data":{"accessToken":"xxx",...}} -->
+          <!-- 这里用 JSONPath 表达式 $.data.accessToken 把 token 提取出来存到变量 ACCESS_TOKEN -->
+          <!-- 默认值 NO_TOKEN：如果提取失败，变量值为 NO_TOKEN，方便后续判断 -->
+          <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="提取 accessToken" enabled="true">
+            <stringProp name="JSONPostProcessor.referenceNames">ACCESS_TOKEN</stringProp>
+            <stringProp name="JSONPostProcessor.jsonPathExprs">$.data.accessToken</stringProp>
+            <stringProp name="JSONPostProcessor.match_numbers">1</stringProp>
+            <stringProp name="JSONPostProcessor.defaultValues">NO_TOKEN</stringProp>
+          </JSONPostProcessor>
+          <hashTree/>
+
+          <!-- BeanShell PostProcessor：把 token、userId、addressId 写入 perf/data/order-tokens.csv -->
+          <!-- 小白理解：登录拿到 token 后，把这条记录追加写入 CSV 文件，供第二个线程组读取 -->
+          <!-- addressId = 90000 + (userId - 2000)，对应 perf-test-data.sql 中的收货地址 -->
+          <!-- 只有 token 不是 NO_TOKEN 时才写入，避免脏数据 -->
+          <BeanShellPostProcessor guiclass="TestBeanGUI" testclass="BeanShellPostProcessor" testname="保存 token 到文件" enabled="true">
+            <stringProp name="script">import java.io.FileWriter;
+import java.io.PrintWriter;
+// 从 JMeter 变量里取出 token 和 userId
+String token = vars.get(&quot;ACCESS_TOKEN&quot;);
+String userId = vars.get(&quot;userId&quot;);
+// 收货地址 ID = 90000 + (userId - 2000)，对应 perf-test-data.sql 中的地址
+String addressId = String.valueOf(90000 + Integer.parseInt(userId) - 2000);
+// 只有 token 有效才写入文件，避免脏数据
+if (token != null &amp;&amp; !token.equals(&quot;NO_TOKEN&quot;)) {
+  FileWriter fw = new FileWriter(&quot;perf/data/order-tokens.csv&quot;, true);
+  PrintWriter pw = new PrintWriter(fw);
+  pw.println(userId + &quot;,&quot; + token + &quot;,&quot; + addressId);
+  pw.close();
+}</stringProp>
+          </BeanShellPostProcessor>
+          <hashTree/>
+        </hashTree>
+
+        <!-- 汇总报告（Summary Report）：显示登录阶段的平均响应时间、QPS、错误率 -->
+        <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="登录阶段汇总报告" enabled="true">
+          <boolProp name="ResultCollector.error_logging">false</boolProp>
+          <objProp>
+            <name>saveConfig</name>
+            <value class="SampleSaveConfiguration">
+              <time>true</time>
+              <latency>true</latency>
+              <timestamp>true</timestamp>
+              <success>true</success>
+              <label>true</label>
+              <code>true</code>
+              <message>true</message>
+              <threadName>true</threadName>
+              <dataType>true</dataType>
+              <encoding>false</encoding>
+              <assertions>true</assertions>
+              <subresults>true</subresults>
+              <responseData>false</responseData>
+              <samplerData>false</samplerData>
+              <xml>false</xml>
+              <fieldNames>true</fieldNames>
+              <responseHeaders>false</responseHeaders>
+              <requestHeaders>false</requestHeaders>
+              <responseDataOnError>false</responseDataOnError>
+              <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
+              <assertionsResultsToSave>0</assertionsResultsToSave>
+              <bytes>true</bytes>
+              <sentBytes>true</sentBytes>
+              <url>true</url>
+              <threadCounts>true</threadCounts>
+              <idleTime>true</idleTime>
+              <connectTime>true</connectTime>
+            </value>
+          </objProp>
+          <stringProp name="filename"></stringProp>
+        </ResultCollector>
+        <hashTree/>
+      </hashTree>
+
+      <!-- ================================================================== -->
+      <!-- 线程组2：普通线程组（创建订单压测）                                   -->
+      <!-- ================================================================== -->
+      <!-- 小白理解：这个线程组是真正的压测部分，50 个并发用户持续 5 分钟创建订单 -->
+      <!-- 从 perf/data/order-tokens.csv 读取 setUp 阶段保存的 token 来调用创建订单接口 -->
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="创建订单线程组" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">-1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">50</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">10</stringProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.duration">300</stringProp>
+        <stringProp name="ThreadGroup.delay">0</stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+      </ThreadGroup>
+      <hashTree>
+        <!-- CSV Data Set Config：读取 setUp 阶段生成的 token 数据（userId,token,addressId 三列） -->
+        <!-- 小白理解：从 order-tokens.csv 一行行读取已登录用户的 token，每个线程绑定一个用户 -->
+        <!-- ignoreFirstLine=false：setUp 写入时没加标题行，所以不忽略首行 -->
+        <!-- recycle=true：读完循环回第一行继续读（压测期间 token 可复用） -->
+        <!-- stopThread=false：读完 EOF 不停止线程，继续循环使用 -->
+        <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="Token 数据 CSV" enabled="true">
+          <stringProp name="filename">d:\workspace\business\Shop\perf\data\order-tokens.csv</stringProp>
+          <stringProp name="fileEncoding">UTF-8</stringProp>
+          <stringProp name="variableNames">userId,token,addressId</stringProp>
+          <boolProp name="ignoreFirstLine">false</boolProp>
+          <stringProp name="delimiter">,</stringProp>
+          <boolProp name="quotedData">false</boolProp>
+          <boolProp name="recycle">true</boolProp>
+          <boolProp name="stopThread">false</boolProp>
+          <stringProp name="shareMode">shareMode.all</stringProp>
+        </CSVDataSet>
+        <hashTree/>
+
+        <!-- HTTP 请求默认值：配置服务器地址和端口 -->
+        <ConfigTestElement guiclass="HttpDefaultsGui" testclass="ConfigTestElement" testname="HTTP 请求默认值" enabled="true">
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="用户定义变量" enabled="true">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">${HOST}</stringProp>
+          <stringProp name="HTTPSampler.port">${PORT}</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path"></stringProp>
+          <stringProp name="HTTPSampler.concurrentPool">6</stringProp>
+        </ConfigTestElement>
+        <hashTree/>
+
+        <!-- Constant Throughput Timer：控制吞吐量为 100 QPS（6000 per minute） -->
+        <!-- 小白理解：每分钟发送 6000 个请求 = 每秒 100 个请求，控制压测节奏 -->
+        <!-- calcMode=2：表示按所有活跃线程计算吞吐量（this thread only 的反向） -->
+        <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制 100 QPS" enabled="true">
+          <intProp name="calcMode">2</intProp>
+          <doubleProp>
+            <name>throughput</name>
+            <value>6000.0</value>
+          </doubleProp>
+        </ConstantThroughputTimer>
+        <hashTree/>
+
+        <!-- HTTP 请求：POST /api/order（创建订单） -->
+        <!-- 小白理解：发一个 POST 请求，Body 里带收货地址、商品 SKU、数量、备注 -->
+        <!-- skuId=50001 是 iPhone 15 Pro Max，quantity=1 表示买 1 件 -->
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="创建订单请求" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{"addressId":${addressId},"items":[{"skuId":50001,"quantity":1}],"remark":"性能测试订单"}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+          <stringProp name="HTTPSampler.path">/api/order</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <!-- 请求头管理器：声明 JSON 格式 + 携带登录 token + 幂等键 -->
+          <!-- 小白理解：除了 Content-Type，还要带两个特殊头： -->
+          <!--   1. Authorization: ${token} —— 登录态校验，没 token 会被拒绝 -->
+          <!--   2. X-Idempotent-Key: order_用户ID_时间戳_随机数 —— 幂等键，避免重复下单 -->
+          <!-- 幂等键用 JMeter 内置函数生成：__time(,) 是当前毫秒时间戳，__Random(1000,9999,) 是 1000-9999 的随机数 -->
+          <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP 请求头" enabled="true">
+            <collectionProp name="HeaderManager.headers">
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">Content-Type</stringProp>
+                <stringProp name="Header.value">application/json</stringProp>
+              </elementProp>
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">Accept</stringProp>
+                <stringProp name="Header.value">application/json</stringProp>
+              </elementProp>
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">Authorization</stringProp>
+                <stringProp name="Header.value">${token}</stringProp>
+              </elementProp>
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">X-Idempotent-Key</stringProp>
+                <stringProp name="Header.value">order_${userId}_${__time(,)}_${__Random(1000,9999,)}</stringProp>
+              </elementProp>
+            </collectionProp>
+          </HeaderManager>
+          <hashTree/>
+
+          <!-- 响应断言：HTTP 响应码为 200 -->
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="响应码 200 断言" enabled="true">
+            <collectionProp name="Asserion.test_strings">
+              <stringProp name="49586">200</stringProp>
+            </collectionProp>
+            <stringProp name="Assertion.custom_message">响应码不是 200</stringProp>
+            <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+            <intProp name="Assertion.test_type">8</intProp>
+          </ResponseAssertion>
+          <hashTree/>
+
+          <!-- JSON 断言：验证响应体包含 code:200（业务成功） -->
+          <JSONPathAssertion guiclass="JSONPathAssertionGui" testclass="JSONPathAssertion" testname="业务 code=200 断言" enabled="true">
+            <stringProp name="JSON_PATH">$.code</stringProp>
+            <stringProp name="EXPECTED_VALUE">200</stringProp>
+            <boolProp name="JSONVALIDATION">true</boolProp>
+            <boolProp name="EXPECT_NULL">false</boolProp>
+            <boolProp name="INVERT">false</boolProp>
+            <boolProp name="ISREGEX">false</boolProp>
+          </JSONPathAssertion>
+          <hashTree/>
+        </hashTree>
+
+        <!-- 汇总报告（Summary Report）：显示创建订单阶段的平均响应时间、P90/P95/P99、QPS、错误率 -->
+        <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="创建订单汇总报告" enabled="true">
+          <boolProp name="ResultCollector.error_logging">false</boolProp>
+          <objProp>
+            <name>saveConfig</name>
+            <value class="SampleSaveConfiguration">
+              <time>true</time>
+              <latency>true</latency>
+              <timestamp>true</timestamp>
+              <success>true</success>
+              <label>true</label>
+              <code>true</code>
+              <message>true</message>
+              <threadName>true</threadName>
+              <dataType>true</dataType>
+              <encoding>false</encoding>
+              <assertions>true</assertions>
+              <subresults>true</subresults>
+              <responseData>false</responseData>
+              <samplerData>false</samplerData>
+              <xml>false</xml>
+              <fieldNames>true</fieldNames>
+              <responseHeaders>false</responseHeaders>
+              <requestHeaders>false</requestHeaders>
+              <responseDataOnError>false</responseDataOnError>
+              <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
+              <assertionsResultsToSave>0</assertionsResultsToSave>
+              <bytes>true</bytes>
+              <sentBytes>true</sentBytes>
+              <url>true</url>
+              <threadCounts>true</threadCounts>
+              <idleTime>true</idleTime>
+              <connectTime>true</connectTime>
+            </value>
+          </objProp>
+          <stringProp name="filename"></stringProp>
+        </ResultCollector>
+        <hashTree/>
+      </hashTree>
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>

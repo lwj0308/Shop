@@ -111,7 +111,7 @@ public class SaTokenConfig implements WebMvcConfigurer {
                         // ===== 管理端接口仅供shop-admin通过Feign内部调用（由InnerApiInterceptor校验X-Inner-Key） =====
                         "/merchant/admin/**",              // 管理端商家接口
                         "/merchant/settlement/admin/**",   // 管理端结算/提现审核接口
-                        "/shop/{shopId}",           // 公开查看店铺信息
+                        "/merchant/shop/{shopId}",  // 公开查看店铺信息（N-P 性能测试整改：原路径 /shop/{shopId} 缺少 /merchant 前缀，导致 Feign 调用被 401 拦截，merchantId 始终为 null）
                         "/doc.html",                // Swagger文档页面
                         "/webjars/**",              // Swagger静态资源
                         "/v3/api-docs/**",          // OpenAPI文档接口

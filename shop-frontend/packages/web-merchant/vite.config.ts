@@ -29,6 +29,9 @@ export default defineConfig({
     },
   },
   server: {
+    // 监听 IPv4 127.0.0.1，确保 Playwright 用 localhost:3001 能访问
+    // （默认 Vite 只监听 IPv6 [::1]，会导致 Playwright ERR_CONNECTION_REFUSED）
+    host: '127.0.0.1',
     port: 3001,
     // 开发代理：把 /api 开头的请求转发到后端网关
     proxy: {

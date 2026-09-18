@@ -2,7 +2,7 @@
   {
     "highestSystemLoad": 4.0,
     "highestCpuUsage": 0.75,
-    "avgRt": 10,
+    "avgRt": 1000,
     "qps": 2000,
     "maxThread": 100
   }

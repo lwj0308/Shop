@@ -8,6 +8,7 @@ import com.shop.common.model.PageRequest;
 import com.shop.common.model.PageResult;
 import com.shop.common.result.ErrorCode;
 import com.shop.common.result.Result;
+import com.shop.model.coupon.dto.CouponUseDTO;
 import com.shop.model.order.dto.OrderCancelDTO;
 import com.shop.model.order.dto.OrderCreateDTO;
 import com.shop.model.order.entity.OrderAddress;
@@ -16,6 +17,7 @@ import com.shop.model.order.entity.OrderItem;
 import com.shop.model.order.entity.OrderLog;
 import com.shop.model.order.entity.OrderLogistics;
 import com.shop.model.order.enums.OrderStatusEnum;
+import com.shop.model.order.enums.OrderTypeEnum;
 import com.shop.model.order.vo.OrderDetailVO;
 import com.shop.model.order.vo.OrderVO;
 import com.shop.model.product.vo.ProductSkuVO;
@@ -442,6 +444,81 @@ class OrderServiceImplTest {
             // 验证：库存不足不应该插入订单
             verify(orderInfoMapper, never()).insert(any(OrderInfo.class));
         }
+
+        @Test
+        @DisplayName("库存扣减失败 → 抛出PRODUCT_STOCK_NOT_ENOUGH异常")
+        void createOrder_deductStockFail_throwsException() {
+            // 场景：订单创建到扣库存环节，商品服务批量扣减库存返回失败
+            OrderCreateDTO dto = buildCreateDTO();
+
+            ValueOperations<String, String> valueOps = mock(ValueOperations.class);
+            when(stringRedisTemplate.opsForValue()).thenReturn(valueOps);
+            when(valueOps.setIfAbsent(anyString(), anyString(), anyLong(), any())).thenReturn(true);
+
+            when(productFeignClient.batchGetSkuByIds(anyList())).thenReturn(Result.success(Collections.singletonList(buildSku())));
+            when(userFeignClient.getAddressById(ADDRESS_ID)).thenReturn(Result.success(buildAddress()));
+            when(orderNoGenerator.generate()).thenReturn(ORDER_NO);
+
+            // mock insert 成功
+            when(orderInfoMapper.insert(any(OrderInfo.class))).thenAnswer(invocation -> {
+                OrderInfo o = invocation.getArgument(0);
+                o.setId(ORDER_ID);
+                return 1;
+            });
+            when(orderItemMapper.insert(any(OrderItem.class))).thenReturn(1);
+            when(orderAddressMapper.insert(any(OrderAddress.class))).thenReturn(1);
+            when(orderLogMapper.insert(any(OrderLog.class))).thenReturn(1);
+
+            // mock 批量扣减库存返回失败
+            when(productFeignClient.batchDeductStock(anyList(), anyString())).thenReturn(Result.fail(500, "库存不足"));
+
+            // 验证：抛出 PRODUCT_STOCK_NOT_ENOUGH 异常（@Transactional 会回滚订单数据）
+            assertThatThrownBy(() -> orderService.createOrder(USER_ID, dto))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("code", ErrorCode.PRODUCT_STOCK_NOT_ENOUGH.getCode());
+        }
+
+        @Test
+        @DisplayName("使用优惠券下单 → 调用优惠券服务核销，实付金额=总额-满减-券优惠")
+        void createOrder_useCoupon_couponDeducted() {
+            // 场景：用户下单时选了优惠券，系统调用用户服务核销优惠券
+            OrderCreateDTO dto = buildCreateDTO();
+            dto.setUserCouponId(8001L); // 设置用户券ID
+
+            ValueOperations<String, String> valueOps = mock(ValueOperations.class);
+            when(stringRedisTemplate.opsForValue()).thenReturn(valueOps);
+            when(valueOps.setIfAbsent(anyString(), anyString(), anyLong(), any())).thenReturn(true);
+
+            when(productFeignClient.batchGetSkuByIds(anyList())).thenReturn(Result.success(Collections.singletonList(buildSku())));
+            when(userFeignClient.getAddressById(ADDRESS_ID)).thenReturn(Result.success(buildAddress()));
+            when(orderNoGenerator.generate()).thenReturn(ORDER_NO);
+
+            // mock 优惠券核销返回优惠5元
+            when(couponFeignClient.useCoupon(any(CouponUseDTO.class))).thenReturn(Result.success(new BigDecimal("5.00")));
+
+            when(orderInfoMapper.insert(any(OrderInfo.class))).thenAnswer(invocation -> {
+                OrderInfo o = invocation.getArgument(0);
+                o.setId(ORDER_ID);
+                return 1;
+            });
+            when(orderItemMapper.insert(any(OrderItem.class))).thenReturn(1);
+            when(orderAddressMapper.insert(any(OrderAddress.class))).thenReturn(1);
+            when(orderLogMapper.insert(any(OrderLog.class))).thenReturn(1);
+            when(productFeignClient.batchDeductStock(anyList(), anyString())).thenReturn(Result.success());
+
+            // mock getOrderDetail 的依赖
+            OrderInfo savedOrder = buildOrder(ORDER_ID, USER_ID, OrderStatusEnum.UNPAID.getCode());
+            when(orderInfoMapper.selectById(ORDER_ID)).thenReturn(savedOrder);
+            when(orderItemMapper.selectList(any())).thenReturn(Collections.singletonList(buildOrderItem()));
+            when(orderAddressMapper.selectOne(any())).thenReturn(buildOrderAddress());
+            when(orderLogisticsMapper.selectOne(any())).thenReturn(null);
+
+            OrderDetailVO vo = orderService.createOrder(USER_ID, dto);
+
+            // 验证：调用了优惠券核销
+            verify(couponFeignClient).useCoupon(any(CouponUseDTO.class));
+            assertThat(vo).isNotNull();
+        }
     }
 
     // ==================== 2. cancelOrder 取消订单 ====================
@@ -524,6 +601,72 @@ class OrderServiceImplTest {
             verify(productFeignClient).addStock(eq(SKU_ID), eq(2));
             // 验证：记录了状态变更日志
             verify(orderLogMapper).insert(any(OrderLog.class));
+        }
+
+        @Test
+        @DisplayName("取消订单时有优惠券优惠 → 调用优惠券服务回退券")
+        void cancelOrder_withCouponDiscount_rollbackCoupon() {
+            // 场景：下单时用了优惠券（总优惠10元，满减0元，券优惠10元），取消时需回退券
+            OrderInfo order = buildOrder(ORDER_ID, USER_ID, OrderStatusEnum.UNPAID.getCode());
+            order.setDiscountAmount(new BigDecimal("10.00")); // 总优惠10元
+            order.setPromotionDiscount(BigDecimal.ZERO);       // 满减0元，所以券优惠=10元
+            when(orderInfoMapper.selectById(ORDER_ID)).thenReturn(order);
+            when(orderInfoMapper.update(any(), any())).thenReturn(1);
+            when(orderItemMapper.selectList(any())).thenReturn(Collections.singletonList(buildOrderItem()));
+            when(productFeignClient.addStock(anyLong(), anyInt())).thenReturn(Result.success());
+            when(orderLogMapper.insert(any(OrderLog.class))).thenReturn(1);
+            when(couponFeignClient.rollbackCoupon(ORDER_NO)).thenReturn(Result.success());
+
+            orderService.cancelOrder(USER_ID, ORDER_ID, buildCancelDTO());
+
+            // 验证：调用了优惠券回退
+            verify(couponFeignClient).rollbackCoupon(ORDER_NO);
+        }
+
+        @Test
+        @DisplayName("秒杀订单取消 → 回退Redis秒杀库存")
+        void cancelOrder_seckillOrder_rollbackRedisStock() {
+            // 场景：秒杀订单（orderType=2, seckillId=999），取消时需把Redis秒杀库存加回去
+            OrderInfo order = buildOrder(ORDER_ID, USER_ID, OrderStatusEnum.UNPAID.getCode());
+            order.setOrderType(OrderTypeEnum.SECKILL.getCode());
+            order.setSeckillId(999L);
+            when(orderInfoMapper.selectById(ORDER_ID)).thenReturn(order);
+            when(orderInfoMapper.update(any(), any())).thenReturn(1);
+            when(orderItemMapper.selectList(any())).thenReturn(Collections.singletonList(buildOrderItem()));
+            when(productFeignClient.addStock(anyLong(), anyInt())).thenReturn(Result.success());
+            when(orderLogMapper.insert(any(OrderLog.class))).thenReturn(1);
+
+            // mock Redis increment（回退秒杀库存）
+            ValueOperations<String, String> valueOps = mock(ValueOperations.class);
+            when(stringRedisTemplate.opsForValue()).thenReturn(valueOps);
+            when(valueOps.increment(anyString())).thenReturn(1L);
+
+            orderService.cancelOrder(USER_ID, ORDER_ID, buildCancelDTO());
+
+            // 验证：调用了 Redis increment 回退秒杀库存
+            verify(stringRedisTemplate.opsForValue()).increment("seckill:stock:999");
+        }
+
+        @Test
+        @DisplayName("优惠券回退异常 → 不影响取消订单主流程（弱依赖）")
+        void cancelOrder_couponRollbackFail_stillSucceeds() {
+            // 场景：取消订单时回退优惠券失败（Feign异常），但不影响取消主流程
+            OrderInfo order = buildOrder(ORDER_ID, USER_ID, OrderStatusEnum.UNPAID.getCode());
+            order.setDiscountAmount(new BigDecimal("10.00"));
+            order.setPromotionDiscount(BigDecimal.ZERO);
+            when(orderInfoMapper.selectById(ORDER_ID)).thenReturn(order);
+            when(orderInfoMapper.update(any(), any())).thenReturn(1);
+            when(orderItemMapper.selectList(any())).thenReturn(Collections.singletonList(buildOrderItem()));
+            when(productFeignClient.addStock(anyLong(), anyInt())).thenReturn(Result.success());
+            when(orderLogMapper.insert(any(OrderLog.class))).thenReturn(1);
+            // Feign 回退优惠券抛异常
+            when(couponFeignClient.rollbackCoupon(ORDER_NO)).thenThrow(new RuntimeException("network error"));
+
+            // 执行取消订单（不应该抛异常）
+            orderService.cancelOrder(USER_ID, ORDER_ID, buildCancelDTO());
+
+            // 验证：订单状态仍然更新成功
+            verify(orderInfoMapper).update(any(), any());
         }
     }
 
@@ -682,6 +825,44 @@ class OrderServiceImplTest {
             // 验证：记录了状态变更日志
             verify(orderLogMapper).insert(any(OrderLog.class));
         }
+
+        @Test
+        @DisplayName("确认收货后触发商家结算（merchantId>0）")
+        void confirmReceive_withMerchant_triggersSettlement() {
+            // 场景：订单有商家信息（merchantId=2001），确认收货后触发商家结算
+            OrderInfo order = buildOrder(ORDER_ID, USER_ID, OrderStatusEnum.SHIPPING.getCode());
+            order.setMerchantId(2001L);
+            when(orderInfoMapper.selectById(ORDER_ID)).thenReturn(order);
+            when(orderInfoMapper.update(any(), any())).thenReturn(1);
+            when(orderLogMapper.insert(any(OrderLog.class))).thenReturn(1);
+            when(merchantFeignClient.settleOrder(eq(2001L), eq(ORDER_NO), any(BigDecimal.class)))
+                    .thenReturn(Result.success());
+
+            orderService.confirmReceive(USER_ID, ORDER_ID);
+
+            // 验证：调用了商家结算
+            verify(merchantFeignClient).settleOrder(eq(2001L), eq(ORDER_NO), any(BigDecimal.class));
+        }
+
+        @Test
+        @DisplayName("商家结算异常 → 不影响确认收货主流程（弱依赖）")
+        void confirmReceive_settlementFail_stillSucceeds() {
+            // 场景：确认收货后商家结算失败（Feign异常），不影响收货主流程
+            OrderInfo order = buildOrder(ORDER_ID, USER_ID, OrderStatusEnum.SHIPPING.getCode());
+            order.setMerchantId(2001L);
+            when(orderInfoMapper.selectById(ORDER_ID)).thenReturn(order);
+            when(orderInfoMapper.update(any(), any())).thenReturn(1);
+            when(orderLogMapper.insert(any(OrderLog.class))).thenReturn(1);
+            // 商家结算抛异常
+            when(merchantFeignClient.settleOrder(eq(2001L), eq(ORDER_NO), any(BigDecimal.class)))
+                    .thenThrow(new RuntimeException("network error"));
+
+            // 执行确认收货（不应该抛异常）
+            orderService.confirmReceive(USER_ID, ORDER_ID);
+
+            // 验证：订单状态仍然更新成功
+            verify(orderInfoMapper).update(any(), any());
+        }
     }
 
     // ==================== 6. autoCancelOrder 自动取消超时订单 ====================
@@ -745,6 +926,32 @@ class OrderServiceImplTest {
             verify(productFeignClient).addStock(eq(SKU_ID), eq(2));
             // 验证：记录了状态变更日志
             verify(orderLogMapper).insert(any(OrderLog.class));
+        }
+
+        @Test
+        @DisplayName("秒杀订单超时取消 → 回退Redis秒杀库存 + 回滚商品库存")
+        void autoCancelOrder_seckillOrder_rollbackRedisStock() {
+            // 场景：秒杀订单超时未支付，系统自动取消，需回退Redis秒杀库存和商品库存
+            OrderInfo order = buildOrder(ORDER_ID, USER_ID, OrderStatusEnum.UNPAID.getCode());
+            order.setOrderType(OrderTypeEnum.SECKILL.getCode());
+            order.setSeckillId(888L);
+            when(orderInfoMapper.selectOne(any())).thenReturn(order);
+            when(orderInfoMapper.update(any(), any())).thenReturn(1);
+            when(orderItemMapper.selectList(any())).thenReturn(Collections.singletonList(buildOrderItem()));
+            when(productFeignClient.addStock(anyLong(), anyInt())).thenReturn(Result.success());
+            when(orderLogMapper.insert(any(OrderLog.class))).thenReturn(1);
+
+            // mock Redis increment（回退秒杀库存）
+            ValueOperations<String, String> valueOps = mock(ValueOperations.class);
+            when(stringRedisTemplate.opsForValue()).thenReturn(valueOps);
+            when(valueOps.increment(anyString())).thenReturn(1L);
+
+            orderService.autoCancelOrder(ORDER_NO);
+
+            // 验证：回退了商品库存
+            verify(productFeignClient).addStock(eq(SKU_ID), eq(2));
+            // 验证：回退了Redis秒杀库存
+            verify(stringRedisTemplate.opsForValue()).increment("seckill:stock:888");
         }
     }
 

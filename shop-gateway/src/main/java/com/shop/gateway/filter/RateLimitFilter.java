@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
+import reactor.netty.channel.AbortedException;
 
 import java.util.List;
 import java.util.UUID;
@@ -209,6 +210,11 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
                 })
                 // 第5步：降级策略——Redis异常时放行（限流是弱依赖）
                 .onErrorResume(error -> {
+                    // N-P 性能测试整改：客户端断连是正常现象，不记录 ERROR 日志
+                    if (isClientDisconnectedError(error)) {
+                        log.debug("客户端断开连接，跳过限流后续处理。IP：{}，路径：{}", clientIp, path);
+                        return Mono.empty();
+                    }
                     log.error("限流检查异常，降级放行。IP：{}，路径：{}", clientIp, path, error);
                     return chain.filter(exchange);
                 });
@@ -264,6 +270,11 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
                 })
                 // 自动拉黑是弱依赖，异常不影响限流响应
                 .onErrorResume(error -> {
+                    // N-P 性能测试整改：客户端断连不记录 ERROR 日志
+                    if (isClientDisconnectedError(error)) {
+                        log.debug("客户端断开连接，跳过自动拉黑处理。key：{}", blockKey);
+                        return Mono.empty();
+                    }
                     log.error("自动拉黑检查异常，key：{}", blockKey, error);
                     return Mono.empty();
                 });
@@ -427,5 +438,44 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
     @Override
     public int getOrder() {
         return -80;
+    }
+
+    /**
+     * 判断异常是否由客户端断开连接引起
+     * <p>
+     * 客户端主动关闭连接（如用户关闭浏览器、JMeter 连接超时）时，
+     * Netty 会抛出 AbortedException（包装 StacklessClosedChannelException）。
+     * 这类异常不是服务端 bug，不应该记录 ERROR 级别日志。
+     * </p>
+     * <p>
+     * 注意：StacklessClosedChannelException 是 Netty 的 package-private 类，
+     * 无法直接 instanceof 判断，所以通过类名字符串匹配。
+     * </p>
+     *
+     * @param error 捕获的异常
+     * @return true=客户端断连，false=其他异常
+     */
+    private boolean isClientDisconnectedError(Throwable error) {
+        if (error == null) {
+            return false;
+        }
+        if (error instanceof AbortedException) {
+            return true;
+        }
+        String errorClassName = error.getClass().getName();
+        if (errorClassName.contains("StacklessClosedChannelException")) {
+            return true;
+        }
+        Throwable cause = error.getCause();
+        while (cause != null && cause != error) {
+            if (cause instanceof AbortedException) {
+                return true;
+            }
+            if (cause.getClass().getName().contains("StacklessClosedChannelException")) {
+                return true;
+            }
+            cause = cause.getCause();
+        }
+        return false;
     }
 }

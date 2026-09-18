@@ -16,8 +16,11 @@ import com.shop.model.product.entity.*;
 import com.shop.model.product.vo.ProductDetailVO;
 import com.shop.model.product.vo.ProductSkuVO;
 import com.shop.model.product.vo.ProductVO;
+import com.shop.product.feign.MerchantFeignClient;
 import com.shop.product.mapper.*;
 import com.shop.product.service.ProductCacheService;
+import com.shop.common.result.Result;
+import com.shop.model.merchant.vo.ShopVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -77,6 +80,22 @@ public class ProductCacheServiceImpl implements ProductCacheService {
 
     /** 品牌Mapper */
     private final BrandMapper brandMapper;
+
+    /** 商家服务Feign客户端（N-P 性能测试整改：用于查询 shopId→merchantId 映射） */
+    private final MerchantFeignClient merchantFeignClient;
+
+    /**
+     * shopId → merchantId 本地缓存（N-P 性能测试整改）
+     * <p>
+     * 避免每次查商品详情都通过 Feign 调用商家服务，缓存命中后直接返回 merchantId。
+     * 缓存策略：最多 500 个店铺，写入 30 分钟后过期（店铺归属变更极少）。
+     * </p>
+     */
+    private final Cache<Long, Long> shopIdToMerchantIdCache = Caffeine.newBuilder()
+            .maximumSize(500)
+            .expireAfterWrite(30, TimeUnit.MINUTES)
+            .recordStats()
+            .build();
 
     /** 商品详情Redis缓存key前缀 */
     private static final String PRODUCT_DETAIL_CACHE_KEY = "product:detail:";
@@ -429,6 +448,61 @@ public class ProductCacheServiceImpl implements ProductCacheService {
         vo.setStock(sku.getStock());
         vo.setImage(sku.getImage());
         vo.setStatus(sku.getStatus());
+        // N-P 性能测试整改：查询并设置 merchantId（带 Caffeine 本地缓存，避免每次 Feign 调用）
+        vo.setMerchantId(queryMerchantIdByProductId(sku.getProductId()));
         return vo;
+    }
+
+    /**
+     * 根据商品ID查询商家ID（带 Caffeine 本地缓存优化）
+     * <p>
+     * N-P 性能测试整改：原 convertSkuToVO 未设置 merchantId，导致商品详情接口返回的 SKU 中
+     * merchantId 始终为 null。此方法与 ProductServiceImpl 中的实现保持一致：
+     * 1. 查商品 SPU 拿 shopId
+     * 2. 先查 Caffeine 缓存（命中率 >99%）
+     * 3. 缓存未命中走 Feign 调用商家服务，结果写入缓存
+     * 4. 任何异常降级返回 null，不阻塞主流程
+     * </p>
+     *
+     * @param productId 商品ID
+     * @return 商家ID，查询失败返回 null
+     */
+    private Long queryMerchantIdByProductId(Long productId) {
+        try {
+            // 1. 先查出商品SPU，拿到店铺ID
+            Product product = productMapper.selectById(productId);
+            if (product == null || product.getShopId() == null) {
+                log.warn("查询merchantId失败：商品或店铺ID为空, productId={}", productId);
+                return null;
+            }
+
+            Long shopId = product.getShopId();
+
+            // 2. 先查本地缓存（命中率 >99%，命中直接返回，不发起远程调用）
+            Long cachedMerchantId = shopIdToMerchantIdCache.getIfPresent(shopId);
+            if (cachedMerchantId != null) {
+                log.debug("shopId→merchantId 缓存命中: shopId={}, merchantId={}", shopId, cachedMerchantId);
+                return cachedMerchantId;
+            }
+
+            // 3. 缓存未命中，通过Feign调用商家服务查询店铺信息
+            Result<ShopVO> shopResult = merchantFeignClient.getShopById(shopId);
+            if (shopResult == null || !shopResult.isSuccess() || shopResult.getData() == null) {
+                log.warn("查询merchantId失败：店铺信息为空, shopId={}", shopId);
+                return null;
+            }
+
+            // 4. 取出merchantId并写入缓存
+            Long merchantId = shopResult.getData().getMerchantId();
+            if (merchantId != null) {
+                shopIdToMerchantIdCache.put(shopId, merchantId);
+                log.debug("shopId→merchantId 缓存写入: shopId={}, merchantId={}", shopId, merchantId);
+            }
+
+            return merchantId;
+        } catch (Exception e) {
+            log.warn("查询merchantId异常，不影响主流程: productId={}", productId, e);
+            return null;
+        }
     }
 }

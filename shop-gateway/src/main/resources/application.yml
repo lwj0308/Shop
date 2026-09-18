@@ -43,6 +43,18 @@ spring:
     gateway:
       server:
         webflux:
+          # 默认过滤器（N-S-01 安全测试整改：添加 HTTP 安全响应头）
+          # 这些安全头是 OWASP 推荐的基本防护措施：
+          # - X-Content-Type-Options: nosniff 防止浏览器 MIME 嗅探攻击
+          # - X-Frame-Options: DENY 防止点击劫持（页面被嵌入 iframe）
+          # - X-XSS-Protection: 1; mode=block 启用浏览器 XSS 过滤器
+          # - Strict-Transport-Security: 强制 HTTPS（生产环境启用）
+          default-filters:
+            - AddResponseHeader=X-Content-Type-Options, nosniff
+            - AddResponseHeader=X-Frame-Options, DENY
+            - AddResponseHeader=X-XSS-Protection, 1; mode=block
+            - AddResponseHeader=Strict-Transport-Security, max-age=31536000; includeSubDomains
+            - AddResponseHeader=Referrer-Policy, no-referrer-when-downgrade
           routes:
             # 用户服务路由：前端访问 /api/user/** 的请求会转发到 shop-user 服务
             - id: shop-user

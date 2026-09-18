@@ -383,13 +383,21 @@ function handleTokenRefresh(config: AxiosRequestConfig): Promise<unknown> {
  * 而是触发全局 token-expired 事件，由布局组件监听后弹出 AuthModal 登录弹窗。
  *
  * 商家端：仍用整页跳转（商家端有独立的登录页）。
+ *
+ * 管理后台：整页跳转到 /login（admin 端有独立的登录页）。
+ *
+ * 注意：判断商家端必须用 startsWith('/merchant')，不能用 includes('/merchant')，
+ * 否则 admin 端的 /business/merchant 路径也会被误判为商家端，跳转到错误的 /merchant/login。
  */
 function redirectToLogin(): void {
   clearToken()
   const currentPath = window.location.pathname
-  if (currentPath.includes('/merchant')) {
+  if (currentPath.startsWith('/merchant')) {
     // 商家端：整页跳转到商家登录页
     window.location.href = '/merchant/login'
+  } else if (localStorage.getItem('admin_info')) {
+    // 管理后台：整页跳转到管理后台登录页（通过 admin_info 标识区分）
+    window.location.href = '/login'
   } else {
     // 用户端：触发全局事件，由 DefaultLayout 监听并弹出 AuthModal
     window.dispatchEvent(new CustomEvent('token-expired'))

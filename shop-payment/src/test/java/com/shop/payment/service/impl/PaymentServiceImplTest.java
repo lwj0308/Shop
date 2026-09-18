@@ -270,6 +270,30 @@ class PaymentServiceImplTest {
             // 验证：支付单号以PAY开头（由PaymentNoGenerator生成）
             assertThat(vo.getPaymentNo()).startsWith("PAY");
         }
+
+        @Test
+        @DisplayName("订单已有待支付记录 → 直接返回已有支付单，不重复创建")
+        void createPayment_alreadyHasWaitPayment_returnExisting() {
+            // 场景：用户重复点击"去支付"，订单已有一笔待支付的支付记录
+            // 小白理解：防止重复创建支付单，直接返回之前那个待支付的支付单
+            PayCreateDTO dto = buildPayCreateDTO(ORDER_NO, new BigDecimal("100.00"), 1);
+            PaymentInfo existPayment = buildPaymentInfo(PAYMENT_ID, USER_ID, ORDER_NO, PAYMENT_NO,
+                    new BigDecimal("100.00"), 1, PayStatusEnum.WAIT.getCode());
+
+            // 模拟：查到已存在的待支付记录
+            when(paymentInfoMapper.selectOne(any())).thenReturn(existPayment);
+
+            // 执行
+            PaymentVO vo = paymentService.createPayment(USER_ID, dto);
+
+            // 验证：返回的是已存在的支付单
+            assertThat(vo).isNotNull();
+            assertThat(vo.getId()).isEqualTo(PAYMENT_ID);
+            assertThat(vo.getPaymentNo()).isEqualTo(PAYMENT_NO);
+            // 验证：没有反查订单金额，没有创建新支付记录
+            verify(orderFeignClient, never()).getPayAmount(anyString(), anyLong());
+            verify(paymentInfoMapper, never()).insert(any(PaymentInfo.class));
+        }
     }
 
     // ==================== 2. mockPay 模拟支付 ====================
@@ -339,9 +363,26 @@ class PaymentServiceImplTest {
             assertThat(result.getPaymentNo()).isEqualTo(PAYMENT_NO);
             assertThat(result.getMessage()).isEqualTo("支付成功");
         }
-    }
 
-    // ==================== 3. handleCallback 处理支付回调 ====================
+        @Test
+        @DisplayName("越权支付他人订单 → 抛出FORBIDDEN异常")
+        void mockPay_notOwner_throwsForbidden() {
+            // 场景：用户B想支付用户A的支付单，被归属校验拦截
+            // 小白理解：只能支付自己的订单，不能替别人付款（防止恶意支付）
+            PaymentInfo paymentInfo = buildPaymentInfo(PAYMENT_ID, USER_ID, ORDER_NO, PAYMENT_NO,
+                    new BigDecimal("100.00"), 1, PayStatusEnum.PAYING.getCode());
+            when(paymentInfoMapper.selectById(PAYMENT_ID)).thenReturn(paymentInfo);
+
+            // 验证：用 OTHER_USER_ID 去支付 USER_ID 的支付单，应抛 FORBIDDEN
+            assertThatThrownBy(() -> paymentService.mockPay(OTHER_USER_ID, PAYMENT_ID))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("code", ErrorCode.FORBIDDEN.getCode());
+
+            // 验证：没有更新支付状态，没有发MQ消息
+            verify(paymentInfoMapper, never()).update(any(), any());
+            verify(paymentMQProducer, never()).sendPaySuccessMessage(anyString(), anyString());
+        }
+    }
 
     @Nested
     @DisplayName("handleCallback 处理支付回调")
@@ -421,6 +462,105 @@ class PaymentServiceImplTest {
             assertThat(result.getSuccess()).isTrue();
             assertThat(result.getPaymentNo()).isEqualTo(PAYMENT_NO);
             assertThat(result.getMessage()).isEqualTo("支付成功");
+        }
+
+        @Test
+        @DisplayName("重复回调幂等：支付单已是已支付状态，直接返回已处理，不重复更新")
+        void handleCallback_alreadyPaid_idempotentReturn() {
+            // 场景：第三方支付平台重复通知（MQ重试或平台重发），支付单已经是已支付状态
+            // 小白理解：幂等校验——已经处理过的回调不再重复处理，避免重复发MQ通知订单
+            PaymentInfo paymentInfo = buildPaymentInfo(PAYMENT_ID, USER_ID, ORDER_NO, PAYMENT_NO,
+                    new BigDecimal("100.00"), 2, PayStatusEnum.PAID.getCode());
+            PayCallbackDTO dto = buildPayCallbackDTO(PAYMENT_NO, "WX_123", "wechat", "");
+
+            mockRedisLockSuccess();
+            when(paymentInfoMapper.selectOne(any())).thenReturn(paymentInfo);
+
+            // 执行
+            PayResultVO result = paymentService.handleCallback(dto);
+
+            // 验证：返回"已处理"
+            assertThat(result.getSuccess()).isTrue();
+            assertThat(result.getMessage()).isEqualTo("已处理");
+            // 验证：没有更新支付状态、没有记录回调日志、没有发MQ消息
+            verify(paymentInfoMapper, never()).update(any(), any());
+            verify(paymentCallbackMapper, never()).insert(any(PaymentCallback.class));
+            verify(paymentMQProducer, never()).sendPaySuccessMessage(anyString(), anyString());
+        }
+
+        @Test
+        @DisplayName("并发回调锁失败：Redis锁获取失败，返回处理中，不处理业务")
+        void handleCallback_lockFail_returnProcessing() {
+            // 场景：两个回调请求同时到达，只有一个能获取到锁，另一个返回"处理中"
+            // 小白理解：并发回调时让另一个请求等待，避免重复处理
+            PayCallbackDTO dto = buildPayCallbackDTO(PAYMENT_NO, "WX_123", "wechat", "");
+
+            // mock Redis 锁获取失败
+            when(stringRedisTemplate.opsForValue()).thenReturn(valueOperations);
+            when(valueOperations.setIfAbsent(anyString(), anyString(), anyLong(), any(TimeUnit.class)))
+                    .thenReturn(false);
+
+            // 执行
+            PayResultVO result = paymentService.handleCallback(dto);
+
+            // 验证：返回"处理中"
+            assertThat(result.getSuccess()).isTrue();
+            assertThat(result.getMessage()).isEqualTo("处理中");
+            // 验证：没有查询支付记录、没有更新、没有发MQ
+            verify(paymentInfoMapper, never()).selectOne(any());
+            verify(paymentInfoMapper, never()).update(any(), any());
+            verify(paymentMQProducer, never()).sendPaySuccessMessage(anyString(), anyString());
+        }
+
+        @Test
+        @DisplayName("回调乐观锁更新失败：支付状态已被其他请求变更，返回已处理")
+        void handleCallback_optimisticLockFail_returnProcessed() {
+            // 场景：两个回调并发处理（锁获取成功但状态已被另一个请求更新）
+            // 小白理解：update 的 where 条件包含 payStatus=WAIT，如果状态已变则 update 返回0
+            PaymentInfo paymentInfo = buildPaymentInfo(PAYMENT_ID, USER_ID, ORDER_NO, PAYMENT_NO,
+                    new BigDecimal("100.00"), 2, PayStatusEnum.PAYING.getCode());
+            PayCallbackDTO dto = buildPayCallbackDTO(PAYMENT_NO, "WX_123", "wechat", "");
+
+            mockRedisLockSuccess();
+            when(paymentInfoMapper.selectOne(any())).thenReturn(paymentInfo);
+            // mock 乐观锁更新失败（返回0表示没有行被更新）
+            when(paymentInfoMapper.update(any(), any())).thenReturn(0);
+
+            // 执行
+            PayResultVO result = paymentService.handleCallback(dto);
+
+            // 验证：返回"已处理"（不抛异常，因为可能是并发处理成功了）
+            assertThat(result.getSuccess()).isTrue();
+            assertThat(result.getMessage()).isEqualTo("已处理");
+            // 验证：更新失败了，所以没有记录回调日志、没有发MQ
+            verify(paymentCallbackMapper, never()).insert(any(PaymentCallback.class));
+            verify(paymentMQProducer, never()).sendPaySuccessMessage(anyString(), anyString());
+        }
+
+        @Test
+        @DisplayName("回调outTradeNo唯一索引冲突：DuplicateKeyException被捕获，不影响主流程")
+        void handleCallback_duplicateCallback_ignoredAndContinue() {
+            // 场景：重复回调时 out_trade_no 唯一索引冲突，但被 try-catch 捕获
+            // 小白理解：out_trade_no 是第三方交易号，加了唯一索引防止重复记录
+            // 重复回调时 insert 会抛 DuplicateKeyException，代码捕获后继续发 MQ 通知
+            PaymentInfo paymentInfo = buildPaymentInfo(PAYMENT_ID, USER_ID, ORDER_NO, PAYMENT_NO,
+                    new BigDecimal("100.00"), 2, PayStatusEnum.PAYING.getCode());
+            PayCallbackDTO dto = buildPayCallbackDTO(PAYMENT_NO, "WX_123", "wechat", "");
+
+            mockRedisLockSuccess();
+            when(paymentInfoMapper.selectOne(any())).thenReturn(paymentInfo);
+            when(paymentInfoMapper.update(any(), any())).thenReturn(1);
+            // mock insert 抛唯一索引冲突异常
+            org.mockito.Mockito.doThrow(new org.springframework.dao.DuplicateKeyException("Duplicate entry"))
+                    .when(paymentCallbackMapper).insert(any(PaymentCallback.class));
+
+            // 执行：不应抛异常（DuplicateKeyException 被捕获）
+            PayResultVO result = paymentService.handleCallback(dto);
+
+            // 验证：主流程正常完成，仍发送了 MQ 通知订单服务
+            assertThat(result.getSuccess()).isTrue();
+            assertThat(result.getMessage()).isEqualTo("支付成功");
+            verify(paymentMQProducer).sendPaySuccessMessage(ORDER_NO, PAYMENT_NO);
         }
     }
 
@@ -524,6 +664,43 @@ class PaymentServiceImplTest {
             verify(paymentInfoMapper).update(any(), any());
             // 验证：发送了退款成功的MQ消息通知订单服务
             verify(paymentMQProducer).sendRefundSuccessMessage(ORDER_NO, PAYMENT_NO, new BigDecimal("100.00"));
+        }
+
+        @Test
+        @DisplayName("越权退款他人订单 → 抛出FORBIDDEN异常")
+        void refund_notOwner_throwsForbidden() {
+            // 场景：用户B想退用户A的支付单，被归属校验拦截
+            // 小白理解：只能退自己的支付单，不能退别人的（防止恶意退款）
+            PaymentInfo paymentInfo = buildPaymentInfo(PAYMENT_ID, USER_ID, ORDER_NO, PAYMENT_NO,
+                    new BigDecimal("100.00"), 1, PayStatusEnum.PAID.getCode());
+            when(paymentInfoMapper.selectById(PAYMENT_ID)).thenReturn(paymentInfo);
+
+            // 验证：用 OTHER_USER_ID 去退 USER_ID 的支付单，应抛 FORBIDDEN
+            assertThatThrownBy(() -> paymentService.refund(OTHER_USER_ID, PAYMENT_ID, new BigDecimal("100.00")))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("code", ErrorCode.FORBIDDEN.getCode());
+
+            // 验证：没有更新支付状态，没有发MQ消息
+            verify(paymentInfoMapper, never()).update(any(), any());
+            verify(paymentMQProducer, never()).sendRefundSuccessMessage(anyString(), anyString(), any());
+        }
+
+        @Test
+        @DisplayName("退款金额小于等于0 → 抛出BusinessException")
+        void refund_amountNotPositive_throwsException() {
+            // 场景：退款金额传了0或负数，不合法
+            PaymentInfo paymentInfo = buildPaymentInfo(PAYMENT_ID, USER_ID, ORDER_NO, PAYMENT_NO,
+                    new BigDecimal("100.00"), 1, PayStatusEnum.PAID.getCode());
+            when(paymentInfoMapper.selectById(PAYMENT_ID)).thenReturn(paymentInfo);
+
+            // 验证：退款金额为0，应抛 PAYMENT_FAIL 异常
+            assertThatThrownBy(() -> paymentService.refund(USER_ID, PAYMENT_ID, BigDecimal.ZERO))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("code", ErrorCode.PAYMENT_FAIL.getCode());
+
+            // 验证：没有更新支付状态，没有发MQ消息
+            verify(paymentInfoMapper, never()).update(any(), any());
+            verify(paymentMQProducer, never()).sendRefundSuccessMessage(anyString(), anyString(), any());
         }
     }
 }

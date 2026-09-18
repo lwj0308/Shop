@@ -1,0 +1,110 @@
+# ==========================================================
+# shop-gateway 集成测试专用配置（B-I-03 限流全链路）
+# ==========================================================
+# 小白讲解：
+# 集成测试要启动完整的 Spring 上下文，但 gateway 正常启动会连 Nacos 注册中心
+# 和 Nacos 配置中心，测试环境没有这些，会启动失败。
+# 所以我们在 test profile 中：
+# 1. 禁用 Nacos 服务发现（不需要注册自己）
+# 2. 禁用 Nacos 配置导入（不远程拉配置）
+# 3. 禁用 Sentinel（不需要流控规则数据源）
+# 4. Redis 连接信息由 Testcontainers 动态注入（见 RateLimitIntegrationTest）
+# 5. 路由配置简化为本地直连，避免负载均衡器找不到服务
+# ==========================================================
+
+spring:
+  # 强制响应式 WebFlux 模式
+  main:
+    web-application-type: reactive
+
+  # 禁用 Nacos 配置导入（不远程拉配置）
+  cloud:
+    nacos:
+      discovery:
+        enabled: false
+        register-enabled: false
+      config:
+        import-check:
+          enabled: false
+
+    # 禁用 Sentinel（不需要流控规则数据源）
+    sentinel:
+      enabled: false
+      transport:
+        dashboard: ""
+
+    # 简化网关路由：测试只关注过滤器链，路由到本地占位即可
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: test-route
+              uri: http://localhost:1  # 占位 URI，限流命中前不会真正转发
+              predicates:
+                - Path=/api/**
+              filters:
+                - StripPrefix=1
+
+  # Redis 连接信息会被 Testcontainers 动态覆盖（见 RateLimitIntegrationTest 的 @DynamicPropertySource）
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 4
+          min-idle: 0
+
+# 限流配置（与生产一致，验证真实 Redis 下的 Lua 脚本行为）
+gateway:
+  rate-limit:
+    enabled: true
+    default-ip-qps: 50
+    default-path-qps: 200
+    default-algorithm: token-bucket
+    default-capacity: 100
+    rules:
+      # 认证接口：ZSet 滑动窗口，5 QPS（测试用小阈值方便触发）
+      - path-pattern: /api/user/auth/**
+        algorithm: sliding-window
+        ip-qps: 5
+        path-qps: 50
+      # 秒杀接口：令牌桶，3 QPS
+      - path-pattern: /api/seckill/grab/**
+        algorithm: token-bucket
+        ip-qps: 3
+        path-qps: 1000
+        capacity: 5
+        user-qps: 3
+      # 评论提交：滑动窗口，3 QPS
+      - path-pattern: /api/product/comment/create
+        algorithm: sliding-window
+        ip-qps: 3
+        path-qps: 50
+        user-qps: 3
+
+  # 黑白名单配置
+  blacklist:
+    ip-blacklist: []
+    user-blacklist: []
+    ip-whitelist: []
+    user-whitelist: []
+    auto-block-threshold: 10
+    auto-block-duration: 3600
+
+  # 白名单配置
+  whitelist:
+    auth-whitelist:
+      - /api/user/auth/login
+      - /api/user/auth/register
+    public-whitelist:
+      - /api/product/**
+      - /api/seckill/list
+
+# 日志级别（测试时降低日志噪音）
+logging:
+  level:
+    org.springframework.cloud.gateway: WARN
+    com.shop.gateway: DEBUG

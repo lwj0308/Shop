@@ -69,6 +69,13 @@
 
         <!-- 消息队列 -->
         <rocketmq-spring.version>2.3.1</rocketmq-spring.version>
+
+        <!-- 测试覆盖率 -->
+        <jacoco.version>0.8.12</jacoco.version>
+        <jacoco.line.coverage>0.60</jacoco.line.coverage>
+
+        <!-- 集成测试容器（Testcontainers）：用于 B-I 系列集成测试，启动真实 MySQL/Redis 容器 -->
+        <testcontainers.version>1.20.4</testcontainers.version>
     </properties>
 
     <!-- ============================================ -->
@@ -77,6 +84,16 @@
     <!-- ============================================ -->
     <dependencyManagement>
         <dependencies>
+            <!-- Testcontainers BOM：必须放在 Spring Boot BOM 之前，确保版本统一为 1.20.4 -->
+            <!-- 否则 Spring Boot 4 会用 2.0.2 主包 + 1.20.4 子包，版本不一致 -->
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers-bom</artifactId>
+                <version>${testcontainers.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
             <!-- Spring Boot BOM：管理Spring Boot全家桶的版本 -->
             <dependency>
                 <groupId>org.springframework.boot</groupId>
@@ -323,13 +340,90 @@
 
             <!-- Maven Surefire插件：执行单元测试 -->
             <!-- 必须用3.x版本才支持JUnit 5（Spring Boot默认不带surefire配置，需手动声明） -->
+            <!-- @{argLine} 是占位符，让JaCoCo的prepare-agent能注入覆盖率统计agent -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
                 <configuration>
-                    <argLine>-Xshare:off -XX:+EnableDynamicAgentLoading -Xmx512m -Dfile.encoding=UTF-8</argLine>
+                    <argLine>@{argLine} -Xshare:off -XX:+EnableDynamicAgentLoading -Xmx512m -Dfile.encoding=UTF-8</argLine>
                 </configuration>
+            </plugin>
+
+            <!-- JaCoCo插件：统计测试覆盖率 -->
+            <!-- 小白理解：跑测试时，JaCoCo会记录哪些代码被执行过，最后生成HTML报告 -->
+            <!-- prepare-agent：在测试启动时注入agent -->
+            <!-- report：测试结束后生成报告到 target/site/jacoco/ -->
+            <!-- check：检查覆盖率是否达标，不达标则构建失败（质量门禁） -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco.version}</version>
+                <configuration>
+                    <!-- 排除不需要单元测试的类，让覆盖率更准确反映业务代码测试情况 -->
+                    <!-- 小白理解：像启动类、配置类、Feign客户端这些代码不需要写单元测试 -->
+                    <!-- 把它们排除掉，覆盖率数字才真实反映业务逻辑的测试覆盖 -->
+                    <excludes>
+                        <!-- 启动类：只有 main 方法，不需要测试 -->
+                        <exclude>com/shop/**/*Application.*</exclude>
+                        <!-- 配置类：Spring配置代码，由集成测试覆盖 -->
+                        <exclude>com/shop/**/config/**</exclude>
+                        <!-- Feign客户端及其降级工厂：接口声明和降级兜底，由集成测试覆盖 -->
+                        <exclude>com/shop/**/feign/**</exclude>
+                        <exclude>com/shop/**/*FallbackFactory.*</exclude>
+                        <!-- MyBatis Mapper接口：由DAO测试覆盖（如OrderInfoMapperTest） -->
+                        <exclude>com/shop/**/mapper/**</exclude>
+                        <!-- 数据模型类：纯数据载体，无业务逻辑 -->
+                        <exclude>com/shop/**/entity/**</exclude>
+                        <exclude>com/shop/**/dto/**</exclude>
+                        <exclude>com/shop/**/vo/**</exclude>
+                        <exclude>com/shop/**/model/**</exclude>
+                        <!-- 枚举类：部分已单独测试，排除避免统计干扰 -->
+                        <exclude>com/shop/**/enums/**</exclude>
+                        <!-- 常量类：纯静态值，无逻辑 -->
+                        <exclude>com/shop/**/constants/**</exclude>
+                        <!-- MyBatis-Plus 自动生成的实体类 -->
+                        <exclude>com/shop/**/pojo/**</exclude>
+                    </excludes>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>check</id>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <configuration>
+                            <!-- 阶段性开关：测试补全期间设为false，不阻塞构建；覆盖率达标后改true启用门禁 -->
+                            <!-- 质量门禁已启用：B-COV-01~13 覆盖率提升任务全部完成，所有模块覆盖率≥60%，启用门禁防止退化 -->
+                            <haltOnFailure>true</haltOnFailure>
+                            <rules>
+                                <rule>
+                                    <element>BUNDLE</element>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>${jacoco.line.coverage}</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

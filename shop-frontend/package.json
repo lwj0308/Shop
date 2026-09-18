@@ -10,12 +10,30 @@
     "build:merchant": "npm --workspace=packages/web-merchant run build",
     "build:admin": "npm --workspace=packages/web-admin run build",
     "lint": "npm -ws run lint",
-    "format": "prettier --write \"packages/**/*.{ts,vue,json,css}\""
+    "format": "prettier --write \"packages/**/*.{ts,vue,json,css}\"",
+    "test:unit": "npm -ws run test:unit",
+    "test:unit:shared": "npm --workspace=packages/shared run test:unit",
+    "test:unit:user": "npm --workspace=packages/web-user run test:unit",
+    "test:unit:merchant": "npm --workspace=packages/web-merchant run test:unit",
+    "test:unit:admin": "npm --workspace=packages/web-admin run test:unit",
+    "test:coverage": "npm -ws run test:coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "workspaces": [
     "packages/*"
   ],
   "engines": {
     "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/user-event": "^14.6.1",
+    "@testing-library/vue": "^8.1.0",
+    "@vitest/coverage-v8": "^2.1.9",
+    "@vue/test-utils": "^2.4.11",
+    "happy-dom": "^15.11.7",
+    "vitest": "^2.1.9"
   }
 }

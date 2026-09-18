@@ -3,6 +3,7 @@ package com.shop.common.exception;
 import cn.dev33.satoken.exception.NotLoginException;
 import com.shop.common.result.ErrorCode;
 import com.shop.common.result.Result;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
@@ -131,14 +132,19 @@ public class GlobalExceptionHandler {
     /**
      * 处理请求方法不支持异常 - 接口要求的HTTP方法和前端发的不一致时触发
      * 比如接口定义了@PostMapping，但前端发了GET请求
+     * <p>
+     * 日志中会带上请求路径，方便定位是哪个接口被调用了错误的方法。
+     * （N-P 性能测试整改：原日志没有路径信息，无法定位问题来源）
+     * </p>
      *
-     * @param e 请求方法不支持异常
+     * @param e       请求方法不支持异常
+     * @param request HTTP请求对象（Spring自动注入，用于获取请求路径）
      * @return 提示请求方法不支持的响应
      */
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     @ResponseStatus(HttpStatus.METHOD_NOT_ALLOWED)
-    public Result<Void> handleHttpRequestMethodNotSupportedException(HttpRequestMethodNotSupportedException e) {
-        log.warn("请求方法不支持: {}，支持的方法: {}", e.getMethod(), e.getSupportedHttpMethods());
+    public Result<Void> handleHttpRequestMethodNotSupportedException(HttpRequestMethodNotSupportedException e, HttpServletRequest request) {
+        log.warn("请求方法不支持: {}，路径: {}，支持的方法: {}", e.getMethod(), request.getRequestURI(), e.getSupportedHttpMethods());
         return Result.fail(ErrorCode.METHOD_NOT_ALLOWED);
     }
 

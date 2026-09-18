@@ -26,7 +26,7 @@ import java.util.List;
  * 触发条件（满足任一即触发）：
  * - CPU 使用率 > 75%：CPU 忙不过来了
  * - 系统负载 > 4.0：系统扛不住了（4核机器满载是4.0）
- * - 平均响应时间 > 10ms：请求处理变慢了
+ * - 平均响应时间 > 1000ms：请求处理变慢了（10ms 太低，DB 查询+网络开销就会超）
  * - 入口 QPS > 2000：请求量太大了
  * - 入口线程数 > 100：并发线程太多了
  * </p>
@@ -46,9 +46,11 @@ public class SentinelSystemRuleConfig {
     public void initSystemRules() {
         List<SystemRule> rules = new ArrayList<>();
 
-        // 规则1：CPU 使用率超过 75% 触发（防止 CPU 满载导致服务无响应）
+        // 规则1：CPU 使用率超过 95% 触发（N-P 性能测试整改：原 0.75 在 Windows 开发环境太敏感，
+        // 本地运行多个 Spring Boot 服务时 CPU 经常超过 75%，导致所有接口被误判限流。
+        // 调整为 0.95，仅在 CPU 真正满载时触发，生产环境可通过 Nacos 动态调整为 0.75）
         SystemRule cpuRule = new SystemRule();
-        cpuRule.setHighestCpuUsage(0.75);
+        cpuRule.setHighestCpuUsage(0.95);
         rules.add(cpuRule);
 
         // 规则2：系统负载超过 4.0 触发（4核机器满载负载为4.0）
@@ -56,9 +58,10 @@ public class SentinelSystemRuleConfig {
         loadRule.setHighestSystemLoad(4.0);
         rules.add(loadRule);
 
-        // 规则3：平均响应时间超过 10ms 触发（正常应该在几毫秒内）
+        // 规则3：平均响应时间超过 1000ms 触发（N-P 性能测试整改：原 10ms 阈值过低，
+        // 任何 DB 查询+网络开销都会超过，导致所有请求被误判限流）
         SystemRule rtRule = new SystemRule();
-        rtRule.setAvgRt(10);
+        rtRule.setAvgRt(1000);
         rules.add(rtRule);
 
         // 规则4：入口总 QPS 超过 2000 触发（单机防护上限）

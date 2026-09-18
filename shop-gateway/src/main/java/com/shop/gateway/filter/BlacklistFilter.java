@@ -11,6 +11,7 @@ import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
+import reactor.netty.channel.AbortedException;
 
 import java.util.List;
 
@@ -126,6 +127,13 @@ public class BlacklistFilter implements GlobalFilter, Ordered {
                 })
                 // 降级策略：Redis 异常时放行（黑白名单是弱依赖，不能因为 Redis 挂了导致全站不可用）
                 .onErrorResume(error -> {
+                    // N-P 性能测试整改：区分客户端断连和真正的 Redis 异常
+                    // 客户端主动断开连接（StacklessClosedChannelException/AbortedException）是正常现象
+                    // （比如用户关闭浏览器、JMeter 超时断开），不需要记录 ERROR 日志污染错误日志
+                    if (isClientDisconnectedError(error)) {
+                        log.debug("客户端断开连接，跳过后续处理。IP：{}，userId：{}", clientIp, userId);
+                        return Mono.empty();
+                    }
                     log.error("黑白名单检查异常，降级放行。IP：{}，userId：{}", clientIp, userId, error);
                     return chain.filter(exchange);
                 });
@@ -261,5 +269,47 @@ public class BlacklistFilter implements GlobalFilter, Ordered {
     @Override
     public int getOrder() {
         return -85;
+    }
+
+    /**
+     * 判断异常是否由客户端断开连接引起
+     * <p>
+     * 客户端主动关闭连接（如用户关闭浏览器、JMeter 连接超时）时，
+     * Netty 会抛出 AbortedException（包装 StacklessClosedChannelException）。
+     * 这类异常不是服务端 bug，不应该记录 ERROR 级别日志。
+     * </p>
+     * <p>
+     * 注意：StacklessClosedChannelException 是 Netty 的 package-private 类，
+     * 无法直接 instanceof 判断，所以通过类名字符串匹配。
+     * </p>
+     *
+     * @param error 捕获的异常
+     * @return true=客户端断连，false=其他异常
+     */
+    private boolean isClientDisconnectedError(Throwable error) {
+        if (error == null) {
+            return false;
+        }
+        // 直接匹配 AbortedException（reactor-netty 公开类）
+        if (error instanceof AbortedException) {
+            return true;
+        }
+        // 通过类名匹配 StacklessClosedChannelException（Netty package-private 类，无法直接引用）
+        String errorClassName = error.getClass().getName();
+        if (errorClassName.contains("StacklessClosedChannelException")) {
+            return true;
+        }
+        // 递归检查 cause 链（异常可能被包装）
+        Throwable cause = error.getCause();
+        while (cause != null && cause != error) {
+            if (cause instanceof AbortedException) {
+                return true;
+            }
+            if (cause.getClass().getName().contains("StacklessClosedChannelException")) {
+                return true;
+            }
+            cause = cause.getCause();
+        }
+        return false;
     }
 }

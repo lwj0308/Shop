@@ -21,3 +21,10 @@ pnpm-debug.log*
 
 # 构建产物
 *.tsbuildinfo
+
+# 测试产物（运行时生成，不入库）
+# Vitest 覆盖率报告
+coverage/
+# Playwright E2E 测试报告和测试结果
+playwright-report/
+test-results/

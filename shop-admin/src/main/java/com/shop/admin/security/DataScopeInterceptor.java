@@ -186,8 +186,11 @@ public class DataScopeInterceptor implements InnerInterceptor {
 
         if (originalWhere != null) {
             // 已有WHERE条件，用AND连接
+            // 注意：JSqlParser 5.0+ 中 Parenthesis 继承自 ArrayList，
+            // 必须用 add() 添加表达式，不能用 setExpression()/withExpression()，
+            // 后两者内部调用 list.set(0, expr)，在空 list 上会抛 IndexOutOfBoundsException
             Parenthesis parenthesis = new Parenthesis();
-            parenthesis.setExpression(dataScopeExpression);
+            parenthesis.add(dataScopeExpression);
             plainSelect.setWhere(new AndExpression(originalWhere, parenthesis));
         } else {
             // 没有WHERE条件，直接设置
