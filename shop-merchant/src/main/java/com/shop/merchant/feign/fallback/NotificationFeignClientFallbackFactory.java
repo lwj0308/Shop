@@ -9,8 +9,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
 
-import java.util.Collections;
-
 /**
  * 通知服务Feign降级工厂（商家服务用）
  * <p>

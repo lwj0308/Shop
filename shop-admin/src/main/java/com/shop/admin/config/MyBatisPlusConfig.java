@@ -5,12 +5,10 @@ import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.shop.admin.security.DataScopeInterceptor;
-import org.apache.ibatis.reflection.MetaObject;
+import com.shop.common.config.MyBatisPlusSupport;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
-
-import java.time.LocalDateTime;
 
 /**
  * MyBatis-Plus配置类
@@ -19,6 +17,11 @@ import java.time.LocalDateTime;
  * 1. 分页插件：让分页查询变得简单，不用手写limit语句
  * 2. 数据权限拦截器：根据管理员的数据权限范围自动追加SQL过滤条件
  * 3. 自动填充：createTime和updateTime字段自动赋值，不用每次手动设置
+ * </p>
+ * <p>
+ * 注意：本服务的拦截器链和其他服务不一样（多了数据权限拦截器），
+ * 所以 mybatisPlusInterceptor 不能直接用 {@link MyBatisPlusSupport#paginationInterceptor()}，
+ * 只有自动填充处理器是共用的。
  * </p>
  */
 @Configuration
@@ -70,38 +73,13 @@ public class MyBatisPlusConfig {
      * 自动填充处理器
      * <p>
      * 当插入或更新数据时，自动填充createTime和updateTime字段。
-     * 这样就不用在业务代码里手动设置时间了，减少重复代码。
+     * 填充规则和其他服务完全一致，直接复用 {@link MyBatisPlusSupport}。
      * </p>
      *
      * @return MetaObjectHandler实现
      */
     @Bean
     public MetaObjectHandler metaObjectHandler() {
-        return new MetaObjectHandler() {
-
-            /**
-             * 插入数据时自动填充
-             * <p>
-             * 新增记录时，createTime和updateTime都设置为当前时间。
-             * </p>
-             */
-            @Override
-            public void insertFill(MetaObject metaObject) {
-                this.strictInsertFill(metaObject, "createTime", LocalDateTime.class, LocalDateTime.now());
-                this.strictInsertFill(metaObject, "updateTime", LocalDateTime.class, LocalDateTime.now());
-            }
-
-            /**
-             * 更新数据时自动填充
-             * <p>
-             * 修改记录时，只更新updateTime为当前时间。
-             * createTime不应该被修改，所以这里不填充。
-             * </p>
-             */
-            @Override
-            public void updateFill(MetaObject metaObject) {
-                this.strictUpdateFill(metaObject, "updateTime", LocalDateTime.class, LocalDateTime.now());
-            }
-        };
+        return MyBatisPlusSupport.createTimeUpdateTimeFillHandler();
     }
 }

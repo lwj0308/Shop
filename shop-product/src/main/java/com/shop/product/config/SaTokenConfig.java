@@ -3,7 +3,7 @@ package com.shop.product.config;
 import cn.dev33.satoken.interceptor.SaInterceptor;
 import cn.dev33.satoken.stp.StpUtil;
 import com.shop.common.interceptor.InnerApiInterceptor;
-import com.shop.product.interceptor.UserInfoInterceptor;
+import com.shop.common.interceptor.UserInfoInterceptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;

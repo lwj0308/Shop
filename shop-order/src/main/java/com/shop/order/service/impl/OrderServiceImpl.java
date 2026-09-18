@@ -35,6 +35,7 @@ import com.shop.order.feign.PromotionFeignClient;
 import com.shop.order.feign.UserFeignClient;
 import com.shop.order.mapper.*;
 import com.shop.order.service.OrderService;
+import com.shop.order.util.OrderLogRecorder;
 import com.shop.order.util.OrderNoGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -174,54 +175,25 @@ public class OrderServiceImpl implements OrderService {
         }
 
         try {
-            // ========== 3. 获取所有SKU信息 ==========
+            // ========== 2. 获取所有SKU信息 ==========
             // 从下单参数中提取所有SKU ID（后续用于批量查询SKU、删除购物车、传给满减计算）
             List<Long> skuIds = dto.getItems().stream()
                     .map(OrderCreateDTO.OrderItemDTO::getSkuId)
                     .collect(Collectors.toList());
             Map<Long, ProductSkuVO> skuMap = fetchSkuInfo(skuIds);
 
-            // ========== 4. 获取收货地址信息 ==========
-            Result<AddressVO> addressResult = userFeignClient.getAddressById(dto.getAddressId());
-            if (addressResult == null || addressResult.getCode() != 200 || addressResult.getData() == null) {
-                throw new BusinessException(ErrorCode.ORDER_CREATE_FAIL.getCode(), "收货地址获取失败");
-            }
-            AddressVO address = addressResult.getData();
+            // ========== 3. 获取收货地址信息 ==========
+            AddressVO address = fetchAddress(dto.getAddressId());
 
-            // ========== 5. 生成订单号 ==========
+            // ========== 4. 生成订单号 ==========
             String orderNo = orderNoGenerator.generate();
 
-            // ========== 6. 计算订单金额并创建订单明细 ==========
-            BigDecimal totalAmount = BigDecimal.ZERO;
-            List<OrderItem> orderItems = new ArrayList<>();
+            // ========== 5. 计算订单金额并创建订单明细 ==========
+            OrderItemsDraft itemsDraft = buildOrderItems(orderNo, dto.getItems(), skuMap);
+            BigDecimal totalAmount = itemsDraft.totalAmount();
+            List<OrderItem> orderItems = itemsDraft.items();
 
-            for (OrderCreateDTO.OrderItemDTO itemDTO : dto.getItems()) {
-                ProductSkuVO sku = skuMap.get(itemDTO.getSkuId());
-
-                // 检查库存是否充足
-                if (sku.getStock() < itemDTO.getQuantity()) {
-                    throw new BusinessException(ErrorCode.PRODUCT_STOCK_NOT_ENOUGH);
-                }
-
-                // 计算小计金额 = 单价 × 数量
-                BigDecimal subtotal = sku.getPrice().multiply(BigDecimal.valueOf(itemDTO.getQuantity()));
-                totalAmount = totalAmount.add(subtotal);
-
-                // 创建订单明细
-                OrderItem orderItem = new OrderItem();
-                orderItem.setOrderNo(orderNo);
-                orderItem.setProductId(sku.getProductId());
-                orderItem.setSkuId(sku.getId());
-                orderItem.setProductName("");
-                orderItem.setSkuSpec(sku.getSpecValues() != null ? sku.getSpecValues().toString() : "");
-                orderItem.setProductImage(sku.getImage());
-                orderItem.setPrice(sku.getPrice());
-                orderItem.setQuantity(itemDTO.getQuantity());
-                orderItem.setSubtotal(subtotal);
-                orderItems.add(orderItem);
-            }
-
-            // ========== 7. 获取商家ID + 满减计算 ==========
+            // ========== 6. 获取商家ID + 满减计算 ==========
             // 从商品信息获取商家ID（假设一个订单只包含一个商家的商品）
             // 取第一个有效的 merchantId，如果获取失败则降级为 0（不影响下单主流程）
             Long merchantId = skuMap.values().stream()
@@ -233,14 +205,14 @@ public class OrderServiceImpl implements OrderService {
 
             BigDecimal promotionDiscount = calculatePromotion(merchantId, totalAmount, skuIds, orderNo);
 
-            // ========== 8. 优惠券核销（如果用户选了优惠券） ==========
+            // ========== 7. 优惠券核销（如果用户选了优惠券） ==========
             // 小白讲解：如果下单时传了 userCouponId，就调用用户服务核销这张优惠券
             // 优惠券基于"满减后金额"判断门槛：比如满200减20后是280元，用满100减10的券，280>=100可以减10
             // 如果核销失败（比如券被用了、过期了），直接抛异常让整个事务回滚
             BigDecimal couponDiscount = useCoupon(userId, dto.getUserCouponId(), orderNo,
                     totalAmount.subtract(promotionDiscount));
 
-            // ========== 9. 创建订单主表 ==========
+            // ========== 8. 创建订单主表 + 订单明细 ==========
             OrderInfo orderInfo = new OrderInfo();
             orderInfo.setOrderNo(orderNo);
             orderInfo.setUserId(userId);
@@ -264,19 +236,10 @@ public class OrderServiceImpl implements OrderService {
             }
 
             // ========== 9. 创建地址快照 ==========
-            OrderAddress orderAddress = new OrderAddress();
-            orderAddress.setOrderId(orderId);
-            orderAddress.setOrderNo(orderNo);
-            orderAddress.setName(address.getName());
-            orderAddress.setPhone(address.getPhone());
-            orderAddress.setProvince(address.getProvince());
-            orderAddress.setCity(address.getCity());
-            orderAddress.setDistrict(address.getDistrict());
-            orderAddress.setDetail(address.getDetail());
-            orderAddressMapper.insert(orderAddress);
+            saveOrderAddress(orderId, orderNo, address);
 
             // ========== 10. 记录订单状态日志 ==========
-            saveOrderLog(orderId, orderNo, null, OrderStatusEnum.UNPAID.getCode(),
+            OrderLogRecorder.record(orderLogMapper, orderId, orderNo, null, OrderStatusEnum.UNPAID.getCode(),
                     "创建订单", userId, OPERATOR_TYPE_USER, null);
 
             // ========== 11. 扣减库存（补偿回退策略） ==========
@@ -287,32 +250,143 @@ public class OrderServiceImpl implements OrderService {
             sendTimeoutMessage(orderNo);
 
             // ========== 13. 下单成功后删除购物车 ==========
-            try {
-                cartFeignClient.deleteBySkuIds(userId, skuIds);
-            } catch (Exception e) {
-                log.warn("删除购物车失败: userId={}, skuIds={}", userId, skuIds, e);
-            }
+            clearCartItems(userId, skuIds);
 
             // ========== 14. 销量累加（弱依赖，失败不影响下单） ==========
-            // 小白讲解：用户买了2件，商品的销量就+2，用于首页"热销推荐"排序
-            // 这是弱依赖：如果商品服务挂了导致销量没累加上，也不影响下单成功
-            // 批量累加：把订单里所有商品的销量一次性传给商品服务，避免循环 N 次 Feign 调用
-            try {
-                Map<Long, Integer> salesMap = new java.util.HashMap<>();
-                for (OrderItem item : orderItems) {
-                    // 同一个商品可能有多个 SKU，销量需要合并累加
-                    salesMap.merge(item.getProductId(), item.getQuantity(), Integer::sum);
-                }
-                productFeignClient.incrSalesBatch(salesMap);
-            } catch (Exception e) {
-                log.warn("销量累加失败，不影响下单: orderNo={}", orderNo, e);
-            }
+            accumulateSales(orderItems, orderNo);
 
             log.info("订单创建成功: orderNo={}, totalAmount={}", orderNo, totalAmount);
             return getOrderDetail(userId, orderId);
         } finally {
             // 无论成功失败，都要释放分布式锁
             stringRedisTemplate.delete(lockKey);
+        }
+    }
+
+    /**
+     * 订单金额与明细的计算结果
+     *
+     * @param totalAmount 订单总金额（未减满减/优惠券）
+     * @param items       待入库的订单明细列表
+     */
+    private record OrderItemsDraft(BigDecimal totalAmount, List<OrderItem> items) {
+    }
+
+    /**
+     * 获取收货地址（Feign调用用户服务）
+     *
+     * @param addressId 收货地址ID
+     * @return 收货地址VO
+     */
+    private AddressVO fetchAddress(Long addressId) {
+        Result<AddressVO> addressResult = userFeignClient.getAddressById(addressId);
+        if (addressResult == null || !addressResult.isSuccess() || addressResult.getData() == null) {
+            throw new BusinessException(ErrorCode.ORDER_CREATE_FAIL.getCode(), "收货地址获取失败");
+        }
+        return addressResult.getData();
+    }
+
+    /**
+     * 计算订单金额并组装订单明细
+     * <p>
+     * 逐个校验SKU库存是否充足，不足则抛异常（此时还没有任何写库操作，无需回滚）。
+     * </p>
+     *
+     * @param orderNo 订单号
+     * @param items   下单商品列表
+     * @param skuMap  SKU ID 到 SKU 信息的映射
+     * @return 订单总金额和明细列表
+     */
+    private OrderItemsDraft buildOrderItems(String orderNo, List<OrderCreateDTO.OrderItemDTO> items,
+                                            Map<Long, ProductSkuVO> skuMap) {
+        BigDecimal totalAmount = BigDecimal.ZERO;
+        List<OrderItem> orderItems = new ArrayList<>();
+
+        for (OrderCreateDTO.OrderItemDTO itemDTO : items) {
+            ProductSkuVO sku = skuMap.get(itemDTO.getSkuId());
+
+            // 检查库存是否充足
+            if (sku.getStock() < itemDTO.getQuantity()) {
+                throw new BusinessException(ErrorCode.PRODUCT_STOCK_NOT_ENOUGH);
+            }
+
+            // 计算小计金额 = 单价 × 数量
+            BigDecimal subtotal = sku.getPrice().multiply(BigDecimal.valueOf(itemDTO.getQuantity()));
+            totalAmount = totalAmount.add(subtotal);
+
+            // 创建订单明细
+            OrderItem orderItem = new OrderItem();
+            orderItem.setOrderNo(orderNo);
+            orderItem.setProductId(sku.getProductId());
+            orderItem.setSkuId(sku.getId());
+            orderItem.setProductName("");
+            orderItem.setSkuSpec(sku.getSpecValues() != null ? sku.getSpecValues().toString() : "");
+            orderItem.setProductImage(sku.getImage());
+            orderItem.setPrice(sku.getPrice());
+            orderItem.setQuantity(itemDTO.getQuantity());
+            orderItem.setSubtotal(subtotal);
+            orderItems.add(orderItem);
+        }
+        return new OrderItemsDraft(totalAmount, orderItems);
+    }
+
+    /**
+     * 保存订单地址快照
+     * <p>
+     * 把下单时的收货地址复制一份存起来，之后用户改地址或删地址都不影响历史订单。
+     * </p>
+     *
+     * @param orderId 订单ID
+     * @param orderNo 订单号
+     * @param address 下单时的收货地址
+     */
+    private void saveOrderAddress(Long orderId, String orderNo, AddressVO address) {
+        OrderAddress orderAddress = new OrderAddress();
+        orderAddress.setOrderId(orderId);
+        orderAddress.setOrderNo(orderNo);
+        orderAddress.setName(address.getName());
+        orderAddress.setPhone(address.getPhone());
+        orderAddress.setProvince(address.getProvince());
+        orderAddress.setCity(address.getCity());
+        orderAddress.setDistrict(address.getDistrict());
+        orderAddress.setDetail(address.getDetail());
+        orderAddressMapper.insert(orderAddress);
+    }
+
+    /**
+     * 下单成功后删除购物车里对应的商品（弱依赖，失败不影响下单）
+     *
+     * @param userId 用户ID
+     * @param skuIds SKU ID列表
+     */
+    private void clearCartItems(Long userId, List<Long> skuIds) {
+        try {
+            cartFeignClient.deleteBySkuIds(userId, skuIds);
+        } catch (Exception e) {
+            log.warn("删除购物车失败: userId={}, skuIds={}", userId, skuIds, e);
+        }
+    }
+
+    /**
+     * 累加商品销量（弱依赖，失败不影响下单）
+     * <p>
+     * 小白讲解：用户买了2件，商品的销量就+2，用于首页"热销推荐"排序。
+     * 批量累加：把订单里所有商品的销量一次性传给商品服务，避免循环 N 次 Feign 调用。
+     * </p>
+     *
+     * @param orderItems 订单明细列表
+     * @param orderNo    订单号（用于日志）
+     */
+    private void accumulateSales(List<OrderItem> orderItems, String orderNo) {
+        try {
+            Map<Long, Integer> salesMap = new java.util.HashMap<>();
+            for (OrderItem item : orderItems) {
+                // 同一个商品可能有多个 SKU，销量需要合并累加
+                salesMap.merge(item.getProductId(), item.getQuantity(), Integer::sum);
+            }
+            productFeignClient.incrSalesBatch(salesMap);
+        } catch (Exception e) {
+            log.warn("销量累加失败，不影响下单: orderNo={}", orderNo, e);
         }
     }
 
@@ -328,7 +402,7 @@ public class OrderServiceImpl implements OrderService {
      */
     private Map<Long, ProductSkuVO> fetchSkuInfo(List<Long> skuIds) {
         Result<List<ProductSkuVO>> result = productFeignClient.batchGetSkuByIds(skuIds);
-        if (result == null || result.getCode() != 200 || result.getData() == null) {
+        if (result == null || !result.isSuccess() || result.getData() == null) {
             throw new BusinessException(ErrorCode.ORDER_CREATE_FAIL.getCode(), "商品信息批量获取失败");
         }
         List<ProductSkuVO> skuList = result.getData();
@@ -430,7 +504,7 @@ public class OrderServiceImpl implements OrderService {
         }).collect(Collectors.toList());
 
         Result<Void> result = productFeignClient.batchDeductStock(deductItems, orderNo);
-        if (result == null || result.getCode() != 200) {
+        if (result == null || !result.isSuccess()) {
             String msg = result != null ? result.getMessage() : "库存扣减失败";
             throw new BusinessException(ErrorCode.PRODUCT_STOCK_NOT_ENOUGH.getCode(), msg);
         }
@@ -498,7 +572,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         // 记录状态日志
-        saveOrderLog(orderId, order.getOrderNo(), OrderStatusEnum.UNPAID.getCode(),
+        OrderLogRecorder.record(orderLogMapper, orderId, order.getOrderNo(), OrderStatusEnum.UNPAID.getCode(),
                 OrderStatusEnum.CANCELLED.getCode(),
                 "用户取消订单", userId, OPERATOR_TYPE_USER, dto.getReason());
 
@@ -553,11 +627,7 @@ public class OrderServiceImpl implements OrderService {
                 .map(this::convertToVO)
                 .collect(Collectors.toList());
 
-        PageResult<OrderVO> pageResult = new PageResult<>();
-        pageResult.setRecords(voList);
-        pageResult.setPagination(result.getTotal(), pageRequest.getPageNum(), pageRequest.getPageSize());
-
-        return pageResult;
+        return PageResult.from(result, voList);
     }
 
     /**
@@ -591,7 +661,7 @@ public class OrderServiceImpl implements OrderService {
             throw new BusinessException(ErrorCode.ORDER_STATUS_ERROR.getCode(), "确认收货失败，订单状态已变更");
         }
 
-        saveOrderLog(orderId, order.getOrderNo(), OrderStatusEnum.SHIPPING.getCode(),
+        OrderLogRecorder.record(orderLogMapper, orderId, order.getOrderNo(), OrderStatusEnum.SHIPPING.getCode(),
                 OrderStatusEnum.RECEIVED.getCode(),
                 "确认收货", userId, OPERATOR_TYPE_USER, null);
 
@@ -658,7 +728,7 @@ public class OrderServiceImpl implements OrderService {
                     order.getOrderNo(),
                     order.getPayAmount()
             );
-            if (result.getCode() == 200) {
+            if (result.isSuccess()) {
                 log.info("订单结算成功: orderNo={}, merchantId={}", order.getOrderNo(), order.getMerchantId());
             } else {
                 log.warn("订单结算失败: orderNo={}, message={}", order.getOrderNo(), result.getMessage());
@@ -712,7 +782,7 @@ public class OrderServiceImpl implements OrderService {
         // 如果是秒杀订单，回退 Redis 秒杀库存（超时取消也要回退秒杀库存）
         rollbackSeckillStock(order);
 
-        saveOrderLog(order.getId(), orderNo, OrderStatusEnum.UNPAID.getCode(),
+        OrderLogRecorder.record(orderLogMapper, order.getId(), orderNo, OrderStatusEnum.UNPAID.getCode(),
                 OrderStatusEnum.CANCELLED.getCode(),
                 "超时自动取消", null, OPERATOR_TYPE_SYSTEM, "超时未支付，系统自动取消");
 
@@ -762,7 +832,7 @@ public class OrderServiceImpl implements OrderService {
             return;
         }
 
-        saveOrderLog(order.getId(), orderNo, OrderStatusEnum.UNPAID.getCode(),
+        OrderLogRecorder.record(orderLogMapper, order.getId(), orderNo, OrderStatusEnum.UNPAID.getCode(),
                 OrderStatusEnum.PAID.getCode(),
                 "支付成功", order.getUserId(), OPERATOR_TYPE_SYSTEM, null);
 
@@ -870,35 +940,6 @@ public class OrderServiceImpl implements OrderService {
             // 回退失败不影响取消订单主流程，记录日志后续可通过定时任务补偿
             log.warn("秒杀库存回退失败: seckillId={}", order.getSeckillId(), e);
         }
-    }
-
-    /**
-     * 保存订单状态日志
-     * <p>
-     * 每次订单状态变化都记录一条日志，方便追溯订单的完整生命周期。
-     * </p>
-     *
-     * @param orderId      订单ID
-     * @param orderNo      订单号
-     * @param fromStatus   变化前的状态
-     * @param toStatus     变化后的状态
-     * @param action       操作类型
-     * @param operatorId   操作人ID
-     * @param operatorType 操作人类型
-     * @param note         备注
-     */
-    private void saveOrderLog(Long orderId, String orderNo, Integer fromStatus, Integer toStatus,
-                              String action, Long operatorId, Integer operatorType, String note) {
-        OrderLog orderLog = new OrderLog();
-        orderLog.setOrderId(orderId);
-        orderLog.setOrderNo(orderNo);
-        orderLog.setFromStatus(fromStatus);
-        orderLog.setToStatus(toStatus);
-        orderLog.setAction(action);
-        orderLog.setOperatorId(operatorId);
-        orderLog.setOperatorType(operatorType);
-        orderLog.setNote(note);
-        orderLogMapper.insert(orderLog);
     }
 
     /**

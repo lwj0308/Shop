@@ -89,9 +89,6 @@ public class FavoriteServiceImpl implements FavoriteService {
         Page<UserFavorite> result = favoriteMapper.selectPage(page, wrapper);
 
         // 封装分页结果
-        PageResult<UserFavorite> pageResult = new PageResult<>();
-        pageResult.setRecords(result.getRecords());
-        pageResult.setPagination(result.getTotal(), pageRequest.getPageNum(), pageRequest.getPageSize());
-        return pageResult;
+        return PageResult.from(result);
     }
 }

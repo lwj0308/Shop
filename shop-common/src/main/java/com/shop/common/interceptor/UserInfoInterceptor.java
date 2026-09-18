@@ -1,4 +1,4 @@
-package com.shop.order.interceptor;
+package com.shop.common.interceptor;
 
 import com.shop.common.context.UserContext;
 import jakarta.servlet.http.HttpServletRequest;
@@ -15,7 +15,7 @@ import org.springframework.web.servlet.HandlerInterceptor;
  * </p>
  * <p>
  * 工作流程：
- * 1. 用户请求 → Gateway校验Token → Gateway把userId放到Header（X-User-Id）中转发给订单服务
+ * 1. 用户请求 → Gateway校验Token → Gateway把userId放到Header（X-User-Id）中转发给各业务服务
  * 2. 本拦截器从Header中取出X-User-Id → 存入UserContext的ThreadLocal
  * 3. 后续业务代码通过 SecurityUtils.getCurrentUserId() 获取用户ID
  * 4. 请求结束时，清除ThreadLocal，防止内存泄漏
@@ -23,6 +23,10 @@ import org.springframework.web.servlet.HandlerInterceptor;
  * <p>
  * 安全说明：不调用 StpUtil.login(userId)，因为X-User-Id Header可被伪造。
  * 鉴权完全依赖Sa-Token的Token校验（Gateway已校验Token并重写X-User-Id）。
+ * </p>
+ * <p>
+ * 各业务服务（用户/商品/购物车/订单/支付）的拦截器路径配置有差异，
+ * 所以路径注册仍留在各模块自己的SaTokenConfig里，这里只共用拦截逻辑本身。
  * </p>
  */
 @Slf4j
@@ -48,17 +52,18 @@ public class UserInfoInterceptor implements HandlerInterceptor {
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         // 从Header中获取用户ID（Gateway转发时会带上）
         String userIdStr = request.getHeader(USER_ID_HEADER);
-        if (userIdStr != null && !userIdStr.isEmpty()) {
-            try {
-                Long userId = Long.parseLong(userIdStr);
-                // 存入UserContext的ThreadLocal，方便后续业务代码获取
-                // 注意：不调用StpUtil.login()，因为X-User-Id可被伪造
-                // 鉴权由Sa-Token的Token校验负责（Gateway已校验Token）
-                UserContext.setUserId(userId);
-                log.debug("从Gateway获取用户信息: userId={}", userId);
-            } catch (NumberFormatException e) {
-                log.warn("X-User-Id格式错误: {}", userIdStr);
-            }
+        if (userIdStr == null || userIdStr.isEmpty()) {
+            return true;
+        }
+        try {
+            Long userId = Long.parseLong(userIdStr);
+            // 存入UserContext的ThreadLocal，方便后续业务代码获取
+            // 注意：不调用StpUtil.login()，因为X-User-Id可被伪造
+            // 鉴权由Sa-Token的Token校验负责（Gateway已校验Token）
+            UserContext.setUserId(userId);
+            log.debug("从Gateway获取用户信息: userId={}", userId);
+        } catch (NumberFormatException e) {
+            log.warn("X-User-Id格式错误: {}", userIdStr);
         }
         return true;
     }

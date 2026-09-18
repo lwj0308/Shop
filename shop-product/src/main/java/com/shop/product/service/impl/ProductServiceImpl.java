@@ -2,14 +2,11 @@ package com.shop.product.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import com.shop.common.exception.BusinessException;
 import com.shop.common.model.PageRequest;
 import com.shop.common.model.PageResult;
 import com.shop.common.result.ErrorCode;
 import com.shop.common.result.Result;
-import com.shop.model.merchant.vo.ShopVO;
 import com.shop.model.product.dto.ProductCreateDTO;
 import com.shop.model.product.dto.ProductUpdateDTO;
 import com.shop.model.product.dto.StockDeductItemDTO;
@@ -20,7 +17,6 @@ import com.shop.model.product.vo.ProductVO;
 import com.shop.product.feign.MerchantFeignClient;
 import com.shop.product.mapper.*;
 import com.shop.product.service.ProductCacheService;
-import com.shop.product.service.ProductSearchService;
 import com.shop.product.service.ProductService;
 import com.shop.product.service.StockService;
 import lombok.RequiredArgsConstructor;
@@ -31,7 +27,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -61,20 +56,11 @@ public class ProductServiceImpl implements ProductService {
     /** 规格值Mapper */
     private final ProductSpecValueMapper productSpecValueMapper;
 
-    /** 商品图片Mapper */
-    private final ProductImageMapper productImageMapper;
-
-    /** 评价Mapper */
-    private final ProductCommentMapper productCommentMapper;
-
     /** 分类Mapper */
     private final CategoryMapper categoryMapper;
 
     /** 品牌Mapper */
     private final BrandMapper brandMapper;
-
-    /** 搜索服务，商品变更时同步到ES */
-    private final ProductSearchService productSearchService;
 
     /** 缓存服务，封装商品详情的缓存逻辑 */
     private final ProductCacheService productCacheService;
@@ -95,24 +81,12 @@ public class ProductServiceImpl implements ProductService {
     private static final String TOPIC_PRODUCT_SYNC = "topic_product_sync";
 
     /**
-     * shopId → merchantId 本地缓存（性能优化：避免每次查 SKU 都 Feign 调用商家服务）
+     * shopId → merchantId 本地缓存查询器（性能优化：避免每次查 SKU 都 Feign 调用商家服务）
      * <p>
-     * 小白理解：店铺和商家的归属关系很少变化（只有店铺转让才会变），
-     * 没必要每次查询商品都打电话（Feign）问商家服务"这个店铺是谁的"。
-     * 我们把答案记在本地小本本（Caffeine 缓存）上，下次直接查小本本，30 分钟后自动过期重查。
-     * </p>
-     * <p>
-     * 缓存策略：
-     * - 最多缓存 500 个店铺的映射（足够覆盖正常业务）
-     * - 写入 30 分钟后过期（店铺归属变更极少，30 分钟足够）
-     * - 缓存未命中时回源 Feign 调用，失败仍降级返回 null
+     * 与 ProductCacheServiceImpl 共用同一份实现，缓存配置见 {@link MerchantIdCache}。
      * </p>
      */
-    private final Cache<Long, Long> shopIdToMerchantIdCache = Caffeine.newBuilder()
-            .maximumSize(500)
-            .expireAfterWrite(30, TimeUnit.MINUTES)
-            .recordStats()
-            .build();
+    private final MerchantIdCache merchantIdCache = new MerchantIdCache();
 
     /**
      * 发布商品
@@ -144,44 +118,10 @@ public class ProductServiceImpl implements ProductService {
         Long productId = product.getId();
 
         // 2. 创建规格模板和规格值
-        if (dto.getSpecs() != null && !dto.getSpecs().isEmpty()) {
-            for (ProductCreateDTO.SpecDTO specDTO : dto.getSpecs()) {
-                // 创建规格模板（如"颜色"）
-                ProductSpec spec = new ProductSpec();
-                spec.setProductId(productId);
-                spec.setName(specDTO.getName());
-                productSpecMapper.insert(spec);
-
-                // 创建规格值（如"红色"、"蓝色"）
-                if (specDTO.getValues() != null) {
-                    for (String value : specDTO.getValues()) {
-                        ProductSpecValue specValue = new ProductSpecValue();
-                        specValue.setSpecId(spec.getId());
-                        specValue.setValue(value);
-                        productSpecValueMapper.insert(specValue);
-                    }
-                }
-            }
-        }
+        createSpecs(productId, dto.getSpecs());
 
         // 3. 创建SKU，同时初始化库存到Redis
-        if (dto.getSkus() != null && !dto.getSkus().isEmpty()) {
-            for (ProductCreateDTO.SkuDTO skuDTO : dto.getSkus()) {
-                ProductSku sku = new ProductSku();
-                sku.setProductId(productId);
-                sku.setSpecValues(skuDTO.getSpecValues());
-                sku.setPrice(skuDTO.getPrice());
-                sku.setOriginalPrice(skuDTO.getOriginalPrice());
-                sku.setStock(skuDTO.getStock());
-                sku.setImage(skuDTO.getImage());
-                sku.setVersion(0); // 初始版本号
-                sku.setStatus(1); // 默认启用
-                productSkuMapper.insert(sku);
-
-                // 初始化SKU库存到Redis，方便后续用Lua脚本扣减
-                stockService.initStock(sku.getId(), skuDTO.getStock());
-            }
-        }
+        createSkus(productId, dto.getSkus());
 
         // 4. 异步同步到ES（通过RocketMQ）
         sendSyncMessage(productId);
@@ -201,73 +141,17 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateProduct(Long productId, ProductUpdateDTO dto, Long shopId) {
-        Product product = productMapper.selectById(productId);
-        if (product == null) {
-            throw new BusinessException(ErrorCode.PRODUCT_NOT_FOUND);
-        }
-
         // 归属校验：只能编辑自己店铺的商品
-        // 小白讲解：防止商家A通过修改URL中的商品ID，去编辑商家B的商品
-        if (shopId != null && !shopId.equals(product.getShopId())) {
-            throw new BusinessException(ErrorCode.FORBIDDEN.getCode(), "无权操作该商品");
-        }
+        Product product = getOwnedProduct(productId, shopId);
 
-        // 更新SPU字段
-        if (dto.getCategoryId() != null) {
-            product.setCategoryId(dto.getCategoryId());
-        }
-        if (dto.getBrandId() != null) {
-            product.setBrandId(dto.getBrandId());
-        }
-        if (dto.getName() != null) {
-            product.setName(dto.getName());
-        }
-        if (dto.getSubtitle() != null) {
-            product.setSubtitle(dto.getSubtitle());
-        }
-        if (dto.getMainImage() != null) {
-            product.setMainImage(dto.getMainImage());
-        }
-        if (dto.getImages() != null) {
-            product.setImages(dto.getImages());
-        }
-        if (dto.getDetail() != null) {
-            product.setDetail(dto.getDetail());
-        }
+        // 更新SPU字段（只更新传了的字段，没传的保持不变）
+        mergeUpdateFields(product, dto);
         productMapper.updateById(product);
 
         // 如果传了规格，先删旧规格再创建新规格
         if (dto.getSpecs() != null) {
-            // 删除旧规格值
-            List<ProductSpec> oldSpecs = productSpecMapper.selectList(
-                    new LambdaQueryWrapper<ProductSpec>().eq(ProductSpec::getProductId, productId)
-            );
-            for (ProductSpec oldSpec : oldSpecs) {
-                productSpecValueMapper.delete(
-                        new LambdaQueryWrapper<ProductSpecValue>().eq(ProductSpecValue::getSpecId, oldSpec.getId())
-                );
-            }
-            // 删除旧规格模板
-            productSpecMapper.delete(
-                    new LambdaQueryWrapper<ProductSpec>().eq(ProductSpec::getProductId, productId)
-            );
-
-            // 创建新规格
-            for (ProductCreateDTO.SpecDTO specDTO : dto.getSpecs()) {
-                ProductSpec spec = new ProductSpec();
-                spec.setProductId(productId);
-                spec.setName(specDTO.getName());
-                productSpecMapper.insert(spec);
-
-                if (specDTO.getValues() != null) {
-                    for (String value : specDTO.getValues()) {
-                        ProductSpecValue specValue = new ProductSpecValue();
-                        specValue.setSpecId(spec.getId());
-                        specValue.setValue(value);
-                        productSpecValueMapper.insert(specValue);
-                    }
-                }
-            }
+            deleteSpecs(productId);
+            createSpecs(productId, dto.getSpecs());
         }
 
         // 如果传了SKU，先删旧SKU再创建新SKU
@@ -275,22 +159,7 @@ public class ProductServiceImpl implements ProductService {
             productSkuMapper.delete(
                     new LambdaQueryWrapper<ProductSku>().eq(ProductSku::getProductId, productId)
             );
-
-            for (ProductCreateDTO.SkuDTO skuDTO : dto.getSkus()) {
-                ProductSku sku = new ProductSku();
-                sku.setProductId(productId);
-                sku.setSpecValues(skuDTO.getSpecValues());
-                sku.setPrice(skuDTO.getPrice());
-                sku.setOriginalPrice(skuDTO.getOriginalPrice());
-                sku.setStock(skuDTO.getStock());
-                sku.setImage(skuDTO.getImage());
-                sku.setVersion(0);
-                sku.setStatus(1);
-                productSkuMapper.insert(sku);
-
-                // 初始化新SKU库存到Redis
-                stockService.initStock(sku.getId(), skuDTO.getStock());
-            }
+            createSkus(productId, dto.getSkus());
         }
 
         // 延迟双删缓存（先删一次，通过MQ延迟再删一次）
@@ -307,14 +176,8 @@ public class ProductServiceImpl implements ProductService {
      */
     @Override
     public void onShelf(Long productId, Long shopId) {
-        Product product = productMapper.selectById(productId);
-        if (product == null) {
-            throw new BusinessException(ErrorCode.PRODUCT_NOT_FOUND);
-        }
         // 归属校验：只能上架自己店铺的商品
-        if (shopId != null && !shopId.equals(product.getShopId())) {
-            throw new BusinessException(ErrorCode.FORBIDDEN.getCode(), "无权操作该商品");
-        }
+        getOwnedProduct(productId, shopId);
         productMapper.updateStatus(productId, 1);
 
         // 延迟双删缓存
@@ -331,14 +194,8 @@ public class ProductServiceImpl implements ProductService {
      */
     @Override
     public void offShelf(Long productId, Long shopId) {
-        Product product = productMapper.selectById(productId);
-        if (product == null) {
-            throw new BusinessException(ErrorCode.PRODUCT_NOT_FOUND);
-        }
         // 归属校验：只能下架自己店铺的商品
-        if (shopId != null && !shopId.equals(product.getShopId())) {
-            throw new BusinessException(ErrorCode.FORBIDDEN.getCode(), "无权操作该商品");
-        }
+        getOwnedProduct(productId, shopId);
         productMapper.updateStatus(productId, 0);
 
         // 延迟双删缓存
@@ -513,9 +370,7 @@ public class ProductServiceImpl implements ProductService {
             return vo;
         }).collect(Collectors.toList());
 
-        PageResult<ProductVO> pageResult = new PageResult<>();
-        pageResult.setRecords(voList);
-        pageResult.setPagination(result.getTotal(), pageRequest.getPageNum(), pageRequest.getPageSize());
+        PageResult<ProductVO> pageResult = PageResult.from(result, voList);
 
         // RL-13：正常查询时把结果写入Redis缓存，供限流时兜底使用（弱依赖，失败不影响主流程）
         productCacheService.cacheProductList(categoryId, pageRequest, pageResult);
@@ -1057,6 +912,135 @@ public class ProductServiceImpl implements ProductService {
     }
 
     /**
+     * 查询商品并校验店铺归属
+     * <p>
+     * 小白讲解：防止商家A通过修改URL中的商品ID，去操作商家B的商品。
+     * shopId为null表示平台侧操作，不做归属校验。
+     * </p>
+     *
+     * @param productId 商品ID
+     * @param shopId    当前商家的店铺ID（可为null）
+     * @return 商品实体
+     */
+    private Product getOwnedProduct(Long productId, Long shopId) {
+        Product product = productMapper.selectById(productId);
+        if (product == null) {
+            throw new BusinessException(ErrorCode.PRODUCT_NOT_FOUND);
+        }
+        if (shopId != null && !shopId.equals(product.getShopId())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN.getCode(), "无权操作该商品");
+        }
+        return product;
+    }
+
+    /**
+     * 把DTO里非空的SPU字段合并到商品实体上（没传的字段保持不变）
+     *
+     * @param product 待更新的商品实体
+     * @param dto     编辑参数
+     */
+    private void mergeUpdateFields(Product product, ProductUpdateDTO dto) {
+        if (dto.getCategoryId() != null) {
+            product.setCategoryId(dto.getCategoryId());
+        }
+        if (dto.getBrandId() != null) {
+            product.setBrandId(dto.getBrandId());
+        }
+        if (dto.getName() != null) {
+            product.setName(dto.getName());
+        }
+        if (dto.getSubtitle() != null) {
+            product.setSubtitle(dto.getSubtitle());
+        }
+        if (dto.getMainImage() != null) {
+            product.setMainImage(dto.getMainImage());
+        }
+        if (dto.getImages() != null) {
+            product.setImages(dto.getImages());
+        }
+        if (dto.getDetail() != null) {
+            product.setDetail(dto.getDetail());
+        }
+    }
+
+    /**
+     * 创建规格模板和规格值
+     *
+     * @param productId 商品ID
+     * @param specs     规格参数（null或空表示不创建）
+     */
+    private void createSpecs(Long productId, List<ProductCreateDTO.SpecDTO> specs) {
+        if (specs == null || specs.isEmpty()) {
+            return;
+        }
+        for (ProductCreateDTO.SpecDTO specDTO : specs) {
+            // 创建规格模板（如"颜色"）
+            ProductSpec spec = new ProductSpec();
+            spec.setProductId(productId);
+            spec.setName(specDTO.getName());
+            productSpecMapper.insert(spec);
+
+            // 创建规格值（如"红色"、"蓝色"）
+            if (specDTO.getValues() != null) {
+                for (String value : specDTO.getValues()) {
+                    ProductSpecValue specValue = new ProductSpecValue();
+                    specValue.setSpecId(spec.getId());
+                    specValue.setValue(value);
+                    productSpecValueMapper.insert(specValue);
+                }
+            }
+        }
+    }
+
+    /**
+     * 删除商品已有的规格模板和规格值
+     *
+     * @param productId 商品ID
+     */
+    private void deleteSpecs(Long productId) {
+        // 删除旧规格值
+        List<ProductSpec> oldSpecs = productSpecMapper.selectList(
+                new LambdaQueryWrapper<ProductSpec>().eq(ProductSpec::getProductId, productId)
+        );
+        for (ProductSpec oldSpec : oldSpecs) {
+            productSpecValueMapper.delete(
+                    new LambdaQueryWrapper<ProductSpecValue>().eq(ProductSpecValue::getSpecId, oldSpec.getId())
+            );
+        }
+        // 删除旧规格模板
+        productSpecMapper.delete(
+                new LambdaQueryWrapper<ProductSpec>().eq(ProductSpec::getProductId, productId)
+        );
+    }
+
+    /**
+     * 创建SKU，同时初始化库存到Redis
+     *
+     * @param productId 商品ID
+     * @param skus      SKU参数（null或空表示不创建）
+     */
+    private void createSkus(Long productId, List<ProductCreateDTO.SkuDTO> skus) {
+        if (skus == null || skus.isEmpty()) {
+            return;
+        }
+        for (ProductCreateDTO.SkuDTO skuDTO : skus) {
+            ProductSku sku = new ProductSku();
+            sku.setProductId(productId);
+            sku.setSpecValues(skuDTO.getSpecValues());
+            sku.setPrice(skuDTO.getPrice());
+            sku.setOriginalPrice(skuDTO.getOriginalPrice());
+            sku.setStock(skuDTO.getStock());
+            sku.setImage(skuDTO.getImage());
+            sku.setVersion(0); // 初始版本号
+            sku.setStatus(1);  // 默认启用
+            productSkuMapper.insert(sku);
+
+            // 初始化SKU库存到Redis，方便后续用Lua脚本扣减
+            stockService.initStock(sku.getId(), skuDTO.getStock());
+        }
+    }
+
+    /**
      * ProductSku实体转ProductSkuVO
      * <p>
      * 转换过程中会通过Feign远程查询商家ID（merchantId）：
@@ -1083,66 +1067,7 @@ public class ProductServiceImpl implements ProductService {
         vo.setImage(sku.getImage());
         vo.setStatus(sku.getStatus());
         // 查询并设置merchantId，失败时不阻塞主流程
-        vo.setMerchantId(queryMerchantIdByProductId(sku.getProductId()));
+        vo.setMerchantId(merchantIdCache.resolve(sku.getProductId(), productMapper, merchantFeignClient));
         return vo;
-    }
-
-    /**
-     * 根据商品ID查询商家ID（带 Caffeine 本地缓存优化）
-     * <p>
-     * 调用链：productId → Product表查shopId → 查缓存（shopId→merchantId）→ 缓存未命中才 Feign 调用商家服务。
-     * 整个过程用try-catch包裹，任何一步失败都只记日志返回null，
-     * 保证商品查询和下单主流程不被商家服务故障阻塞。
-     * </p>
-     * <p>
-     * 性能优化说明（N-P 性能测试整改）：
-     * 原实现每次查询 SKU 都会发起 Feign 调用，高并发时（如商品详情压测）会：
-     * 1. 大量 Feign 调用打到 shop-merchant，压垮商家服务
-     * 2. 触发降级，产生 "商家服务调用失败" 错误日志
-     * 3. 单次请求 RT 增加 10-50ms（远程调用耗时）
-     * 现改为先查 Caffeine 本地缓存，命中率 >99% 后 Feign 调用近乎为 0。
-     * </p>
-     *
-     * @param productId 商品ID
-     * @return 商家ID，查询失败返回null
-     */
-    private Long queryMerchantIdByProductId(Long productId) {
-        try {
-            // 1. 先查出商品SPU，拿到店铺ID
-            Product product = productMapper.selectById(productId);
-            if (product == null || product.getShopId() == null) {
-                log.warn("查询merchantId失败：商品或店铺ID为空, productId={}", productId);
-                return null;
-            }
-
-            Long shopId = product.getShopId();
-
-            // 2. 先查本地缓存（命中率 >99%，命中直接返回，不发起远程调用）
-            Long cachedMerchantId = shopIdToMerchantIdCache.getIfPresent(shopId);
-            if (cachedMerchantId != null) {
-                log.debug("shopId→merchantId 缓存命中: shopId={}, merchantId={}", shopId, cachedMerchantId);
-                return cachedMerchantId;
-            }
-
-            // 3. 缓存未命中，通过Feign调用商家服务查询店铺信息
-            Result<ShopVO> shopResult = merchantFeignClient.getShopById(shopId);
-            if (shopResult == null || !shopResult.isSuccess() || shopResult.getData() == null) {
-                log.warn("查询merchantId失败：店铺信息为空, shopId={}", shopId);
-                return null;
-            }
-
-            // 4. 取出merchantId并写入缓存，下次同一shopId就不再发起远程调用
-            Long merchantId = shopResult.getData().getMerchantId();
-            if (merchantId != null) {
-                shopIdToMerchantIdCache.put(shopId, merchantId);
-                log.debug("shopId→merchantId 缓存写入: shopId={}, merchantId={}", shopId, merchantId);
-            }
-
-            return merchantId;
-        } catch (Exception e) {
-            // Feign调用失败（服务挂了、超时等）只记日志，不抛异常
-            log.warn("查询merchantId异常，不影响主流程: productId={}", productId, e);
-            return null;
-        }
     }
 }

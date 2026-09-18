@@ -89,7 +89,7 @@ public class BlacklistFilter implements GlobalFilter, Ordered {
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         ServerHttpRequest request = exchange.getRequest();
-        String clientIp = getClientIp(request);
+        String clientIp = GatewayIpUtils.getClientIp(request);
         String userId = request.getHeaders().getFirst("X-User-Id");
 
         // 第1步：检查静态黑名单（Nacos 配置，同步检查，性能高）
@@ -233,28 +233,6 @@ public class BlacklistFilter implements GlobalFilter, Ordered {
 
         return Mono.zip(ipCheck, userCheck)
                 .map(tuple -> tuple.getT1() || tuple.getT2());
-    }
-
-    /**
-     * 获取客户端真实 IP 地址
-     * <p>
-     * 请求可能经过多层代理，从 X-Forwarded-For 等 Header 获取真实 IP。
-     * </p>
-     *
-     * @param request HTTP 请求对象
-     * @return 客户端 IP 地址
-     */
-    private String getClientIp(ServerHttpRequest request) {
-        String ip = request.getHeaders().getFirst("X-Forwarded-For");
-        if (ip != null && !ip.isEmpty()) {
-            return ip.split(",")[0].trim();
-        }
-        ip = request.getHeaders().getFirst("X-Real-IP");
-        if (ip != null && !ip.isEmpty()) {
-            return ip;
-        }
-        return request.getRemoteAddress() != null
-                ? request.getRemoteAddress().getAddress().getHostAddress() : "unknown";
     }
 
     /**

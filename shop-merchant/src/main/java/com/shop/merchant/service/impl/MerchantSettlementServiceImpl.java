@@ -173,10 +173,7 @@ public class MerchantSettlementServiceImpl implements MerchantSettlementService 
                 .map(this::convertSettlementRecordToVO)
                 .collect(Collectors.toList());
 
-        PageResult<SettlementRecordVO> pageResult = new PageResult<>();
-        pageResult.setRecords(voList);
-        pageResult.setPagination(result.getTotal(), pageRequest.getPageNum(), pageRequest.getPageSize());
-        return pageResult;
+        return PageResult.from(result, voList);
     }
 
     // ==================== 提现申请 ====================
@@ -271,10 +268,7 @@ public class MerchantSettlementServiceImpl implements MerchantSettlementService 
                 .map(this::convertWithdrawOrderToVO)
                 .collect(Collectors.toList());
 
-        PageResult<WithdrawOrderVO> pageResult = new PageResult<>();
-        pageResult.setRecords(voList);
-        pageResult.setPagination(result.getTotal(), pageRequest.getPageNum(), pageRequest.getPageSize());
-        return pageResult;
+        return PageResult.from(result, voList);
     }
 
     // ==================== 订单结算（内部调用） ====================
@@ -385,10 +379,7 @@ public class MerchantSettlementServiceImpl implements MerchantSettlementService 
                 })
                 .collect(Collectors.toList());
 
-        PageResult<WithdrawOrderVO> pageResult = new PageResult<>();
-        pageResult.setRecords(voList);
-        pageResult.setPagination(result.getTotal(), pageRequest.getPageNum(), pageRequest.getPageSize());
-        return pageResult;
+        return PageResult.from(result, voList);
     }
 
     /**

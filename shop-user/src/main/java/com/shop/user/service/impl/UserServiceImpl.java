@@ -6,6 +6,7 @@ import cn.hutool.core.util.DesensitizedUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.shop.common.exception.BusinessException;
 import com.shop.common.result.ErrorCode;
+import com.shop.common.util.IpUtils;
 import com.shop.model.user.dto.*;
 import com.shop.model.user.entity.User;
 import com.shop.model.user.entity.UserAccount;
@@ -352,36 +353,11 @@ public class UserServiceImpl implements UserService {
                 (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         if (attributes != null) {
             HttpServletRequest request = attributes.getRequest();
-            loginLog.setLoginIp(getClientIp(request));
+            loginLog.setLoginIp(IpUtils.getClientIp(request));
             loginLog.setLoginDevice(request.getHeader("User-Agent"));
         }
 
         userLoginLogMapper.insert(loginLog);
-    }
-
-    /**
-     * 获取客户端真实IP地址
-     * <p>
-     * 考虑了代理的情况，依次从 X-Forwarded-For、X-Real-IP 等 Header 中获取。
-     * 如果都没有，就用 RemoteAddr。
-     * </p>
-     *
-     * @param request HTTP请求
-     * @return 客户端IP地址
-     */
-    private String getClientIp(HttpServletRequest request) {
-        String ip = request.getHeader("X-Forwarded-For");
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getHeader("X-Real-IP");
-        }
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getRemoteAddr();
-        }
-        // X-Forwarded-For可能包含多个IP，取第一个（最原始的客户端IP）
-        if (ip != null && ip.contains(",")) {
-            ip = ip.split(",")[0].trim();
-        }
-        return ip;
     }
 
     /**

@@ -11,6 +11,7 @@ import com.shop.model.seckill.enums.SeckillStatusEnum;
 import com.shop.order.feign.SeckillFeignClient;
 import com.shop.order.service.QueueService;
 import com.shop.order.service.SeckillService;
+import com.shop.order.util.SeckillStockHelper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
@@ -60,9 +61,6 @@ public class SeckillServiceImpl implements SeckillService {
 
     /** 秒杀订单MQ Topic：用户抢购成功后往这个Topic发消息，消费者收到后异步创建订单 */
     private static final String TOPIC_SECKILL_ORDER = "topic_seckill_order";
-
-    /** Redis秒杀库存key前缀：seckill:stock:{seckillId} 存的是剩余秒杀库存数量 */
-    private static final String STOCK_KEY_PREFIX = "seckill:stock:";
 
     /** Redis用户已购数量key前缀：seckill:user:{seckillId}:{userId} 存的是这个用户在这个活动买了几个 */
     private static final String USER_BOUGHT_KEY_PREFIX = "seckill:user:";
@@ -190,7 +188,7 @@ public class SeckillServiceImpl implements SeckillService {
             // MQ发送失败，需要回退刚才扣减的Redis库存，否则库存对不上
             // 小白讲解：名额抢到了但消息发不出去，要把库存加回去，让别人还能抢
             log.error("发送秒杀下单MQ消息失败，回退Redis库存: userId={}, seckillId={}", userId, seckillId, e);
-            rollbackRedisStock(seckillId);
+            SeckillStockHelper.rollbackRedisStock(stringRedisTemplate, seckillId);
             return Result.fail(ErrorCode.OPERATION_FAIL.getCode(), "系统繁忙，请稍后重试");
         }
 
@@ -251,7 +249,7 @@ public class SeckillServiceImpl implements SeckillService {
      */
     private Long executeLuaScript(Long seckillId, Long userId, Integer limitCount) {
         // 构建库存key和用户已购key
-        String stockKey = STOCK_KEY_PREFIX + seckillId;
+        String stockKey = SeckillStockHelper.STOCK_KEY_PREFIX + seckillId;
         String userKey = USER_BOUGHT_KEY_PREFIX + seckillId + ":" + userId;
 
         // 默认限购数量为1（防止活动配置的limitCount为null）
@@ -266,26 +264,6 @@ public class SeckillServiceImpl implements SeckillService {
         // 参数：脚本、key列表、ARGV参数（限购数量、购买数量1）
         List<String> keys = Arrays.asList(stockKey, userKey);
         return stringRedisTemplate.execute(script, keys, String.valueOf(limit), "1");
-    }
-
-    /**
-     * 回退Redis秒杀库存
-     * <p>
-     * 当MQ消息发送失败时，需要把刚才扣减的Redis秒杀库存加回去，
-     * 否则库存数量会不对（扣了但没下单成功）。
-     * </p>
-     *
-     * @param seckillId 秒杀活动ID
-     */
-    private void rollbackRedisStock(Long seckillId) {
-        try {
-            String stockKey = STOCK_KEY_PREFIX + seckillId;
-            stringRedisTemplate.opsForValue().increment(stockKey);
-            log.info("秒杀Redis库存回退成功: seckillId={}", seckillId);
-        } catch (Exception e) {
-            // 回退失败只能记录日志，后续可通过定时任务补偿
-            log.error("秒杀Redis库存回退失败，需要人工处理: seckillId={}", seckillId, e);
-        }
     }
 
     // ==================== Sentinel 限流/降级兜底方法（RL-02 引入）====================

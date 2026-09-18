@@ -18,6 +18,7 @@ import com.shop.order.mapper.OrderItemMapper;
 import com.shop.order.mapper.OrderLogMapper;
 import com.shop.order.mapper.RefundOrderMapper;
 import com.shop.order.service.RefundService;
+import com.shop.order.util.OrderLogRecorder;
 import com.shop.order.util.OrderNoGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -136,7 +137,7 @@ public class RefundServiceImpl implements RefundService {
         }
 
         // 记录状态日志
-        saveOrderLog(order.getId(), order.getOrderNo(), OrderStatusEnum.PAID.getCode(),
+        OrderLogRecorder.record(orderLogMapper, order.getId(), order.getOrderNo(), OrderStatusEnum.PAID.getCode(),
                 OrderStatusEnum.REFUNDING.getCode(),
                 "申请退款", userId, OPERATOR_TYPE_USER, dto.getReason());
 
@@ -173,87 +174,117 @@ public class RefundServiceImpl implements RefundService {
         }
 
         if (dto.getStatus() == RefundStatusEnum.APPROVED.getCode()) {
-            // ========== 同意退款 ==========
-            // 校验退款状态转换：待审核 → 已同意
-            RefundStatusEnum.checkTransit(currentStatus, RefundStatusEnum.APPROVED, "同意退款");
-
-            // 乐观锁更新退款单状态为"已同意"
-            int updated = refundOrderMapper.update(null,
-                    new LambdaUpdateWrapper<RefundOrder>()
-                            .eq(RefundOrder::getId, dto.getRefundId())
-                            .eq(RefundOrder::getStatus, RefundStatusEnum.PENDING.getCode())
-                            .set(RefundOrder::getStatus, RefundStatusEnum.APPROVED.getCode())
-                            .set(RefundOrder::getAuditNote, dto.getAuditNote())
-                            .set(RefundOrder::getAuditTime, LocalDateTime.now())
-            );
-            if (updated == 0) {
-                throw new BusinessException(ErrorCode.ORDER_STATUS_ERROR.getCode(), "审核失败，退款单状态已变更");
-            }
-
-            // 乐观锁更新订单状态为"已退款"
-            updated = orderInfoMapper.update(null,
-                    new LambdaUpdateWrapper<OrderInfo>()
-                            .eq(OrderInfo::getId, order.getId())
-                            .eq(OrderInfo::getStatus, OrderStatusEnum.REFUNDING.getCode())
-                            .set(OrderInfo::getStatus, OrderStatusEnum.REFUNDED.getCode())
-            );
-            if (updated == 0) {
-                throw new BusinessException(ErrorCode.ORDER_STATUS_ERROR.getCode(), "更新订单状态失败，订单状态已变更");
-            }
-
-            // 回滚库存
-            rollbackStockForRefund(refundOrder);
-
-            // 更新退款单状态为"已退款"
-            refundOrderMapper.update(null,
-                    new LambdaUpdateWrapper<RefundOrder>()
-                            .eq(RefundOrder::getId, dto.getRefundId())
-                            .set(RefundOrder::getStatus, RefundStatusEnum.REFUNDED.getCode())
-                            .set(RefundOrder::getRefundTime, LocalDateTime.now())
-            );
-
-            // 记录状态日志
-            saveOrderLog(order.getId(), order.getOrderNo(), OrderStatusEnum.REFUNDING.getCode(),
-                    OrderStatusEnum.REFUNDED.getCode(),
-                    "退款成功", null, OPERATOR_TYPE_MERCHANT, dto.getAuditNote());
-
-            log.info("退款审核通过: refundNo={}", refundOrder.getRefundNo());
-
+            approveRefund(dto, refundOrder, currentStatus, order);
         } else if (dto.getStatus() == RefundStatusEnum.REJECTED.getCode()) {
-            // ========== 拒绝退款 ==========
-            // 校验退款状态转换：待审核 → 已拒绝
-            RefundStatusEnum.checkTransit(currentStatus, RefundStatusEnum.REJECTED, "拒绝退款");
-
-            // 乐观锁更新退款单状态为"已拒绝"
-            int updated = refundOrderMapper.update(null,
-                    new LambdaUpdateWrapper<RefundOrder>()
-                            .eq(RefundOrder::getId, dto.getRefundId())
-                            .eq(RefundOrder::getStatus, RefundStatusEnum.PENDING.getCode())
-                            .set(RefundOrder::getStatus, RefundStatusEnum.REJECTED.getCode())
-                            .set(RefundOrder::getAuditNote, dto.getAuditNote())
-                            .set(RefundOrder::getAuditTime, LocalDateTime.now())
-            );
-            if (updated == 0) {
-                throw new BusinessException(ErrorCode.ORDER_STATUS_ERROR.getCode(), "审核失败，退款单状态已变更");
-            }
-
-            // 乐观锁恢复订单状态为"待发货"
-            orderInfoMapper.update(null,
-                    new LambdaUpdateWrapper<OrderInfo>()
-                            .eq(OrderInfo::getId, order.getId())
-                            .eq(OrderInfo::getStatus, OrderStatusEnum.REFUNDING.getCode())
-                            .set(OrderInfo::getStatus, OrderStatusEnum.PAID.getCode())
-            );
-
-            // 记录状态日志
-            saveOrderLog(order.getId(), order.getOrderNo(), OrderStatusEnum.REFUNDING.getCode(),
-                    OrderStatusEnum.PAID.getCode(),
-                    "退款被拒绝", null, OPERATOR_TYPE_MERCHANT, dto.getAuditNote());
-
-            log.info("退款审核拒绝: refundNo={}", refundOrder.getRefundNo());
+            rejectRefund(dto, refundOrder, currentStatus, order);
         } else {
             throw new BusinessException(ErrorCode.PARAM_ERROR.getCode(), "审核状态参数错误，只能是1（同意）或2（拒绝）");
         }
+    }
+
+    /**
+     * 同意退款
+     * <p>
+     * 依次：状态机校验 → 退款单置为"已同意" → 订单置为"已退款" → 回滚库存 →
+     * 退款单置为"已退款" → 记录状态日志。前两步都用乐观锁，状态被并发改过则抛异常回滚。
+     * </p>
+     *
+     * @param dto           审核参数
+     * @param refundOrder   退款单
+     * @param currentStatus 退款单当前状态
+     * @param order         关联订单
+     */
+    private void approveRefund(RefundAuditDTO dto, RefundOrder refundOrder,
+                               RefundStatusEnum currentStatus, OrderInfo order) {
+        // 校验退款状态转换：待审核 → 已同意
+        RefundStatusEnum.checkTransit(currentStatus, RefundStatusEnum.APPROVED, "同意退款");
+
+        // 乐观锁更新退款单状态为"已同意"
+        int updated = refundOrderMapper.update(null,
+                new LambdaUpdateWrapper<RefundOrder>()
+                        .eq(RefundOrder::getId, dto.getRefundId())
+                        .eq(RefundOrder::getStatus, RefundStatusEnum.PENDING.getCode())
+                        .set(RefundOrder::getStatus, RefundStatusEnum.APPROVED.getCode())
+                        .set(RefundOrder::getAuditNote, dto.getAuditNote())
+                        .set(RefundOrder::getAuditTime, LocalDateTime.now())
+        );
+        if (updated == 0) {
+            throw new BusinessException(ErrorCode.ORDER_STATUS_ERROR.getCode(), "审核失败，退款单状态已变更");
+        }
+
+        // 乐观锁更新订单状态为"已退款"
+        updated = orderInfoMapper.update(null,
+                new LambdaUpdateWrapper<OrderInfo>()
+                        .eq(OrderInfo::getId, order.getId())
+                        .eq(OrderInfo::getStatus, OrderStatusEnum.REFUNDING.getCode())
+                        .set(OrderInfo::getStatus, OrderStatusEnum.REFUNDED.getCode())
+        );
+        if (updated == 0) {
+            throw new BusinessException(ErrorCode.ORDER_STATUS_ERROR.getCode(), "更新订单状态失败，订单状态已变更");
+        }
+
+        // 回滚库存
+        rollbackStockForRefund(refundOrder);
+
+        // 更新退款单状态为"已退款"
+        refundOrderMapper.update(null,
+                new LambdaUpdateWrapper<RefundOrder>()
+                        .eq(RefundOrder::getId, dto.getRefundId())
+                        .set(RefundOrder::getStatus, RefundStatusEnum.REFUNDED.getCode())
+                        .set(RefundOrder::getRefundTime, LocalDateTime.now())
+        );
+
+        // 记录状态日志
+        OrderLogRecorder.record(orderLogMapper, order.getId(), order.getOrderNo(), OrderStatusEnum.REFUNDING.getCode(),
+                OrderStatusEnum.REFUNDED.getCode(),
+                "退款成功", null, OPERATOR_TYPE_MERCHANT, dto.getAuditNote());
+
+        log.info("退款审核通过: refundNo={}", refundOrder.getRefundNo());
+    }
+
+    /**
+     * 拒绝退款
+     * <p>
+     * 退款单置为"已拒绝"，订单状态回退为"待发货"，并记录状态日志。
+     * </p>
+     *
+     * @param dto           审核参数
+     * @param refundOrder   退款单
+     * @param currentStatus 退款单当前状态
+     * @param order         关联订单
+     */
+    private void rejectRefund(RefundAuditDTO dto, RefundOrder refundOrder,
+                              RefundStatusEnum currentStatus, OrderInfo order) {
+        // 校验退款状态转换：待审核 → 已拒绝
+        RefundStatusEnum.checkTransit(currentStatus, RefundStatusEnum.REJECTED, "拒绝退款");
+
+        // 乐观锁更新退款单状态为"已拒绝"
+        int updated = refundOrderMapper.update(null,
+                new LambdaUpdateWrapper<RefundOrder>()
+                        .eq(RefundOrder::getId, dto.getRefundId())
+                        .eq(RefundOrder::getStatus, RefundStatusEnum.PENDING.getCode())
+                        .set(RefundOrder::getStatus, RefundStatusEnum.REJECTED.getCode())
+                        .set(RefundOrder::getAuditNote, dto.getAuditNote())
+                        .set(RefundOrder::getAuditTime, LocalDateTime.now())
+        );
+        if (updated == 0) {
+            throw new BusinessException(ErrorCode.ORDER_STATUS_ERROR.getCode(), "审核失败，退款单状态已变更");
+        }
+
+        // 乐观锁恢复订单状态为"待发货"
+        orderInfoMapper.update(null,
+                new LambdaUpdateWrapper<OrderInfo>()
+                        .eq(OrderInfo::getId, order.getId())
+                        .eq(OrderInfo::getStatus, OrderStatusEnum.REFUNDING.getCode())
+                        .set(OrderInfo::getStatus, OrderStatusEnum.PAID.getCode())
+        );
+
+        // 记录状态日志
+        OrderLogRecorder.record(orderLogMapper, order.getId(), order.getOrderNo(), OrderStatusEnum.REFUNDING.getCode(),
+                OrderStatusEnum.PAID.getCode(),
+                "退款被拒绝", null, OPERATOR_TYPE_MERCHANT, dto.getAuditNote());
+
+        log.info("退款审核拒绝: refundNo={}", refundOrder.getRefundNo());
     }
 
     /**
@@ -293,32 +324,6 @@ public class RefundServiceImpl implements RefundService {
                         orderItem.getSkuId(), orderItem.getQuantity(), e);
             }
         }
-    }
-
-    /**
-     * 保存订单状态日志
-     *
-     * @param orderId      订单ID
-     * @param orderNo      订单号
-     * @param fromStatus   变化前状态
-     * @param toStatus     变化后状态
-     * @param action       操作类型
-     * @param operatorId   操作人ID
-     * @param operatorType 操作人类型
-     * @param note         备注
-     */
-    private void saveOrderLog(Long orderId, String orderNo, Integer fromStatus, Integer toStatus,
-                              String action, Long operatorId, Integer operatorType, String note) {
-        com.shop.model.order.entity.OrderLog orderLog = new com.shop.model.order.entity.OrderLog();
-        orderLog.setOrderId(orderId);
-        orderLog.setOrderNo(orderNo);
-        orderLog.setFromStatus(fromStatus);
-        orderLog.setToStatus(toStatus);
-        orderLog.setAction(action);
-        orderLog.setOperatorId(operatorId);
-        orderLog.setOperatorType(operatorType);
-        orderLog.setNote(note);
-        orderLogMapper.insert(orderLog);
     }
 
     /**

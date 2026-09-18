@@ -14,6 +14,7 @@ import com.shop.admin.service.AdminLoginLogService;
 import com.shop.admin.service.AdminSecurityEventService;
 import com.shop.common.exception.BusinessException;
 import com.shop.common.result.ErrorCode;
+import com.shop.common.util.IpUtils;
 import com.shop.model.admin.dto.AdminLoginDTO;
 import com.shop.model.admin.entity.AdminPermission;
 import com.shop.model.admin.entity.AdminRole;
@@ -146,6 +147,8 @@ public class AdminAuthServiceImpl implements AdminAuthService {
      */
     @Override
     public AdminLoginVO login(AdminLoginDTO dto) {
+        String clientIp = IpUtils.getClientIp();
+
         // ========== 第1步：校验验证码 ==========
         validateCaptcha(dto.getCaptchaKey(), dto.getCaptchaCode());
 
@@ -157,39 +160,21 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         // 管理员不存在时，不透露是用户名还是密码错误，防止攻击者枚举用户名
         if (adminUser == null) {
             // 即使管理员不存在，也记录登录日志（安全审计需要）
-            adminLoginLogService.recordLoginLog(dto.getUsername(), getClientIp(), null, null, false, "用户名或密码错误");
-            throw new BusinessException(ErrorCode.ADMIN_PASSWORD_ERROR);
+            throw rejectLogin(dto.getUsername(), clientIp, "用户名或密码错误", ErrorCode.ADMIN_PASSWORD_ERROR);
         }
 
         String failKey = LOGIN_FAIL_KEY_PREFIX + dto.getUsername();
 
         // ========== 第3步：检查账号是否被锁定 ==========
         // 从Redis获取登录失败次数，如果超过5次就锁定
-        String failCountStr = redisTemplate.opsForValue().get(failKey);
-        if (failCountStr != null && Integer.parseInt(failCountStr) >= MAX_LOGIN_FAIL_COUNT) {
-            adminLoginLogService.recordLoginLog(dto.getUsername(), getClientIp(), null, null, false, "账号已锁定");
-            throw new BusinessException(ErrorCode.ADMIN_LOGIN_LOCKED);
+        if (isLoginLocked(failKey)) {
+            throw rejectLogin(dto.getUsername(), clientIp, "账号已锁定", ErrorCode.ADMIN_LOGIN_LOCKED);
         }
 
         // ========== 第4步：校验密码 ==========
         if (!BCrypt.checkpw(dto.getPassword(), adminUser.getPassword())) {
-            // 密码错误：增加失败计数
-            incrementLoginFailCount(failKey);
-
-            // 如果失败次数达到上限，记录安全事件
-            String updatedFailCountStr = redisTemplate.opsForValue().get(failKey);
-            if (updatedFailCountStr != null && Integer.parseInt(updatedFailCountStr) >= MAX_LOGIN_FAIL_COUNT) {
-                adminSecurityEventService.recordSecurityEvent(
-                        "BRUTE_FORCE",
-                        adminUser.getId(),
-                        adminUser.getUsername(),
-                        "连续" + MAX_LOGIN_FAIL_COUNT + "次登录失败，账号已锁定30分钟",
-                        getClientIp()
-                );
-            }
-
-            adminLoginLogService.recordLoginLog(dto.getUsername(), getClientIp(), null, null, false, "用户名或密码错误");
-            throw new BusinessException(ErrorCode.ADMIN_PASSWORD_ERROR);
+            recordPasswordFailure(adminUser, failKey, clientIp);
+            throw rejectLogin(dto.getUsername(), clientIp, "用户名或密码错误", ErrorCode.ADMIN_PASSWORD_ERROR);
         }
 
         // 密码正确：清除失败计数
@@ -198,8 +183,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         // ========== 第5步：检查账号状态 ==========
         // status: 0禁用 1正常
         if (adminUser.getStatus() != 1) {
-            adminLoginLogService.recordLoginLog(dto.getUsername(), getClientIp(), null, null, false, "账号已被禁用");
-            throw new BusinessException(ErrorCode.ADMIN_DISABLED);
+            throw rejectLogin(dto.getUsername(), clientIp, "账号已被禁用", ErrorCode.ADMIN_DISABLED);
         }
 
         // ========== 第6步：Sa-Token登录 ==========
@@ -214,14 +198,76 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         Set<String> roles = getAdminRoles(adminUser.getId());
 
         // ========== 第8步：更新最后登录IP和时间 ==========
-        adminUser.setLastLoginIp(getClientIp());
+        adminUser.setLastLoginIp(clientIp);
         adminUser.setLastLoginTime(LocalDateTime.now());
         adminUserMapper.updateById(adminUser);
 
         // ========== 第9步：记录登录日志 ==========
-        adminLoginLogService.recordLoginLog(dto.getUsername(), getClientIp(), null, null, true, null);
+        adminLoginLogService.recordLoginLog(dto.getUsername(), clientIp, null, null, true, null);
 
         // ========== 第10步：返回登录结果 ==========
+        log.info("管理员登录成功，管理员ID：{}，用户名：{}", adminUser.getId(), adminUser.getUsername());
+        return buildLoginVO(adminUser, permissions, roles);
+    }
+
+    /**
+     * 判断账号是否因连续登录失败被锁定
+     *
+     * @param failKey 登录失败次数的Redis Key
+     * @return true表示失败次数已达上限，账号已锁定
+     */
+    private boolean isLoginLocked(String failKey) {
+        String failCountStr = redisTemplate.opsForValue().get(failKey);
+        return failCountStr != null && Integer.parseInt(failCountStr) >= MAX_LOGIN_FAIL_COUNT;
+    }
+
+    /**
+     * 密码校验失败后的处理：累加失败次数，达到上限时记录暴力破解安全事件
+     *
+     * @param adminUser 登录的管理员
+     * @param failKey   登录失败次数的Redis Key
+     * @param clientIp  客户端IP
+     */
+    private void recordPasswordFailure(AdminUser adminUser, String failKey, String clientIp) {
+        // 密码错误：增加失败计数
+        incrementLoginFailCount(failKey);
+
+        // 如果失败次数达到上限，记录安全事件
+        String updatedFailCountStr = redisTemplate.opsForValue().get(failKey);
+        if (updatedFailCountStr != null && Integer.parseInt(updatedFailCountStr) >= MAX_LOGIN_FAIL_COUNT) {
+            adminSecurityEventService.recordSecurityEvent(
+                    "BRUTE_FORCE",
+                    adminUser.getId(),
+                    adminUser.getUsername(),
+                    "连续" + MAX_LOGIN_FAIL_COUNT + "次登录失败，账号已锁定30分钟",
+                    clientIp
+            );
+        }
+    }
+
+    /**
+     * 记录登录失败日志并构造要抛出的业务异常
+     *
+     * @param username   登录用户名
+     * @param clientIp   客户端IP
+     * @param failReason 失败原因（写入登录日志）
+     * @param errorCode  返回给前端的错误码
+     * @return 业务异常（由调用方 throw 抛出）
+     */
+    private BusinessException rejectLogin(String username, String clientIp, String failReason, ErrorCode errorCode) {
+        adminLoginLogService.recordLoginLog(username, clientIp, null, null, false, failReason);
+        return new BusinessException(errorCode);
+    }
+
+    /**
+     * 组装登录成功响应
+     *
+     * @param adminUser   管理员实体
+     * @param permissions 管理员权限标识集合
+     * @param roles       管理员角色标识集合
+     * @return 登录响应数据
+     */
+    private AdminLoginVO buildLoginVO(AdminUser adminUser, Set<String> permissions, Set<String> roles) {
         AdminLoginVO vo = new AdminLoginVO();
         vo.setToken(StpUtil.getTokenValue());
         vo.setAdminUserId(adminUser.getId());
@@ -230,8 +276,6 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         vo.setAvatar(adminUser.getAvatar());
         vo.setPermissions(permissions);
         vo.setRoles(roles);
-
-        log.info("管理员登录成功，管理员ID：{}，用户名：{}", adminUser.getId(), adminUser.getUsername());
         return vo;
     }
 
@@ -393,31 +437,5 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         return roles.stream()
                 .map(AdminRole::getRoleKey)
                 .collect(Collectors.toSet());
-    }
-
-    /**
-     * 获取客户端IP地址
-     * <p>
-     * 优先从代理头中获取真实IP（因为可能经过了Nginx等反向代理），
-     * 如果没有代理头，就从RemoteAddr获取。
-     * </p>
-     *
-     * @return 客户端IP地址
-     */
-    private String getClientIp() {
-        // 从HttpServletRequest中获取客户端IP，优先从代理头中获取真实IP
-        jakarta.servlet.http.HttpServletRequest request = ((org.springframework.web.context.request.ServletRequestAttributes)
-                org.springframework.web.context.request.RequestContextHolder.getRequestAttributes()).getRequest();
-        String ip = request.getHeader("X-Forwarded-For");
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getHeader("X-Real-IP");
-        }
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getRemoteAddr();
-        }
-        if (ip != null && ip.contains(",")) {
-            ip = ip.split(",")[0].trim();
-        }
-        return ip;
     }
 }

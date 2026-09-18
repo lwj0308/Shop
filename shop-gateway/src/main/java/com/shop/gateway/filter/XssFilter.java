@@ -77,13 +77,13 @@ public class XssFilter implements GlobalFilter, Ordered {
         // 检查查询参数
         if (query != null && containsXss(query)) {
             log.warn("XSS攻击检测！路径：{}，查询参数：{}，来源IP：{}",
-                    path, truncateForLog(query), getClientIp(request));
+                    path, truncateForLog(query), GatewayIpUtils.getClientIp(request));
             return ResponseUtil.writeForbiddenResponse(exchange, "请求包含非法字符");
         }
 
         // 检查路径
         if (containsXss(path)) {
-            log.warn("XSS攻击检测！路径：{}，来源IP：{}", path, getClientIp(request));
+            log.warn("XSS攻击检测！路径：{}，来源IP：{}", path, GatewayIpUtils.getClientIp(request));
             return ResponseUtil.writeForbiddenResponse(exchange, "请求路径包含非法字符");
         }
 
@@ -115,25 +115,6 @@ public class XssFilter implements GlobalFilter, Ordered {
             return value;
         }
         return value.substring(0, 200) + "...";
-    }
-
-    /**
-     * 获取客户端IP地址
-     *
-     * @param request HTTP请求对象
-     * @return 客户端IP地址
-     */
-    private String getClientIp(ServerHttpRequest request) {
-        String ip = request.getHeaders().getFirst("X-Forwarded-For");
-        if (ip != null && !ip.isEmpty()) {
-            return ip.split(",")[0].trim();
-        }
-        ip = request.getHeaders().getFirst("X-Real-IP");
-        if (ip != null && !ip.isEmpty()) {
-            return ip;
-        }
-        return request.getRemoteAddress() != null
-                ? request.getRemoteAddress().getAddress().getHostAddress() : "unknown";
     }
 
     /**

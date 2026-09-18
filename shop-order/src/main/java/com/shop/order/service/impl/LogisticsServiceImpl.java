@@ -9,7 +9,6 @@ import com.shop.model.notification.enums.NotificationTypeEnum;
 import com.shop.model.notification.enums.ReceiverTypeEnum;
 import com.shop.model.order.dto.DeliveryDTO;
 import com.shop.model.order.entity.OrderInfo;
-import com.shop.model.order.entity.OrderLog;
 import com.shop.model.order.entity.OrderLogistics;
 import com.shop.model.order.enums.OrderStatusEnum;
 import com.shop.model.order.vo.OrderDetailVO;
@@ -18,6 +17,7 @@ import com.shop.order.mapper.OrderInfoMapper;
 import com.shop.order.mapper.OrderLogMapper;
 import com.shop.order.mapper.OrderLogisticsMapper;
 import com.shop.order.service.LogisticsService;
+import com.shop.order.util.OrderLogRecorder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -110,7 +110,7 @@ public class LogisticsServiceImpl implements LogisticsService {
         }
 
         // 记录状态日志
-        saveOrderLog(order.getId(), order.getOrderNo(), OrderStatusEnum.PAID.getCode(),
+        OrderLogRecorder.record(orderLogMapper, order.getId(), order.getOrderNo(), OrderStatusEnum.PAID.getCode(),
                 OrderStatusEnum.SHIPPING.getCode(),
                 "商家发货", null, OPERATOR_TYPE_MERCHANT, "快递公司: " + dto.getLogisticsCompany());
 
@@ -182,32 +182,5 @@ public class LogisticsServiceImpl implements LogisticsService {
 
         return vo;
     }
-
-    // ==================== 私有方法 ====================
-
-    /**
-     * 保存订单状态日志
-     *
-     * @param orderId      订单ID
-     * @param orderNo      订单号
-     * @param fromStatus   变化前状态
-     * @param toStatus     变化后状态
-     * @param action       操作类型
-     * @param operatorId   操作人ID
-     * @param operatorType 操作人类型
-     * @param note         备注
-     */
-    private void saveOrderLog(Long orderId, String orderNo, Integer fromStatus, Integer toStatus,
-                              String action, Long operatorId, Integer operatorType, String note) {
-        OrderLog orderLog = new OrderLog();
-        orderLog.setOrderId(orderId);
-        orderLog.setOrderNo(orderNo);
-        orderLog.setFromStatus(fromStatus);
-        orderLog.setToStatus(toStatus);
-        orderLog.setAction(action);
-        orderLog.setOperatorId(operatorId);
-        orderLog.setOperatorType(operatorType);
-        orderLog.setNote(note);
-        orderLogMapper.insert(orderLog);
-    }
 }
+

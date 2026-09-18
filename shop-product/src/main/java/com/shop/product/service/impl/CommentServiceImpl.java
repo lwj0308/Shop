@@ -216,10 +216,7 @@ public class CommentServiceImpl implements CommentService {
             return vo;
         }).collect(Collectors.toList());
 
-        PageResult<CommentVO> pageResult = new PageResult<>();
-        pageResult.setRecords(voList);
-        pageResult.setPagination(result.getTotal(), pageRequest.getPageNum(), pageRequest.getPageSize());
-        return pageResult;
+        return PageResult.from(result, voList);
     }
 
     /**
@@ -240,10 +237,7 @@ public class CommentServiceImpl implements CommentService {
                 .map(this::convertToVOWithProduct)
                 .collect(Collectors.toList());
 
-        PageResult<CommentVO> pageResult = new PageResult<>();
-        pageResult.setRecords(voList);
-        pageResult.setPagination(result.getTotal(), pageRequest.getPageNum(), pageRequest.getPageSize());
-        return pageResult;
+        return PageResult.from(result, voList);
     }
 
     /**
@@ -414,10 +408,7 @@ public class CommentServiceImpl implements CommentService {
             return vo;
         }).collect(Collectors.toList());
 
-        PageResult<CommentVO> pageResult = new PageResult<>();
-        pageResult.setRecords(voList);
-        pageResult.setPagination(result.getTotal(), pageRequest.getPageNum(), pageRequest.getPageSize());
-        return pageResult;
+        return PageResult.from(result, voList);
     }
 
     /**

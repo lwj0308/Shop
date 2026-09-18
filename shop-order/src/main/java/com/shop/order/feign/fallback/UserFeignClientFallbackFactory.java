@@ -1,7 +1,6 @@
 package com.shop.order.feign.fallback;
 
 import com.shop.common.result.Result;
-import com.shop.model.user.vo.AddressVO;
 import com.shop.order.feign.UserFeignClient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.openfeign.FallbackFactory;

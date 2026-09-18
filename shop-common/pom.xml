@@ -50,6 +50,14 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- MyBatis-Plus 分页插件（3.5.9+需要单独引入jsqlparser模块）：MyBatisPlusSupport构建PaginationInnerInterceptor需要 -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-jsqlparser</artifactId>
+            <version>${mybatis-plus.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- Sa-Token：SecurityUtils中用来获取登录用户信息 -->
         <dependency>
             <groupId>cn.dev33</groupId>

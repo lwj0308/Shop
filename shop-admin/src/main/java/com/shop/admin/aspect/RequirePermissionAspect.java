@@ -6,6 +6,7 @@ import com.shop.admin.annotation.RequirePermission;
 import com.shop.admin.service.AdminSecurityEventService;
 import com.shop.common.exception.BusinessException;
 import com.shop.common.result.ErrorCode;
+import com.shop.common.util.IpUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -92,7 +93,7 @@ public class RequirePermissionAspect {
         // 权限校验不通过，记录安全事件并抛出异常
         if (!hasPermission) {
             // 获取客户端IP地址
-            String ip = com.shop.admin.util.IpUtils.getClientIp();
+            String ip = IpUtils.getClientIp();
 
             // 获取当前管理员的用户名（Sa-Token中loginId就是userId，用userId当标识）
             String username = String.valueOf(userId);

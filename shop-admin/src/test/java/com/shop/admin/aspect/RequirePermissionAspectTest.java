@@ -5,7 +5,7 @@ import cn.dev33.satoken.stp.StpUtil;
 import com.shop.admin.annotation.Logical;
 import com.shop.admin.annotation.RequirePermission;
 import com.shop.admin.service.AdminSecurityEventService;
-import com.shop.admin.util.IpUtils;
+import com.shop.common.util.IpUtils;
 import com.shop.common.exception.BusinessException;
 import com.shop.common.result.ErrorCode;
 import org.aspectj.lang.ProceedingJoinPoint;

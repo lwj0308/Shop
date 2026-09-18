@@ -19,14 +19,13 @@ import com.shop.model.product.vo.ProductVO;
 import com.shop.product.feign.MerchantFeignClient;
 import com.shop.product.mapper.*;
 import com.shop.product.service.ProductCacheService;
-import com.shop.common.result.Result;
-import com.shop.model.merchant.vo.ShopVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -85,17 +84,13 @@ public class ProductCacheServiceImpl implements ProductCacheService {
     private final MerchantFeignClient merchantFeignClient;
 
     /**
-     * shopId → merchantId 本地缓存（N-P 性能测试整改）
+     * shopId → merchantId 本地缓存查询器（N-P 性能测试整改）
      * <p>
      * 避免每次查商品详情都通过 Feign 调用商家服务，缓存命中后直接返回 merchantId。
-     * 缓存策略：最多 500 个店铺，写入 30 分钟后过期（店铺归属变更极少）。
+     * 与 ProductServiceImpl 共用同一份实现，缓存配置见 {@link MerchantIdCache}。
      * </p>
      */
-    private final Cache<Long, Long> shopIdToMerchantIdCache = Caffeine.newBuilder()
-            .maximumSize(500)
-            .expireAfterWrite(30, TimeUnit.MINUTES)
-            .recordStats()
-            .build();
+    private final MerchantIdCache merchantIdCache = new MerchantIdCache();
 
     /** 商品详情Redis缓存key前缀 */
     private static final String PRODUCT_DETAIL_CACHE_KEY = "product:detail:";
@@ -325,6 +320,29 @@ public class ProductCacheServiceImpl implements ProductCacheService {
             return null;
         }
 
+        ProductDetailVO detailVO = buildDetailFromProduct(product);
+        fillCategoryAndBrandName(detailVO, product);
+
+        // 查询SKU列表
+        List<ProductSku> skus = productSkuMapper.selectList(
+                new LambdaQueryWrapper<ProductSku>().eq(ProductSku::getProductId, productId)
+        );
+        detailVO.setSkus(skus.stream().map(this::convertSkuToVO).collect(Collectors.toList()));
+        fillSkuSummary(detailVO, skus);
+
+        detailVO.setSpecs(buildSpecList(productId, skus));
+        detailVO.setCommentSummary(buildCommentSummary(productId));
+
+        return detailVO;
+    }
+
+    /**
+     * 商品SPU实体转详情VO（不含分类名、品牌名、SKU、规格、评价等附加信息）
+     *
+     * @param product 商品SPU实体
+     * @return 只填了SPU字段的详情VO
+     */
+    private ProductDetailVO buildDetailFromProduct(Product product) {
         ProductDetailVO detailVO = new ProductDetailVO();
         detailVO.setId(product.getId());
         detailVO.setCategoryId(product.getCategoryId());
@@ -337,7 +355,16 @@ public class ProductCacheServiceImpl implements ProductCacheService {
         detailVO.setDetail(product.getDetail());
         detailVO.setStatus(product.getStatus());
         detailVO.setCreateTime(product.getCreateTime());
+        return detailVO;
+    }
 
+    /**
+     * 查询并填充分类名称、品牌名称
+     *
+     * @param detailVO 待填充的详情VO
+     * @param product  商品SPU实体
+     */
+    private void fillCategoryAndBrandName(ProductDetailVO detailVO, Product product) {
         // 查询分类名称
         Category category = categoryMapper.selectById(product.getCategoryId());
         if (category != null) {
@@ -351,26 +378,39 @@ public class ProductCacheServiceImpl implements ProductCacheService {
                 detailVO.setBrandName(brand.getName());
             }
         }
+    }
 
-        // 查询SKU列表
-        List<ProductSku> skus = productSkuMapper.selectList(
-                new LambdaQueryWrapper<ProductSku>().eq(ProductSku::getProductId, productId)
-        );
-        List<ProductSkuVO> skuVOS = skus.stream().map(this::convertSkuToVO).collect(Collectors.toList());
-        detailVO.setSkus(skuVOS);
-
-        // 计算最低价格和总库存
-        if (!skus.isEmpty()) {
-            BigDecimal minPrice = skus.stream()
-                    .map(ProductSku::getPrice)
-                    .min(BigDecimal::compareTo)
-                    .orElse(BigDecimal.ZERO);
-            int totalStock = skus.stream().mapToInt(ProductSku::getStock).sum();
-            detailVO.setMinPrice(minPrice);
-            detailVO.setTotalStock(totalStock);
+    /**
+     * 根据SKU列表计算最低价格和总库存
+     *
+     * @param detailVO 待填充的详情VO
+     * @param skus     SKU列表
+     */
+    private void fillSkuSummary(ProductDetailVO detailVO, List<ProductSku> skus) {
+        if (skus.isEmpty()) {
+            return;
         }
+        BigDecimal minPrice = skus.stream()
+                .map(ProductSku::getPrice)
+                .min(BigDecimal::compareTo)
+                .orElse(BigDecimal.ZERO);
+        int totalStock = skus.stream().mapToInt(ProductSku::getStock).sum();
+        detailVO.setMinPrice(minPrice);
+        detailVO.setTotalStock(totalStock);
+    }
 
-        // 查询规格列表（从product_spec表查询）
+    /**
+     * 查询商品规格列表
+     * <p>
+     * 优先取product_spec表的记录；如果表里没有记录但SKU带规格数据，
+     * 则从SKU的specValues中动态生成规格列表，保证前端规格选择器能正常显示。
+     * </p>
+     *
+     * @param productId 商品ID
+     * @param skus      该商品的SKU列表
+     * @return 规格VO列表
+     */
+    private List<ProductVO.SpecVO> buildSpecList(Long productId, List<ProductSku> skus) {
         List<ProductSpec> specs = productSpecMapper.selectList(
                 new LambdaQueryWrapper<ProductSpec>().eq(ProductSpec::getProductId, productId)
         );
@@ -385,31 +425,45 @@ public class ProductCacheServiceImpl implements ProductCacheService {
             specVOS.add(specVO);
         }
 
-        // 如果product_spec表没有记录，但SKU有规格数据，则从SKU的specValues中动态生成规格列表
-        // 这样即使product_spec表缺少数据，前端也能正常显示规格选择器
         if (specVOS.isEmpty() && !skus.isEmpty()) {
-            // 用LinkedHashMap保持规格顺序，key是规格名（如"颜色"），value是规格值集合（如["红色","蓝色"]）
-            Map<String, LinkedHashSet<String>> specMap = new LinkedHashMap<>();
-            for (ProductSku sku : skus) {
-                Map<String, String> specValues = sku.getSpecValues();
-                if (specValues != null) {
-                    for (Map.Entry<String, String> entry : specValues.entrySet()) {
-                        // computeIfAbsent：如果key不存在就新建一个LinkedHashSet，然后把value加进去
-                        specMap.computeIfAbsent(entry.getKey(), k -> new LinkedHashSet<>()).add(entry.getValue());
-                    }
-                }
-            }
-            // 把收集到的规格数据转换成SpecVO列表
-            for (Map.Entry<String, LinkedHashSet<String>> entry : specMap.entrySet()) {
-                ProductVO.SpecVO specVO = new ProductVO.SpecVO();
-                specVO.setName(entry.getKey());
-                specVO.setValues(new ArrayList<>(entry.getValue()));
-                specVOS.add(specVO);
+            appendSpecsFromSkuValues(specVOS, skus);
+        }
+        return specVOS;
+    }
+
+    /**
+     * 从SKU的规格值中动态收集规格模板并追加到列表
+     *
+     * @param specVOS 规格VO列表（收集结果追加到这里）
+     * @param skus    SKU列表
+     */
+    private void appendSpecsFromSkuValues(List<ProductVO.SpecVO> specVOS, List<ProductSku> skus) {
+        // 用LinkedHashMap保持规格顺序，key是规格名（如"颜色"），value是规格值集合（如["红色","蓝色"]）
+        Map<String, LinkedHashSet<String>> specMap = new LinkedHashMap<>();
+        for (ProductSku sku : skus) {
+            Map<String, String> specValues = sku.getSpecValues();
+            if (specValues != null) {
+                // computeIfAbsent：如果key不存在就新建一个LinkedHashSet，然后把value加进去
+                specValues.forEach((name, value) ->
+                        specMap.computeIfAbsent(name, k -> new LinkedHashSet<>()).add(value));
             }
         }
-        detailVO.setSpecs(specVOS);
+        // 把收集到的规格数据转换成SpecVO列表
+        for (Map.Entry<String, LinkedHashSet<String>> entry : specMap.entrySet()) {
+            ProductVO.SpecVO specVO = new ProductVO.SpecVO();
+            specVO.setName(entry.getKey());
+            specVO.setValues(new ArrayList<>(entry.getValue()));
+            specVOS.add(specVO);
+        }
+    }
 
-        // 查询评价摘要
+    /**
+     * 查询商品评价摘要（总条数、平均分、好评率）
+     *
+     * @param productId 商品ID
+     * @return 评价摘要
+     */
+    private ProductDetailVO.CommentSummary buildCommentSummary(Long productId) {
         ProductDetailVO.CommentSummary commentSummary = new ProductDetailVO.CommentSummary();
         Long totalCount = productCommentMapper.selectCount(
                 new LambdaQueryWrapper<ProductComment>().eq(ProductComment::getProductId, productId)
@@ -421,18 +475,16 @@ public class ProductCacheServiceImpl implements ProductCacheService {
                     new LambdaQueryWrapper<ProductComment>().eq(ProductComment::getProductId, productId)
             );
             double avgScore = comments.stream().mapToInt(ProductComment::getScore).average().orElse(5.0);
-            commentSummary.setAvgScore(BigDecimal.valueOf(avgScore).setScale(1, BigDecimal.ROUND_HALF_UP));
+            commentSummary.setAvgScore(BigDecimal.valueOf(avgScore).setScale(1, RoundingMode.HALF_UP));
 
             long goodCount = comments.stream().filter(c -> c.getScore() >= 4).count();
             double goodRate = (double) goodCount / totalCount * 100;
-            commentSummary.setGoodRate(BigDecimal.valueOf(goodRate).setScale(1, BigDecimal.ROUND_HALF_UP));
+            commentSummary.setGoodRate(BigDecimal.valueOf(goodRate).setScale(1, RoundingMode.HALF_UP));
         } else {
             commentSummary.setAvgScore(BigDecimal.valueOf(5.0));
             commentSummary.setGoodRate(BigDecimal.valueOf(100.0));
         }
-        detailVO.setCommentSummary(commentSummary);
-
-        return detailVO;
+        return commentSummary;
     }
 
     /**
@@ -449,60 +501,7 @@ public class ProductCacheServiceImpl implements ProductCacheService {
         vo.setImage(sku.getImage());
         vo.setStatus(sku.getStatus());
         // N-P 性能测试整改：查询并设置 merchantId（带 Caffeine 本地缓存，避免每次 Feign 调用）
-        vo.setMerchantId(queryMerchantIdByProductId(sku.getProductId()));
+        vo.setMerchantId(merchantIdCache.resolve(sku.getProductId(), productMapper, merchantFeignClient));
         return vo;
-    }
-
-    /**
-     * 根据商品ID查询商家ID（带 Caffeine 本地缓存优化）
-     * <p>
-     * N-P 性能测试整改：原 convertSkuToVO 未设置 merchantId，导致商品详情接口返回的 SKU 中
-     * merchantId 始终为 null。此方法与 ProductServiceImpl 中的实现保持一致：
-     * 1. 查商品 SPU 拿 shopId
-     * 2. 先查 Caffeine 缓存（命中率 >99%）
-     * 3. 缓存未命中走 Feign 调用商家服务，结果写入缓存
-     * 4. 任何异常降级返回 null，不阻塞主流程
-     * </p>
-     *
-     * @param productId 商品ID
-     * @return 商家ID，查询失败返回 null
-     */
-    private Long queryMerchantIdByProductId(Long productId) {
-        try {
-            // 1. 先查出商品SPU，拿到店铺ID
-            Product product = productMapper.selectById(productId);
-            if (product == null || product.getShopId() == null) {
-                log.warn("查询merchantId失败：商品或店铺ID为空, productId={}", productId);
-                return null;
-            }
-
-            Long shopId = product.getShopId();
-
-            // 2. 先查本地缓存（命中率 >99%，命中直接返回，不发起远程调用）
-            Long cachedMerchantId = shopIdToMerchantIdCache.getIfPresent(shopId);
-            if (cachedMerchantId != null) {
-                log.debug("shopId→merchantId 缓存命中: shopId={}, merchantId={}", shopId, cachedMerchantId);
-                return cachedMerchantId;
-            }
-
-            // 3. 缓存未命中，通过Feign调用商家服务查询店铺信息
-            Result<ShopVO> shopResult = merchantFeignClient.getShopById(shopId);
-            if (shopResult == null || !shopResult.isSuccess() || shopResult.getData() == null) {
-                log.warn("查询merchantId失败：店铺信息为空, shopId={}", shopId);
-                return null;
-            }
-
-            // 4. 取出merchantId并写入缓存
-            Long merchantId = shopResult.getData().getMerchantId();
-            if (merchantId != null) {
-                shopIdToMerchantIdCache.put(shopId, merchantId);
-                log.debug("shopId→merchantId 缓存写入: shopId={}, merchantId={}", shopId, merchantId);
-            }
-
-            return merchantId;
-        } catch (Exception e) {
-            log.warn("查询merchantId异常，不影响主流程: productId={}", productId, e);
-            return null;
-        }
     }
 }

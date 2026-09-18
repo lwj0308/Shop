@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.shop.common.result.Result;
 import com.shop.model.order.entity.OrderInfo;
 import com.shop.model.order.entity.OrderItem;
-import com.shop.model.order.entity.OrderLog;
 import com.shop.model.order.enums.OrderStatusEnum;
 import com.shop.model.order.enums.OrderTypeEnum;
 import com.shop.model.seckill.dto.SeckillOrderDTO;
@@ -14,6 +13,8 @@ import com.shop.order.feign.SeckillFeignClient;
 import com.shop.order.mapper.OrderInfoMapper;
 import com.shop.order.mapper.OrderItemMapper;
 import com.shop.order.mapper.OrderLogMapper;
+import com.shop.order.util.OrderLogRecorder;
+import com.shop.order.util.SeckillStockHelper;
 import com.shop.order.util.OrderNoGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -86,9 +87,6 @@ public class SeckillOrderConsumer implements RocketMQListener<SeckillOrderDTO> {
     /** 超时自动取消延时消息Topic（复用普通订单的超时取消机制） */
     private static final String TOPIC_ORDER_TIMEOUT = "topic_order_timeout";
 
-    /** Redis秒杀库存key前缀 */
-    private static final String STOCK_KEY_PREFIX = "seckill:stock:";
-
     /** 操作人类型：3系统（秒杀订单由系统自动创建） */
     private static final int OPERATOR_TYPE_SYSTEM = 3;
 
@@ -142,7 +140,7 @@ public class SeckillOrderConsumer implements RocketMQListener<SeckillOrderDTO> {
             // 需要把这1个库存加回去，否则库存数量会对不上
             // 注意：Redis操作不受@Transactional影响，回滚本地数据库后Redis库存依然需要手动回退
             log.error("秒杀订单创建失败，回退Redis库存: seckillId={}, userId={}", seckillId, userId, e);
-            rollbackRedisStock(seckillId);
+            SeckillStockHelper.rollbackRedisStock(stringRedisTemplate, seckillId);
             // 抛出异常让RocketMQ重试（重试时幂等校验会拦截重复创建）
             throw new RuntimeException("秒杀订单创建失败: " + e.getMessage(), e);
         }
@@ -219,7 +217,7 @@ public class SeckillOrderConsumer implements RocketMQListener<SeckillOrderDTO> {
 
         // ========== 5. 记录订单状态日志（提前到扣库存之前） ==========
         // 小白讲解：日志先写好，这样扣库存失败时事务回滚，日志也会回滚，不会留下脏数据
-        saveOrderLog(orderId, orderNo, null, OrderStatusEnum.UNPAID.getCode(),
+        OrderLogRecorder.record(orderLogMapper, orderId, orderNo, null, OrderStatusEnum.UNPAID.getCode(),
                 "秒杀下单", userId, OPERATOR_TYPE_SYSTEM, "秒杀活动ID: " + seckillId);
 
         // ========== 6. 扣减商品库存（放最后，失败时事务回滚本地数据） ==========
@@ -260,54 +258,5 @@ public class SeckillOrderConsumer implements RocketMQListener<SeckillOrderDTO> {
             // 可以通过定时任务补偿（扫描超时未支付的秒杀订单）
             log.error("秒杀订单发送延时消息失败: orderNo={}，需要通过定时任务补偿", orderNo, e);
         }
-    }
-
-    /**
-     * 回退Redis秒杀库存
-     * <p>
-     * 订单创建失败时，把抢购时扣减的Redis秒杀库存加回去。
-     * 这样库存数量才能保持正确。
-     * </p>
-     *
-     * @param seckillId 秒杀活动ID
-     */
-    private void rollbackRedisStock(Long seckillId) {
-        try {
-            String stockKey = STOCK_KEY_PREFIX + seckillId;
-            stringRedisTemplate.opsForValue().increment(stockKey);
-            log.info("秒杀Redis库存回退成功: seckillId={}", seckillId);
-        } catch (Exception e) {
-            // 回退失败只能记录日志，后续可通过定时任务补偿
-            log.error("秒杀Redis库存回退失败，需要人工处理: seckillId={}", seckillId, e);
-        }
-    }
-
-    /**
-     * 保存订单状态日志
-     * <p>
-     * 记录订单状态变化，方便追溯订单生命周期。
-     * </p>
-     *
-     * @param orderId      订单ID
-     * @param orderNo      订单号
-     * @param fromStatus   变化前的状态
-     * @param toStatus     变化后的状态
-     * @param action       操作类型
-     * @param operatorId   操作人ID
-     * @param operatorType 操作人类型
-     * @param note         备注
-     */
-    private void saveOrderLog(Long orderId, String orderNo, Integer fromStatus, Integer toStatus,
-                              String action, Long operatorId, Integer operatorType, String note) {
-        OrderLog orderLog = new OrderLog();
-        orderLog.setOrderId(orderId);
-        orderLog.setOrderNo(orderNo);
-        orderLog.setFromStatus(fromStatus);
-        orderLog.setToStatus(toStatus);
-        orderLog.setAction(action);
-        orderLog.setOperatorId(operatorId);
-        orderLog.setOperatorType(operatorType);
-        orderLog.setNote(note);
-        orderLogMapper.insert(orderLog);
     }
 }

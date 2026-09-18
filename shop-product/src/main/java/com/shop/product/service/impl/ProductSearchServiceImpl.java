@@ -95,139 +95,15 @@ public class ProductSearchServiceImpl implements ProductSearchService {
                 recordHotKeyword(dto.getKeyword());
             }
 
-            // 构建bool查询
-            BoolQuery.Builder boolBuilder = new BoolQuery.Builder();
+            SearchResponse<Map> response = executeSearch(dto);
 
-            // 只搜索上架商品
-            boolBuilder.filter(f -> f.term(t -> t.field("status").value(1)));
-
-            // 关键词搜索（在name和subtitle中搜索）
-            // minimumShouldMatch=100%：要求所有分词都必须匹配，避免搜"手机"匹配到"空调机"
-            if (dto.getKeyword() != null && !dto.getKeyword().isBlank()) {
-                boolBuilder.must(m -> m.multiMatch(mm -> mm
-                        .fields("name", "subtitle")
-                        .query(dto.getKeyword())
-                        .minimumShouldMatch("100%")
-                ));
-            }
-
-            // 分类筛选
-            if (dto.getCategoryId() != null) {
-                boolBuilder.filter(f -> f.term(t -> t.field("categoryId").value(dto.getCategoryId())));
-            }
-
-            // 品牌筛选
-            if (dto.getBrandId() != null) {
-                boolBuilder.filter(f -> f.term(t -> t.field("brandId").value(dto.getBrandId())));
-            }
-
-            // 价格区间筛选
-            // ES 8.15+ 的 RangeQuery 需要指定类型（number/date/term），不能直接用 field()
-            if (dto.getMinPrice() != null || dto.getMaxPrice() != null) {
-                boolBuilder.filter(f -> f.range(r -> r
-                        .number(n -> {
-                            n.field("minPrice");
-                            if (dto.getMinPrice() != null) {
-                                n.gte(dto.getMinPrice().doubleValue());
-                            }
-                            if (dto.getMaxPrice() != null) {
-                                n.lte(dto.getMaxPrice().doubleValue());
-                            }
-                            return n;
-                        })
-                ));
-            }
-
-            // 构建搜索请求
-            var searchRequestBuilder = new co.elastic.clients.elasticsearch.core.SearchRequest.Builder()
-                    .index(INDEX_NAME)
-                    .query(q -> q.bool(boolBuilder.build()))
-                    .from((dto.getPageNum() - 1) * dto.getPageSize())
-                    .size(dto.getPageSize());
-
-            // 设置排序
-            String sortField = dto.getSortField();
-            if (sortField != null && !sortField.isBlank()) {
-                SortOrder sortOrder = "asc".equalsIgnoreCase(dto.getSortOrder()) ? SortOrder.Asc : SortOrder.Desc;
-                searchRequestBuilder.sort(s -> s.field(f -> f.field(sortField).order(sortOrder)));
-            } else {
-                // 默认按相关度排序
-                searchRequestBuilder.sort(s -> s.field(f -> f.field("_score").order(SortOrder.Desc)));
-            }
-
-            // 设置高亮（搜索关键词用<em>标签包裹）
-            searchRequestBuilder.highlight(h -> h
-                    .fields("name", HighlightField.of(hf -> hf
-                            .preTags("<em>")
-                            .postTags("</em>")
-                    ))
-                    .fields("subtitle", HighlightField.of(hf -> hf
-                            .preTags("<em>")
-                            .postTags("</em>")
-                    ))
-            );
-
-            // 设置聚合（品牌聚合 + 分类聚合）
-            searchRequestBuilder.aggregations("brand_agg", Aggregation.of(a -> a
-                    .terms(t -> t.field("brandId").size(20))
-            ));
-            searchRequestBuilder.aggregations("category_agg", Aggregation.of(a -> a
-                    .terms(t -> t.field("categoryId").size(20))
-            ));
-
-            // 执行搜索
-            // ES 8.x Java Client 中 SearchRequest 没有 execute() 方法，需要用 esClient.search() 执行
-            SearchResponse<Map> response = esClient.search(searchRequestBuilder.build(), Map.class);
-
-            // 解析结果
-            List<ProductSearchVO> records = new ArrayList<>();
-            // 收集需要合并实时数据的SKU ID列表
-            List<Long> productIds = new ArrayList<>();
-
-            for (Hit<Map> hit : response.hits().hits()) {
-                ProductSearchVO vo = new ProductSearchVO();
-                Map<String, Object> source = hit.source();
-                if (source != null) {
-                    vo.setId(toLong(source.get("id")));
-                    vo.setName(toString(source.get("name")));
-                    vo.setSubtitle(toString(source.get("subtitle")));
-                    vo.setMainImage(toString(source.get("mainImage")));
-                    vo.setMinPrice(toBigDecimal(source.get("minPrice")));
-                    vo.setTotalStock(toInteger(source.get("totalStock")));
-                    vo.setCategoryId(toLong(source.get("categoryId")));
-                    vo.setCategoryName(toString(source.get("categoryName")));
-                    vo.setBrandId(toLong(source.get("brandId")));
-                    vo.setBrandName(toString(source.get("brandName")));
-                    vo.setShopId(toLong(source.get("shopId")));
-                    vo.setShopName(toString(source.get("shopName")));
-                    productIds.add(vo.getId());
-                }
-
-                // 处理高亮 - 商品名称
-                if (hit.highlight() != null && hit.highlight().containsKey("name")) {
-                    List<String> highlightFragments = hit.highlight().get("name");
-                    if (!highlightFragments.isEmpty()) {
-                        vo.setName(highlightFragments.get(0));
-                    }
-                }
-
-                // 处理高亮 - 副标题
-                if (hit.highlight() != null && hit.highlight().containsKey("subtitle")) {
-                    List<String> highlightFragments = hit.highlight().get("subtitle");
-                    if (!highlightFragments.isEmpty()) {
-                        vo.setSubtitle(highlightFragments.get(0));
-                    }
-                }
-
-                records.add(vo);
-            }
-
-            // 与数据库合并实时数据（价格和库存实时性要求高）
-            mergeRealtimeData(records, productIds);
+            // 解析结果，并与数据库合并实时数据（价格和库存实时性要求高）
+            ParsedHits parsed = parseSearchHits(response);
+            mergeRealtimeData(parsed.records(), parsed.productIds());
 
             // 构建分页结果
             PageResult<ProductSearchVO> pageResult = new PageResult<>();
-            pageResult.setRecords(records);
+            pageResult.setRecords(parsed.records());
             long total = response.hits().total() != null ? response.hits().total().value() : 0;
             pageResult.setPagination(total, dto.getPageNum(), dto.getPageSize());
 
@@ -237,6 +113,203 @@ public class ProductSearchServiceImpl implements ProductSearchService {
             // ES搜索失败时返回空结果，不影响主流程
             return new PageResult<>();
         }
+    }
+
+    /**
+     * ES命中结果解析出的数据
+     *
+     * @param records    搜索结果VO列表
+     * @param productIds 需要合并实时数据的商品ID列表（只收集ES文档里有值的记录）
+     */
+    private record ParsedHits(List<ProductSearchVO> records, List<Long> productIds) {
+    }
+
+    /**
+     * 构建并执行ES搜索请求
+     *
+     * @param dto 搜索参数
+     * @return ES搜索响应
+     * @throws IOException ES调用失败
+     */
+    private SearchResponse<Map> executeSearch(ProductSearchDTO dto) throws IOException {
+        // 构建搜索请求
+        var searchRequestBuilder = new co.elastic.clients.elasticsearch.core.SearchRequest.Builder()
+                .index(INDEX_NAME)
+                .query(q -> q.bool(buildBoolQuery(dto)))
+                .from((dto.getPageNum() - 1) * dto.getPageSize())
+                .size(dto.getPageSize());
+
+        applySort(searchRequestBuilder, dto);
+        applyHighlight(searchRequestBuilder);
+        applyAggregations(searchRequestBuilder);
+
+        // 执行搜索
+        // ES 8.x Java Client 中 SearchRequest 没有 execute() 方法，需要用 esClient.search() 执行
+        return esClient.search(searchRequestBuilder.build(), Map.class);
+    }
+
+    /**
+     * 构建bool查询（关键词 + 分类/品牌/价格区间筛选）
+     *
+     * @param dto 搜索参数
+     * @return 构建好的bool查询
+     */
+    private BoolQuery buildBoolQuery(ProductSearchDTO dto) {
+        BoolQuery.Builder boolBuilder = new BoolQuery.Builder();
+
+        // 只搜索上架商品
+        boolBuilder.filter(f -> f.term(t -> t.field("status").value(1)));
+
+        // 关键词搜索（在name和subtitle中搜索）
+        // minimumShouldMatch=100%：要求所有分词都必须匹配，避免搜"手机"匹配到"空调机"
+        if (dto.getKeyword() != null && !dto.getKeyword().isBlank()) {
+            boolBuilder.must(m -> m.multiMatch(mm -> mm
+                    .fields("name", "subtitle")
+                    .query(dto.getKeyword())
+                    .minimumShouldMatch("100%")
+            ));
+        }
+
+        // 分类筛选
+        if (dto.getCategoryId() != null) {
+            boolBuilder.filter(f -> f.term(t -> t.field("categoryId").value(dto.getCategoryId())));
+        }
+
+        // 品牌筛选
+        if (dto.getBrandId() != null) {
+            boolBuilder.filter(f -> f.term(t -> t.field("brandId").value(dto.getBrandId())));
+        }
+
+        // 价格区间筛选
+        // ES 8.15+ 的 RangeQuery 需要指定类型（number/date/term），不能直接用 field()
+        if (dto.getMinPrice() != null || dto.getMaxPrice() != null) {
+            boolBuilder.filter(f -> f.range(r -> r
+                    .number(n -> {
+                        n.field("minPrice");
+                        if (dto.getMinPrice() != null) {
+                            n.gte(dto.getMinPrice().doubleValue());
+                        }
+                        if (dto.getMaxPrice() != null) {
+                            n.lte(dto.getMaxPrice().doubleValue());
+                        }
+                        return n;
+                    })
+            ));
+        }
+        return boolBuilder.build();
+    }
+
+    /**
+     * 设置排序：传了排序字段按字段排，否则按相关度排
+     *
+     * @param builder ES搜索请求构建器
+     * @param dto     搜索参数
+     */
+    private void applySort(co.elastic.clients.elasticsearch.core.SearchRequest.Builder builder,
+                           ProductSearchDTO dto) {
+        String sortField = dto.getSortField();
+        if (sortField == null || sortField.isBlank()) {
+            // 默认按相关度排序
+            builder.sort(s -> s.field(f -> f.field("_score").order(SortOrder.Desc)));
+            return;
+        }
+        SortOrder sortOrder = "asc".equalsIgnoreCase(dto.getSortOrder()) ? SortOrder.Asc : SortOrder.Desc;
+        builder.sort(s -> s.field(f -> f.field(sortField).order(sortOrder)));
+    }
+
+    /**
+     * 设置高亮（搜索关键词用&lt;em&gt;标签包裹）
+     *
+     * @param builder ES搜索请求构建器
+     */
+    private void applyHighlight(co.elastic.clients.elasticsearch.core.SearchRequest.Builder builder) {
+        builder.highlight(h -> h
+                .fields("name", HighlightField.of(hf -> hf
+                        .preTags("<em>")
+                        .postTags("</em>")
+                ))
+                .fields("subtitle", HighlightField.of(hf -> hf
+                        .preTags("<em>")
+                        .postTags("</em>")
+                ))
+        );
+    }
+
+    /**
+     * 设置聚合（品牌聚合 + 分类聚合）
+     *
+     * @param builder ES搜索请求构建器
+     */
+    private void applyAggregations(co.elastic.clients.elasticsearch.core.SearchRequest.Builder builder) {
+        builder.aggregations("brand_agg", Aggregation.of(a -> a
+                .terms(t -> t.field("brandId").size(20))
+        ));
+        builder.aggregations("category_agg", Aggregation.of(a -> a
+                .terms(t -> t.field("categoryId").size(20))
+        ));
+    }
+
+    /**
+     * 解析ES命中记录：文档字段转VO + 应用高亮片段
+     *
+     * @param response ES搜索响应
+     * @return 搜索结果列表和对应的商品ID列表
+     */
+    private ParsedHits parseSearchHits(SearchResponse<Map> response) {
+        List<ProductSearchVO> records = new ArrayList<>();
+        // 收集需要合并实时数据的SKU ID列表
+        List<Long> productIds = new ArrayList<>();
+
+        for (Hit<Map> hit : response.hits().hits()) {
+            ProductSearchVO vo = new ProductSearchVO();
+            Map<String, Object> source = hit.source();
+            if (source != null) {
+                vo.setId(toLong(source.get("id")));
+                vo.setName(toString(source.get("name")));
+                vo.setSubtitle(toString(source.get("subtitle")));
+                vo.setMainImage(toString(source.get("mainImage")));
+                vo.setMinPrice(toBigDecimal(source.get("minPrice")));
+                vo.setTotalStock(toInteger(source.get("totalStock")));
+                vo.setCategoryId(toLong(source.get("categoryId")));
+                vo.setCategoryName(toString(source.get("categoryName")));
+                vo.setBrandId(toLong(source.get("brandId")));
+                vo.setBrandName(toString(source.get("brandName")));
+                vo.setShopId(toLong(source.get("shopId")));
+                vo.setShopName(toString(source.get("shopName")));
+                productIds.add(vo.getId());
+            }
+
+            // 处理高亮 - 商品名称
+            String nameHighlight = firstHighlightFragment(hit, "name");
+            if (nameHighlight != null) {
+                vo.setName(nameHighlight);
+            }
+
+            // 处理高亮 - 副标题
+            String subtitleHighlight = firstHighlightFragment(hit, "subtitle");
+            if (subtitleHighlight != null) {
+                vo.setSubtitle(subtitleHighlight);
+            }
+
+            records.add(vo);
+        }
+        return new ParsedHits(records, productIds);
+    }
+
+    /**
+     * 取某个字段的第一段高亮片段
+     *
+     * @param hit   ES命中记录
+     * @param field 高亮字段名
+     * @return 第一段高亮片段，没有则返回null
+     */
+    private String firstHighlightFragment(Hit<Map> hit, String field) {
+        if (hit.highlight() == null) {
+            return null;
+        }
+        List<String> highlightFragments = hit.highlight().get(field);
+        return (highlightFragments == null || highlightFragments.isEmpty())
+                ? null : highlightFragments.get(0);
     }
 
     /**

@@ -2,7 +2,7 @@ package com.shop.payment.config;
 
 import cn.dev33.satoken.interceptor.SaInterceptor;
 import cn.dev33.satoken.stp.StpUtil;
-import com.shop.payment.interceptor.UserInfoInterceptor;
+import com.shop.common.interceptor.UserInfoInterceptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;

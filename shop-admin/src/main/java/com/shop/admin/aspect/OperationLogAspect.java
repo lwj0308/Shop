@@ -4,6 +4,7 @@ import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.json.JSONUtil;
 import com.shop.admin.annotation.OperationLog;
 import com.shop.admin.service.AdminOperationLogService;
+import com.shop.common.util.IpUtils;
 import com.shop.model.admin.entity.AdminOperationLog;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -78,7 +79,7 @@ public class OperationLogAspect {
             HttpServletRequest request = attributes.getRequest();
             logEntity.setRequestUrl(request.getRequestURL().toString());
             logEntity.setRequestMethod(request.getMethod());
-            logEntity.setIp(com.shop.admin.util.IpUtils.getClientIp(request));
+            logEntity.setIp(IpUtils.getClientIp(request));
 
             // 序列化请求参数为JSON（脱敏处理）
             String params = serializeArgs(joinPoint.getArgs());

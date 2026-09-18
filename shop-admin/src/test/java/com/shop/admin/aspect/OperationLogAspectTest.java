@@ -5,7 +5,7 @@ import cn.hutool.json.JSONUtil;
 import com.shop.admin.annotation.OperationLog;
 import com.shop.admin.annotation.OperationType;
 import com.shop.admin.service.AdminOperationLogService;
-import com.shop.admin.util.IpUtils;
+import com.shop.common.util.IpUtils;
 import com.shop.model.admin.entity.AdminOperationLog;
 import jakarta.servlet.http.HttpServletRequest;
 import org.aspectj.lang.ProceedingJoinPoint;

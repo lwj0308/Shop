@@ -82,10 +82,7 @@ public class FootprintServiceImpl implements FootprintService {
         Page<UserFootprint> result = footprintMapper.selectPage(page, wrapper);
 
         // 封装分页结果
-        PageResult<UserFootprint> pageResult = new PageResult<>();
-        pageResult.setRecords(result.getRecords());
-        pageResult.setPagination(result.getTotal(), pageRequest.getPageNum(), pageRequest.getPageSize());
-        return pageResult;
+        return PageResult.from(result);
     }
 
     /**

@@ -1,4 +1,4 @@
-package com.shop.admin.util;
+package com.shop.common.util;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.DisplayName;

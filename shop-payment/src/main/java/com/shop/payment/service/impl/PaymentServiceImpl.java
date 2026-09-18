@@ -200,10 +200,21 @@ public class PaymentServiceImpl implements PaymentService {
         log.info("模拟支付成功: paymentId={}, paymentNo={}, orderNo={}, channel={}",
                 paymentId, paymentInfo.getPaymentNo(), paymentInfo.getOrderNo(), channel);
 
+        return payResult(paymentInfo.getPaymentNo(), "支付成功");
+    }
+
+    /**
+     * 构建支付结果
+     *
+     * @param paymentNo 支付单号
+     * @param message   处理结论提示
+     * @return 支付结果VO
+     */
+    private PayResultVO payResult(String paymentNo, String message) {
         PayResultVO result = new PayResultVO();
-        result.setPaymentNo(paymentInfo.getPaymentNo());
+        result.setPaymentNo(paymentNo);
         result.setSuccess(true);
-        result.setMessage("支付成功");
+        result.setMessage(message);
         return result;
     }
 
@@ -230,11 +241,7 @@ public class PaymentServiceImpl implements PaymentService {
         if (locked == null || !locked) {
             log.warn("支付回调并发锁获取失败，可能有并发回调: paymentNo={}", dto.getPaymentNo());
             // 并发回调时直接返回成功，让另一个请求处理
-            PayResultVO result = new PayResultVO();
-            result.setPaymentNo(dto.getPaymentNo());
-            result.setSuccess(true);
-            result.setMessage("处理中");
-            return result;
+            return payResult(dto.getPaymentNo(), "处理中");
         }
 
         try {

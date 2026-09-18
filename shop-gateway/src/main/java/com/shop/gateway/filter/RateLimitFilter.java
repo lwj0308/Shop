@@ -154,7 +154,7 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
         }
 
         ServerHttpRequest request = exchange.getRequest();
-        String clientIp = getClientIp(request);
+        String clientIp = GatewayIpUtils.getClientIp(request);
         String path = request.getURI().getPath();
 
         // 第2步：根据路径匹配限流规则，确定算法和限流参数
@@ -395,29 +395,6 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
             }
         }
         return null;
-    }
-
-    /**
-     * 获取客户端真实IP地址
-     * <p>
-     * 请求可能经过多层代理，需要从X-Forwarded-For等Header中获取真实IP。
-     * X-Forwarded-For格式：client, proxy1, proxy2，取第一个就是客户端IP。
-     * </p>
-     *
-     * @param request HTTP请求对象
-     * @return 客户端IP地址
-     */
-    private String getClientIp(ServerHttpRequest request) {
-        String ip = request.getHeaders().getFirst("X-Forwarded-For");
-        if (ip != null && !ip.isEmpty()) {
-            return ip.split(",")[0].trim();
-        }
-        ip = request.getHeaders().getFirst("X-Real-IP");
-        if (ip != null && !ip.isEmpty()) {
-            return ip;
-        }
-        return request.getRemoteAddress() != null
-                ? request.getRemoteAddress().getAddress().getHostAddress() : "unknown";
     }
 
     /**
