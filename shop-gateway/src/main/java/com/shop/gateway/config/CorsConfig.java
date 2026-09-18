@@ -66,9 +66,7 @@ public class CorsConfig {
                 "Content-Type",        // 请求体类型（JSON、表单等）
                 "Accept",              // 客户端期望的响应类型
                 "X-Requested-With",    // AJAX请求标识
-                "X-Request-Id",        // 链路追踪ID
-                "X-User-Id",           // 用户ID（网关注入）
-                "X-User-Role"          // 用户角色（网关注入）
+                "X-Request-Id"         // 链路追踪ID
         ));
 
         // 明确指定允许的HTTP方法（比 * 更安全，防止不必要的请求方法）
