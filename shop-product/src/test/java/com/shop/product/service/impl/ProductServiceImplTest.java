@@ -461,6 +461,46 @@ class ProductServiceImplTest {
             verify(productCacheService).delayDoubleEvict(PRODUCT_ID);
             verify(rocketMQTemplate).convertAndSend(eq("topic_product_sync"), eq(String.valueOf(PRODUCT_ID)));
         }
+
+        @Test
+        @DisplayName("上架-店铺上下文缺失(null) → 拒绝而不是跳过归属校验")
+        void onShelf_nullShopId_throwsForbidden() {
+            // 回归防护：getOwnedProduct 曾把 shopId==null 当成"平台侧操作，跳过校验"，
+            // 等于任何漏传 shopId 的调用都能越权改任意商品。现在必须失败关闭。
+            Product product = buildProduct(PRODUCT_ID, 2002L, 0); // 属于别的店铺
+            when(productMapper.selectById(PRODUCT_ID)).thenReturn(product);
+
+            assertThatThrownBy(() -> productService.onShelf(PRODUCT_ID, null))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("code", ErrorCode.FORBIDDEN.getCode());
+
+            verify(productMapper, never()).updateStatus(anyLong(), anyInt());
+        }
+
+        @Test
+        @DisplayName("管理端上架 → 跨店铺也生效，但仍走完整的改状态+双删+同步ES")
+        void adminOnShelf_crossShop_stillApplies() {
+            Product product = buildProduct(PRODUCT_ID, 2002L, 0); // 不属于当前 SHOP_ID
+            when(productMapper.selectById(PRODUCT_ID)).thenReturn(product);
+
+            productService.adminOnShelf(PRODUCT_ID);
+
+            verify(productMapper).updateStatus(PRODUCT_ID, 1);
+            verify(productCacheService).delayDoubleEvict(PRODUCT_ID);
+            verify(rocketMQTemplate).convertAndSend(eq("topic_product_sync"), eq(String.valueOf(PRODUCT_ID)));
+        }
+
+        @Test
+        @DisplayName("管理端下架-商品不存在 → 仍然抛 PRODUCT_NOT_FOUND，不做静默成功")
+        void adminOffShelf_notExists_throwsException() {
+            when(productMapper.selectById(PRODUCT_ID)).thenReturn(null);
+
+            assertThatThrownBy(() -> productService.adminOffShelf(PRODUCT_ID))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("code", ErrorCode.PRODUCT_NOT_FOUND.getCode());
+
+            verify(productMapper, never()).updateStatus(anyLong(), anyInt());
+        }
     }
 
     // ==================== 4. deductStock 扣减库存测试 ====================

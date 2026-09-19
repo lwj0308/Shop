@@ -291,6 +291,42 @@ public class ProductController {
     // ==================== 管理接口 ====================
 
     /**
+     * 上架商品（管理端）
+     * <p>
+     * 管理员审批通过后上架商品，跨店铺操作，不做店铺归属校验。
+     * 路径落在 /product/admin/** 上：已被 Sa-Token 拦截器排除登录校验，
+     * 并由 InnerApiInterceptor 校验 X-Inner-Key；而网关会在边缘剥离外部自带的
+     * 同名头，所以该接口只能由内部 Feign 调用命中。
+     * </p>
+     *
+     * @param id 商品ID
+     * @return 操作结果
+     */
+    @PutMapping("/admin/{id}/on-shelf")
+    @Operation(summary = "上架商品（管理端）", description = "管理员审批通过后上架商品，仅供shop-admin内部调用")
+    public Result<Void> adminOnShelf(@Parameter(description = "商品ID") @PathVariable Long id) {
+        productService.adminOnShelf(id);
+        return Result.success("上架成功", null);
+    }
+
+    /**
+     * 下架商品（管理端）
+     * <p>
+     * 管理员强制下架违规商品，跨店铺操作，不做店铺归属校验。
+     * 鉴权方式同 {@link #adminOnShelf(Long)}。
+     * </p>
+     *
+     * @param id 商品ID
+     * @return 操作结果
+     */
+    @PutMapping("/admin/{id}/off-shelf")
+    @Operation(summary = "下架商品（管理端）", description = "管理员强制下架违规商品，仅供shop-admin内部调用")
+    public Result<Void> adminOffShelf(@Parameter(description = "商品ID") @PathVariable Long id) {
+        productService.adminOffShelf(id);
+        return Result.success("下架成功", null);
+    }
+
+    /**
      * 全量同步商品到ES（管理接口）
      * <p>
      * 将数据库中所有上架商品同步到ES索引，一般用于ES数据重建。

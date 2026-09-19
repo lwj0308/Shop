@@ -59,7 +59,7 @@ public interface ProductFeignClient {
      * @param id 商品ID
      * @return 操作结果
      */
-    @PutMapping("/{id}/off-shelf")
+    @PutMapping("/admin/{id}/off-shelf")
     Result<Void> offShelfProduct(@PathVariable("id") Long id);
 
     /**
@@ -71,6 +71,6 @@ public interface ProductFeignClient {
      * @param id 商品ID
      * @return 操作结果
      */
-    @PutMapping("/{id}/on-shelf")
+    @PutMapping("/admin/{id}/on-shelf")
     Result<Void> onShelfProduct(@PathVariable("id") Long id);
 }

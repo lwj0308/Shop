@@ -68,6 +68,28 @@ public interface ProductService {
     void offShelf(Long productId, Long shopId);
 
     /**
+     * 上架商品（管理端）
+     * <p>
+     * 管理员审批通过后可对任意商品操作，不做店铺归属校验；
+     * 仅供 shop-admin 通过 Feign 内部调用，由 X-Inner-Key 守护。
+     * </p>
+     *
+     * @param productId 商品ID
+     */
+    void adminOnShelf(Long productId);
+
+    /**
+     * 下架商品（管理端）
+     * <p>
+     * 管理员强制下架违规商品，不做店铺归属校验；
+     * 仅供 shop-admin 通过 Feign 内部调用，由 X-Inner-Key 守护。
+     * </p>
+     *
+     * @param productId 商品ID
+     */
+    void adminOffShelf(Long productId);
+
+    /**
      * 商品详情（含SKU、规格、评价摘要）
      *
      * @param productId 商品ID

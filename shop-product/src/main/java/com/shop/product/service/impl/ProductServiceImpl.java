@@ -178,13 +178,7 @@ public class ProductServiceImpl implements ProductService {
     public void onShelf(Long productId, Long shopId) {
         // 归属校验：只能上架自己店铺的商品
         getOwnedProduct(productId, shopId);
-        productMapper.updateStatus(productId, 1);
-
-        // 延迟双删缓存
-        productCacheService.delayDoubleEvict(productId);
-
-        // 异步同步到ES
-        sendSyncMessage(productId);
+        applyShelfStatus(productId, 1);
 
         log.info("商品上架成功: id={}", productId);
     }
@@ -196,15 +190,56 @@ public class ProductServiceImpl implements ProductService {
     public void offShelf(Long productId, Long shopId) {
         // 归属校验：只能下架自己店铺的商品
         getOwnedProduct(productId, shopId);
-        productMapper.updateStatus(productId, 0);
+        applyShelfStatus(productId, 0);
+
+        log.info("商品下架成功: id={}", productId);
+    }
+
+    /**
+     * 上架商品（管理端）
+     * <p>
+     * 只校验商品存在，不做店铺归属校验（管理员可跨店铺操作）。
+     * </p>
+     */
+    @Override
+    public void adminOnShelf(Long productId) {
+        requireProduct(productId);
+        applyShelfStatus(productId, 1);
+
+        log.info("商品上架成功（管理端）: id={}", productId);
+    }
+
+    /**
+     * 下架商品（管理端）
+     * <p>
+     * 只校验商品存在，不做店铺归属校验（管理员可跨店铺强制下架）。
+     * </p>
+     */
+    @Override
+    public void adminOffShelf(Long productId) {
+        requireProduct(productId);
+        applyShelfStatus(productId, 0);
+
+        log.info("商品下架成功（管理端）: id={}", productId);
+    }
+
+    /**
+     * 落地上下架状态：改状态 + 延迟双删缓存 + 异步同步ES
+     * <p>
+     * 商家端与管理端共用，两端只差在调用前做不做店铺归属校验。
+     * </p>
+     *
+     * @param productId 商品ID
+     * @param status    目标状态：1上架 0下架
+     */
+    private void applyShelfStatus(Long productId, int status) {
+        productMapper.updateStatus(productId, status);
 
         // 延迟双删缓存
         productCacheService.delayDoubleEvict(productId);
 
-        // 异步同步到ES（下架后ES中也不可搜索）
+        // 异步同步到ES（下架后ES中也搜不到）
         sendSyncMessage(productId);
-
-        log.info("商品下架成功: id={}", productId);
     }
 
     /**
@@ -915,20 +950,38 @@ public class ProductServiceImpl implements ProductService {
      * 查询商品并校验店铺归属
      * <p>
      * 小白讲解：防止商家A通过修改URL中的商品ID，去操作商家B的商品。
-     * shopId为null表示平台侧操作，不做归属校验。
+     * </p>
+     * <p>
+     * shopId 为空时直接拒绝，而不是"跳过校验"：漏传店铺上下文属于调用方缺陷，
+     * 若按不校验处理就等于静默放行越权。平台侧的跨店铺操作请走
+     * {@link #adminOnShelf(Long)} 这类显式方法，不要靠传 null 绕过这里。
      * </p>
      *
      * @param productId 商品ID
-     * @param shopId    当前商家的店铺ID（可为null）
+     * @param shopId    当前商家的店铺ID
      * @return 商品实体
      */
     private Product getOwnedProduct(Long productId, Long shopId) {
+        Product product = requireProduct(productId);
+        if (shopId == null) {
+            throw new BusinessException(ErrorCode.FORBIDDEN.getCode(), "缺少店铺上下文");
+        }
+        if (!shopId.equals(product.getShopId())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN.getCode(), "无权操作该商品");
+        }
+        return product;
+    }
+
+    /**
+     * 查询商品实体，不存在则抛 PRODUCT_NOT_FOUND
+     *
+     * @param productId 商品ID
+     * @return 商品实体
+     */
+    private Product requireProduct(Long productId) {
         Product product = productMapper.selectById(productId);
         if (product == null) {
             throw new BusinessException(ErrorCode.PRODUCT_NOT_FOUND);
-        }
-        if (shopId != null && !shopId.equals(product.getShopId())) {
-            throw new BusinessException(ErrorCode.FORBIDDEN.getCode(), "无权操作该商品");
         }
         return product;
     }

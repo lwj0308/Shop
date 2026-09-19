@@ -51,6 +51,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -422,6 +423,48 @@ class ProductControllerTest {
                             .header("X-Shop-Id", MOCK_SHOP_ID.toString()))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(ErrorCode.PRODUCT_NOT_FOUND.getCode()));
+        }
+    }
+
+    // ==================== 管理端上下架 ====================
+
+    @Nested
+    @DisplayName("管理端上下架 PUT /product/admin/{id}/on-shelf|off-shelf")
+    class AdminShelfTest {
+
+        @Test
+        @DisplayName("管理端下架 → 映射到 adminOffShelf，不传任何店铺上下文")
+        void adminOffShelf_success() throws Exception {
+            mockMvc.perform(put("/product/admin/{id}/off-shelf", 8001L))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(200))
+                    .andExpect(jsonPath("$.message").value("下架成功"));
+
+            verify(productService).adminOffShelf(8001L);
+            // 关键：不能误走商家侧那条带归属校验的路径
+            verify(productService, never()).offShelf(anyLong(), anyLong());
+        }
+
+        @Test
+        @DisplayName("管理端上架 → 映射到 adminOnShelf")
+        void adminOnShelf_success() throws Exception {
+            mockMvc.perform(put("/product/admin/{id}/on-shelf", 8001L))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(200))
+                    .andExpect(jsonPath("$.message").value("上架成功"));
+
+            verify(productService).adminOnShelf(8001L);
+            verify(productService, never()).onShelf(anyLong(), anyLong());
+        }
+
+        @Test
+        @DisplayName("商家端缺少 X-Shop-Id → 返回403而不是拿登录ID当店铺ID")
+        void offShelf_withoutShopId_throwsForbidden() throws Exception {
+            mockMvc.perform(put("/product/{id}/off-shelf", 8001L))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(ErrorCode.FORBIDDEN.getCode()));
+
+            verify(productService, never()).offShelf(anyLong(), anyLong());
         }
     }
 
