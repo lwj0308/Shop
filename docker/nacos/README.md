@@ -61,8 +61,10 @@ bash docker/nacos/import-configs.sh
 
 在"配置管理"页面，选择 `dev` 命名空间，逐个创建配置：
 
-1. 先创建 `common.yml`（公共配置，Data ID = common.yml, Group = DEFAULT_GROUP）
-2. 再创建各服务配置（Data ID = 服务名.yml, Group = DEFAULT_GROUP）
+1. 创建各服务配置（Data ID = 服务名.yml, Group = DEFAULT_GROUP）
+2. 创建 Sentinel 规则配置（Data ID = 服务名-<flow|degrade|param|system>-rules.json,
+   Group = **SENTINEL_GROUP**）——注意分组不能写错，服务的 `spring.cloud.sentinel.datasource`
+   只订阅 SENTINEL_GROUP，放进 DEFAULT_GROUP 不会被读取
 
 ## 5. 验证
 
