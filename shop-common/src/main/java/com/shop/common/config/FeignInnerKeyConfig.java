@@ -22,8 +22,14 @@ import org.springframework.context.annotation.Configuration;
 @ConditionalOnClass(RequestInterceptor.class)
 public class FeignInnerKeyConfig {
 
-    /** 内部接口密钥，和InnerApiInterceptor用的同一个值 */
-    @Value("${shop.security.inner-key:shop-inner-key-2024}")
+    /**
+     * 内部接口密钥，和InnerApiInterceptor用的同一个值
+     * <p>
+     * 无默认值：必须由配置中心显式提供，漏配则服务启动失败，
+     * 避免静默退回到一个公开在源码里的共用密钥。
+     * </p>
+     */
+    @Value("${shop.security.inner-key}")
     private String innerKey;
 
     /**

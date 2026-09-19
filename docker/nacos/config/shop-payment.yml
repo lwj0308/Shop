@@ -44,3 +44,11 @@ pay:
   mock:
     # 开启模拟支付：true表示不真付钱，只是假装支付成功
     enabled: true
+
+# 内部接口密钥（InnerApiInterceptor 校验 X-Inner-Key，服务间 Feign 调用自动携带）
+# 源码已去掉默认值：漏配或留空都会导致服务启动失败，不再静默退回公开密钥。
+# 生成方式：openssl rand -hex 24 ；所有服务必须使用同一个值，否则 Feign 互调会 403。
+# 真实密钥只写在配置中心，不要提交进仓库，所以这里只引用环境变量。
+shop:
+  security:
+    inner-key: ${SHOP_INNER_KEY:}

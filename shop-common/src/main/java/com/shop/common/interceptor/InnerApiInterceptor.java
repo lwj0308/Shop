@@ -1,9 +1,11 @@
 package com.shop.common.interceptor;
 
+import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 /**
@@ -26,9 +28,34 @@ import org.springframework.web.servlet.HandlerInterceptor;
 @Slf4j
 public class InnerApiInterceptor implements HandlerInterceptor {
 
-    /** 内部接口密钥，从配置文件读取，默认值仅用于开发环境 */
-    @Value("${shop.security.inner-key:shop-inner-key-2024}")
+    /**
+     * 内部接口密钥，必须由配置中心显式提供（无默认值，缺失则启动失败）。
+     * <p>
+     * 这里曾经带过一个源码内的默认值，后果是：只要配置中心漏配这一项，
+     * 所有服务都会静默退回到那个"任何读过仓库的人都知道"的密钥，
+     * /inner/** 与 /admin/** 的守护随即形同虚设，而且不会有任何报错。
+     * </p>
+     */
+    @Value("${shop.security.inner-key}")
     private String innerKey;
+
+    /**
+     * 校验密钥已配置且非空白
+     * <p>
+     * 空串比漏配更危险：漏配会让占位符解析失败直接启动不了，而空串能正常启动，
+     * 但只要客户端提交一个空的 X-Inner-Key 头就能通过比对，等于门禁卡刷卡机常年不锁。
+     * </p>
+     *
+     * @throws IllegalStateException 密钥为空或全是空白字符时抛出，阻止服务带着敞开的风控启动
+     */
+    @PostConstruct
+    public void validateConfiguredKey() {
+        if (!StringUtils.hasText(innerKey)) {
+            throw new IllegalStateException(
+                    "shop.security.inner-key 未配置或为空，内部接口(/inner/**、/admin/**)将失去保护，"
+                            + "请在Nacos配置中心为该服务显式设置此属性（各服务须使用同一个值）");
+        }
+    }
 
     /**
      * 在Controller方法执行之前调用，校验内部接口密钥

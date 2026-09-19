@@ -12,6 +12,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -121,6 +122,40 @@ class InnerApiInterceptorTest {
             // 验证：返回true表示放行，不会设置403
             assertThat(result).isTrue();
             verify(response, org.mockito.Mockito.never()).setStatus(403);
+        }
+    }
+
+    // ==================== 启动期密钥校验 ====================
+
+    @Nested
+    @DisplayName("validateConfiguredKey 启动期密钥校验（防止静默退回公开/空白密钥）")
+    class ValidateConfiguredKeyTest {
+
+        @Test
+        @DisplayName("密钥正常配置：不抛异常，服务可以启动")
+        void validateKey_configured_passes() {
+            interceptor.validateConfiguredKey();
+        }
+
+        @Test
+        @DisplayName("密钥为空串：抛异常阻止启动（空密钥等于门禁不锁）")
+        void validateKey_empty_throws() {
+            // 配置中心漏写成 `inner-key:` 时解析结果为空串，服务仍能正常启动，
+            // 而客户端只要提交一个空的 X-Inner-Key 头就能通过比对，必须在启动期拦住
+            ReflectionTestUtils.setField(interceptor, "innerKey", "");
+
+            assertThatThrownBy(() -> interceptor.validateConfiguredKey())
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("shop.security.inner-key");
+        }
+
+        @Test
+        @DisplayName("密钥全是空白字符：同样拒绝启动")
+        void validateKey_blank_throws() {
+            ReflectionTestUtils.setField(interceptor, "innerKey", "   ");
+
+            assertThatThrownBy(() -> interceptor.validateConfiguredKey())
+                    .isInstanceOf(IllegalStateException.class);
         }
     }
 }
